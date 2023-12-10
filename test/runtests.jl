@@ -40,7 +40,7 @@ end
 
         ts.result = Some([1,2,3,4])
         test_function(ts, TestCase(UInt[], Random.default_rng(), 10_000))
-        @test ts.result == Some([1,2,3,4])
+        @test ts.result == Some(UInt[1,2,3,4])
     end
 
     @testset "test function invalid" begin
@@ -53,12 +53,12 @@ end
 
     @testset "shrink remove" begin
         ts = TestState(Random.default_rng(), Returns(true), 10_000)
-        ts.result = Some([1,2,3])
+        ts.result = Some(UInt[1,2,3])
 
         @test shrink_remove(ts, UInt[1,2], UInt(1)) == Some([1])
         @test shrink_remove(ts, UInt[1,2], UInt(2)) == Some(UInt[])
 
-        ts.result = Some([1,2,3,4,5])
+        ts.result = Some(UInt[1,2,3,4,5])
         @test shrink_remove(ts, UInt[1,2,3,4], UInt(2)) == Some([1,2])
 
         function second_is_five(tc::TestCase)
@@ -115,5 +115,114 @@ end
         ts = TestState(Random.default_rng(), bl_sum_greater_1000, 10_000)
         MiniThesis.run(ts)
         @test ts.result == Some(UInt[1,1001])
+    end
+
+    @testset "reduces additive pairs" begin
+        function int_sum_greater_1000(tc::TestCase)
+            n = choice!(tc, 1_000)
+            m = choice!(tc, 1_000)
+
+            return (n+m) > 1_000
+        end
+        ts = TestState(Random.default_rng(), int_sum_greater_1000, 10_000)
+        MiniThesis.run(ts)
+        @test ts.result == Some([1,1000])
+    end
+
+    @testset "test cases satisfy preconditions" begin
+        function test(tc::TestCase)
+            n = choice!(tc, 10)
+            assume!(tc, !iszero(n))
+            iszero(n)
+        end
+        ts = TestState(Random.default_rng(), test, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "finds local maximum" begin
+        function test_maxima(tc::TestCase)
+            m = Float64(choice!(tc, 1000))
+            n = Float64(choice!(tc, 1000))
+
+            score = -((m - 500.0)^2.0 + (n - 500.0)^2.0)
+            target!(tc, score)
+            return m == 500 || n == 500
+        end
+
+        ts = TestState(Random.default_rng(), test_maxima, 10_000)
+        MiniThesis.run(ts)
+        @test !isnothing(ts.result)
+    end
+
+    @testset "can target score upwards to interesting" begin
+        function target_upwards(tc::TestCase)
+            n = Float64(choice!(tc, 1_000))
+            m = Float64(choice!(tc, 1_000))
+            score = n+m
+            target!(tc, score)
+            score >= 2000.0
+        end
+
+        ts = TestState(Random.default_rng(), target_upwards, 10_000)
+        MiniThesis.run(ts)
+        @test !isnothing(ts.result)
+    end
+
+    @testset "can target score upwards without failing" begin
+        function target_upwards_nofail(tc::TestCase)
+            n = Float64(choice!(tc, 1_000))
+            m = Float64(choice!(tc, 1_000))
+            score = n+m
+            target!(tc, score)
+            false
+        end
+
+        ts = TestState(Random.default_rng(), target_upwards_nofail, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+        @test !isnothing(ts.best_scoring)
+        @test first(something(ts.best_scoring)) == 2000.0
+    end
+
+    @testset "targeting when most don't benefit" begin
+        function no_benefit(tc::TestCase)
+            choice!(tc, 1_000)
+            choice!(tc, 1_000)
+            score = Float64(choice!(tc, 1_000))
+            target!(tc, score)
+            score >= 1_000
+        end
+
+        ts = TestState(Random.default_rng(), no_benefit, 10_000)
+        MiniThesis.run(ts)
+        @test !isnothing(ts.result)
+    end
+
+    @testset "can target score downwards" begin
+        function target_downwards(tc::TestCase)
+            n = Float64(choice!(tc, 1_000))
+            m = Float64(choice!(tc, 1_000))
+            score = n+m
+            target!(tc, -score)
+            score <= 0.0
+        end
+
+        ts = TestState(Random.default_rng(), target_downwards, 10_000)
+        MiniThesis.run(ts)
+        @test !isnothing(ts.result)
+        @test !isnothing(ts.best_scoring)
+        @test first(something(ts.best_scoring)) == 0.0
+    end
+
+    @testset "mapped possibility" begin
+        function map_pos(tc::TestCase)
+            n = Data.produce(map(n -> 2n, Data.Integers(0, 5)), tc)
+            isodd(n)
+        end
+
+        ts = TestState(Random.default_rng(), map_pos, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
     end
 end

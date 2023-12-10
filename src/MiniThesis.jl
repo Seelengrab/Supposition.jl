@@ -1,7 +1,7 @@
 module MiniThesis
 
 using Base
-export TestCase, TestState, forced_choice!, choice!, weighted!, reject
+export TestCase, TestState, forced_choice!, choice!, weighted!, assume!, target!, reject
 
 import Random
 using Logging
@@ -94,11 +94,11 @@ function reject(::TestCase)
 end
 
 """
-    assume(::TestCase, precondition::Bool)
+    assume!(::TestCase, precondition::Bool)
 
 If this precondition is not met, abort the test and mark this test case as invalid.
 """
-function assume(::TestCase, precondition::Bool)
+function assume!(::TestCase, precondition::Bool)
     if !precondition
         throw(Invalid())
     else
@@ -123,6 +123,14 @@ module Data
 using MiniThesis
 
 abstract type Possibility{T} end
+
+struct Map{T, S <: Possibility{T}, F} <: Possibility{T}
+    source::S
+    map::F
+end
+
+Base.map(f, p::Possibility) = Map(p, f)
+produce(m::Map, tc::TestCase) = m.map(produce(m.source, tc))
 
 ## Possibilities of signed integers
 
@@ -244,7 +252,7 @@ function test_function(ts::TestState, tc::TestCase)
 
         if !isnothing(tc.targeting_score)
             score = @something tc.targeting_score
-            if (@something ts.best_scoring Some(typemin(score))) < score
+            if first(@something ts.best_scoring Some((typemin(score),))) < score
                 ts.best_scoring = Some((score, copy(tc.choices)))
                 was_better = true
             end
@@ -268,7 +276,7 @@ function test_function(ts::TestState, tc::TestCase)
         was_better = false
         if !isnothing(tc.targeting_score)
             score = @something tc.targeting_score
-            if (@something ts.best_scoring Some(typemin(score))) < score
+            if first(@something ts.best_scoring Some((typemin(score),))) < score
                 ts.best_scoring = Some((score, copy(tc.choices)))
                 was_better = true
             end
@@ -279,13 +287,10 @@ function test_function(ts::TestState, tc::TestCase)
 end
 
 function run(ts::TestState)
-    @show ts
     generate!(ts)
-    @show ts
     target!(ts)
-    @show ts
     shrink!(ts)
-    @show ts
+    nothing
 end
 
 function should_keep_generating(ts::TestState)
@@ -370,7 +375,7 @@ function target!(ts::TestState)
 end
 
 function generate!(ts::TestState)
-    while should_keep_generating(ts) & (@something(ts.best_scoring, Some(false)) || (ts.valid_test_cases <= ts.max_examples÷2))
+    while should_keep_generating(ts) & (isnothing(ts.best_scoring) || (ts.valid_test_cases <= ts.max_examples÷2))
         test_function(ts, TestCase(UInt64[], ts.rng, BUFFER_SIZE))
     end
 end
@@ -471,12 +476,12 @@ Try to shrink `attempt` by sorting `k` contiguous elements at a time.
 function shrink_sort(ts::TestState, attempt::Vector{UInt64}, k::UInt)
     k >= length(attempt) && return nothing
 
-    valid = ( (j-k, j) for j in length(attempt):-1:k)
+    valid = ( (j-k+1, j) for j in length(attempt):-1:k)
     for (x,y) in valid
-        middle = attempt[x:y-1]
+        head, middle, tail = windows(attempt, x, y)
         issorted(middle) && continue
-        sort!(middle)
-        new = [@view(attempt[begin:x-1]); middle; @view(attempt[y:end])]
+        newmid = sort(middle)
+        new = [head; newmid; tail]
         consider(ts, new) && return Some(new)
     end
     nothing
@@ -485,16 +490,16 @@ end
 """
     shrink_swap(::TestState, attempt::Vector{UInt64}, k::UInt)
 
-Try to shrink `attempt` by swapping two elements length `l` apart.
+Try to shrink `attempt` by swapping two elements length `k` apart.
 """
 function shrink_swap(ts::TestState, attempt::Vector{UInt64}, k::UInt)
-    valid = ( (j-k, j) for j in (length(attempt):-1:k))
+    valid = ( (j-k+1, j) for j in (length(attempt):-1:k))
     for (x,y) in valid
         attempt[x] == attempt[y] && continue
         new = copy(attempt)
         new[y] = attempt[x]
 
-        res = bin_search_down(1, attempt[y], n -> begin
+        res = bin_search_down(0, attempt[y], n -> begin
             new[x] = n
             consider(ts, new) 
         end)
