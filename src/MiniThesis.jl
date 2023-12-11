@@ -22,12 +22,14 @@ end
 
 TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, max_size) = TestCase(prefix, rng, max_size, UInt64[], nothing)
 
-for_choices(prefix::Vector{UInt64}) = TestCase(
-    prefix,
-    Random.default_rng(),
-    length(prefix),
-    UInt64[],
-    nothing)
+function for_choices(prefix::Vector{UInt64})
+    return TestCase(
+        prefix,
+        Random.default_rng(),
+        length(prefix),
+        UInt64[],
+        nothing)
+end
 
 """
     forced_choice(tc::TestCase, n::UInt64)
@@ -132,17 +134,45 @@ end
 Base.map(f, p::Possibility) = Map(p, f)
 produce(m::Map, tc::TestCase) = m.map(produce(m.source, tc))
 
-## Possibilities of signed integers
-
-struct Integers <: Possibility{Int64}
-    minimum::Int64
-    range::UInt64
-    Integers(minimum::Int64, maximum::Int64) = new(minimum, (maximum - minimum) % UInt64)
+struct Satisfying{T, S <: Possibility{T}, P} <: Possibility{T}
+    source::S
+    predicate::P
 end
 
-function produce(i::Integers, tc::TestCase)
+satisfying(f, p::Possibility) = Satisfying(p, f)
+function produce(s::Satisfying, tc::TestCase)
+    for _ in 1:3
+        candidate = produce(s.source, tc)
+        if s.predicate(candidate)
+            return candidate
+        end
+    end
+
+    reject(tc)
+end
+
+struct Bind{T, S <: Possibility{T}, M} <: Possibility{T}
+    source::S
+    map::M
+end
+
+bind(f, s::Possibility) = Bind(s, f)
+function produce(b::Bind, tc::TestCase)
+    inner = produce(b.source, tc)
+    produce(b.map(inner), tc)
+end
+
+## Possibilities of signed integers
+
+struct Integers{T<:Integer, U<:Unsigned} <: Possibility{T}
+    minimum::T
+    range::U
+    Integers(minimum::T, maximum::T) where T<:Integer = new{T,unsigned(T)}(minimum, (maximum - minimum) % unsigned(T))
+end
+
+function produce(i::Integers{T}, tc::TestCase) where T
     offset = choice!(tc, i.range)
-    return i.minimum + offset
+    return (i.minimum + offset) % T
 end
 
 ## Possibilities of vectors
@@ -158,9 +188,9 @@ function produce(v::Vectors{T}, tc::TestCase) where T
 
     while true
         if length(result) < v.min_size
-            forced_choice!(tc, 1)
+            forced_choice!(tc, UInt(1))
         elseif (length(result)+1) >= v.max_size
-            forced_choice!(tc, 0)
+            forced_choice!(tc, UInt(0))
             break
         elseif !weighted!(tc, 0.9)
             break
@@ -178,6 +208,7 @@ struct Pairs{T,S} <: Possibility{Pair{T,S}}
     second::Possibility{S}
 end
 
+pairs(a::Possibility, b::Possibility) = Pairs(a,b)
 produce(p::Pairs, tc::TestCase) = produce(p.first, tc) => produce(p.second, tc)
 
 ## Possibility of Just a value
@@ -186,11 +217,10 @@ struct Just{T} <: Possibility{T}
     value::T
 end
 
+just(t) = Just(t)
 produce(j::Just, _::TestCase) = copy(j.value)
 
 ## Possibility of Nothing
-
-struct Nothing{T} <: Possibility{T} end
 
 produce(::Nothing, tc::TestCase) = reject(tc)
 

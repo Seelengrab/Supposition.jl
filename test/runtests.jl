@@ -225,4 +225,93 @@ end
         MiniThesis.run(ts)
         @test isnothing(ts.result)
     end
+
+    @testset "selected possibility" begin
+        function sel_pos(tc::TestCase)
+            n = Data.produce(Data.satisfying(iseven, Data.Integers(0,5)), tc)
+            return isodd(n)
+        end
+
+        ts = TestState(Random.default_rng(), sel_pos, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "bound possibility" begin
+        function bound_pos(tc::TestCase)
+            t = Data.produce(Data.bind(Data.Integers(0, 5)) do m
+                Data.pairs(Data.just(m), Data.Integers(m, m+10))
+            end, tc)
+            last(t) < first(t) || (first(t)+10) < last(t)
+        end
+
+        ts = TestState(Random.default_rng(), bound_pos, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "cannot witness nothing" begin
+        function witness_nothing(tc::TestCase)
+            Data.produce(nothing, tc)
+            return true
+        end
+
+        ts = TestState(Random.default_rng(), witness_nothing, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "can draw mixture" begin
+        function draw_mix(tc::TestCase)
+            m = Data.produce(Data.MixOf(Data.Integers(-5, 0), Data.Integers(2,5)), tc)
+            return (-5 > m) || (m > 5) || (m == 1)
+        end
+
+        ts = TestState(Random.default_rng(), draw_mix, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "impossible weighted" begin
+        function impos(tc::TestCase)
+            for _ in 1:10
+                if weighted!(tc, 0.0)
+                    @assert false
+                end
+            end
+
+            return false
+        end
+
+        ts = TestState(Random.default_rng(), impos, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "guaranteed weighted" begin
+        function guaran(tc::TestCase)
+            for _ in 1:10
+                if !weighted!(tc, 1.0)
+                    @assert false
+                end
+            end
+
+            return false
+        end
+
+        ts = TestState(Random.default_rng(), guaran, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "size bounds on vectors" begin
+        function bounds(tc::TestCase)
+            ls = Data.produce(Data.Vectors(Data.Integers(0,10), UInt(1), UInt(3)), tc)
+            length(ls) < 1 || 3 < length(ls)
+        end
+
+        ts = TestState(Random.default_rng(), bounds, 10_000)
+        MiniThesis.run(ts)
+        @test isnothing(ts.result)
+    end
 end
