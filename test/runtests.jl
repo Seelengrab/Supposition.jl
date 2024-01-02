@@ -1,18 +1,18 @@
-using MiniThesis
-using MiniThesis: Data, test_function, shrink_remove, shrink_redistribute
+using Supposition
+using Supposition: Data, test_function, shrink_remove, shrink_redistribute
 using Test
 using Aqua
 using Random
 using Logging
 
 function sum_greater_1000(tc::TestCase)
-    ls = Data.produce(Data.Vectors(Data.Integers(0, 10_000), UInt(0), UInt(1_000)), tc)
+    ls = Data.produce(Data.Vectors(Data.Integers(0, 10_000); min_size=UInt(0), max_size=UInt(1_000)), tc)
     sum(ls) > 1_000
 end
 
-@testset "MiniThesis.jl" begin
+@testset "Supposition.jl" begin
     @testset "Code quality (Aqua.jl)" begin
-        Aqua.test_all(MiniThesis; ambiguities = false,)
+        Aqua.test_all(Supposition; ambiguities = false,)
     end
     # Write your tests here.
     @testset "test function interesting" begin
@@ -44,7 +44,7 @@ end
     end
 
     @testset "test function invalid" begin
-        ts = TestState(Random.default_rng(), _ -> throw(MiniThesis.Invalid()), 10_000)
+        ts = TestState(Random.default_rng(), _ -> throw(Supposition.Invalid()), 10_000)
 
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test !first(test_function(ts, tc))
@@ -89,7 +89,7 @@ end
 
     @testset "finds small list" begin
         ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test ts.result == Some([1,1001,0])
     end
 
@@ -113,7 +113,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), bl_sum_greater_1000, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test ts.result == Some(UInt[1,1001])
     end
 
@@ -125,7 +125,7 @@ end
             return (n+m) > 1_000
         end
         ts = TestState(Random.default_rng(), int_sum_greater_1000, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test ts.result == Some([1,1000])
     end
 
@@ -136,7 +136,7 @@ end
             iszero(n)
         end
         ts = TestState(Random.default_rng(), test, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -151,7 +151,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), test_maxima, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test !isnothing(ts.result)
     end
 
@@ -165,7 +165,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), target_upwards, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test !isnothing(ts.result)
     end
 
@@ -179,7 +179,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), target_upwards_nofail, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
         @test !isnothing(ts.best_scoring)
         @test first(something(ts.best_scoring)) == 2000.0
@@ -195,7 +195,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), no_benefit, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test !isnothing(ts.result)
     end
 
@@ -209,7 +209,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), target_downwards, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test !isnothing(ts.result)
         @test !isnothing(ts.best_scoring)
         @test first(something(ts.best_scoring)) == 0.0
@@ -222,7 +222,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), map_pos, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -233,7 +233,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), sel_pos, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -246,7 +246,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), bound_pos, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -257,7 +257,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), witness_nothing, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -268,7 +268,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), draw_mix, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -284,7 +284,7 @@ end
         end
 
         ts = TestState(Random.default_rng(), impos, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
@@ -300,18 +300,18 @@ end
         end
 
         ts = TestState(Random.default_rng(), guaran, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
     @testset "size bounds on vectors" begin
         function bounds(tc::TestCase)
-            ls = Data.produce(Data.Vectors(Data.Integers(0,10), UInt(1), UInt(3)), tc)
+            ls = Data.produce(Data.Vectors(Data.Integers(0,10); min_size=UInt(1), max_size=UInt(3)), tc)
             length(ls) < 1 || 3 < length(ls)
         end
 
         ts = TestState(Random.default_rng(), bounds, 10_000)
-        MiniThesis.run(ts)
+        Supposition.run(ts)
         @test isnothing(ts.result)
     end
 end
