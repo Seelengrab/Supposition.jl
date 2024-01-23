@@ -9,6 +9,7 @@ using Logging
 abstract type Error <: Exception end
 struct Overrun <: Error end
 struct Invalid <: Error end
+const Option{T} = Union{Some{T}, Nothing}
 
 include("util.jl")
 include("testcase.jl")
