@@ -52,6 +52,8 @@ function test_function(ts::TestState, tc::TestCase)
     catch e
         e isa Error && return (false, false)
         # TODO: instead of rethrowing, try to handle this explicitly by marking it as an error-shrink?
+        # could be more interesting, by shrinking e.g. the length of a stacktrace while keeping the error
+        # origin the same, to get the same failure earlier.
         rethrow()
     end
 

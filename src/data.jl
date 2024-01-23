@@ -24,6 +24,9 @@ postype(::P) where P <: Possibility = postype(P)
 A `Possibility` representing mapping values from `source` through `f`.
 
 Equivalent to calling `map(f, source)`.
+
+The pre-calculated return type of `Map` is a *best effort* and may be wider than
+necessary.
 """
 struct Map{R, S <: Possibility, F} <: Possibility{R}
     source::S
@@ -258,7 +261,7 @@ produce(s::Text, tc::TestCase) = join(produce(s.vectors, tc))
 ## Possibility of values from a collection
 
 """
-    SampledFrom(collection)
+    SampledFrom(collection) <: Possibility{eltype(collection)}
 
 A `Possibility` for sampling uniformly from `collection`.
 
@@ -279,8 +282,36 @@ end
 
 ## Possibility of booleans
 
+"""
+    Booleans() <: Possibility{Bool}
+
+A `Possibility` for sampling boolean values.
+"""
 struct Booleans <: Possibility{Bool} end
 
 produce(::Booleans, tc::TestCase) = weighted!(tc, 0.5)
+
+## Possibility of floating point values
+
+"""
+    Floats{T <: Union{Float16,Float32,Float64}} <: Possibility{T}
+
+A `Possibility` for sampling floating point values.
+
+!!! warn "Inf, Nan"
+    This possibility will generate *any* valid instance, including positive
+    and negative infinities, signaling and quiet NaNs and every possible float.
+"""
+struct Floats{T <: Base.IEEEFloat} <: Possibility{T} end
+
+uint(::Type{Float16}) = UInt16
+uint(::Type{Float32}) = UInt32
+uint(::Type{Float64}) = UInt64
+
+function produce(f::Floats{T}, tc::TestCase) where {T}
+    iT = uint(T)
+    i = Integers(typemin(iT), typemax(iT))
+    reinterpret(T, produce(i, tc))
+end
 
 end # data module

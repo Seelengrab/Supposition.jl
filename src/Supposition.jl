@@ -11,10 +11,11 @@ struct Overrun <: Error end
 struct Invalid <: Error end
 const Option{T} = Union{Some{T}, Nothing}
 
-include("util.jl")
 include("testcase.jl")
+include("util.jl")
 include("data.jl")
 include("teststate.jl")
 include("shrink.jl")
+include("api.jl")
 
 end # Supposition module

@@ -24,10 +24,10 @@ TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, max_size) = TestCase(p
 
 Create a `TestCase` for a given set of known choices.
 """
-function for_choices(prefix::Vector{UInt64})
+function for_choices(prefix::Vector{UInt64}, rng=Random.default_rng())
     return TestCase(
         prefix,
-        Random.default_rng(),
+        rng,
         length(prefix),
         UInt64[],
         nothing)
@@ -76,7 +76,7 @@ end
 Force a number of choices to occur, taking from the existing prefix first.
 If the prefix is exhausted, draw from `[zero(n), n]` instead.
 """
-function choice!(tc::TestCase, n)
+function choice!(tc::TestCase, n::UInt)
     if length(tc.choices) < length(tc.prefix)
         preordained = tc.prefix[length(tc.choices)+1]
         if preordained > n
@@ -88,6 +88,15 @@ function choice!(tc::TestCase, n)
         result = rand(tc.rng, zero(n):n)
         forced_choice!(tc, UInt(result))
     end
+end
+function choice!(tc::TestCase, n::T) where T <: Integer
+    s = sign(n)
+    choice!(tc, n % UInt) % T
+end
+
+function choice!(tc::TestCase, values::AbstractVector)
+    forced_i = choice!(tc, length(values))
+    values[forced_i]
 end
 
 """
