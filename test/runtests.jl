@@ -348,6 +348,12 @@ end
             end
         end
 
+        @testset "interdependent generation" begin
+            Supposition.@check function depend(a=Data.Integers(0x0, 0xff), b=Data.Integers(a, 0xff))
+                a <= b
+            end
+        end
+
         @testset "Custom RNG" begin
             Supposition.@check function foo(i=Data.Integers(0x0, 0xff))
                 i isa Integer

@@ -2,21 +2,20 @@ using Base: isexpr
 using Test: @testset, @test
 
 function kw_to_produce(tc::Symbol, kwargs)
-    res = Expr(:tuple)
+    res = Expr(:block)
+    rettup = Expr(:tuple)
 
     for e in kwargs
         name, call = e.args
+        escname = esc(name)
         c = esc(call)
-        ass = :($name = $Data.produce($c, $tc))
+        ass = :($escname = $Data.produce($c, $tc))
         push!(res.args, ass)
+        push!(rettup.args, :($name = $escname))
     end
+    push!(res.args, rettup)
 
     return res
-end
-
-function esc_body(names, body::Expr)
-    # TODO: make sure the `names` in `body` are not escaped, but everything else is
-    body
 end
 
 """
@@ -41,7 +40,7 @@ julia> using Supposition, Supposition.Data, Random
 
 julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=10))
           length(a) > 8
-       end Xoshiro(1234)
+       end Xoshiro(1234) # use a custom Xoshiro instance
 ```
 """
 macro check(e::Expr, rng=nothing)
@@ -50,43 +49,42 @@ macro check(e::Expr, rng=nothing)
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
     name = first(head.args)
     namestr = string(name)
+    escname = esc(name)
     isone(length(head.args)) && throw(ArgumentError("Given function does not accept any arguments for fuzzing!"))
     kwargs = @view head.args[2:end]
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
-    tc = gensym()
-    ts = gensym()
-    gen_input = esc(Symbol(:geninput_, name))
-    run_input = esc(Symbol(:run_, name))
-    args = kw_to_produce(tc, kwargs)
-    argnames = Expr(:tuple)
-    argnames.args = [ e.args[1] for e in args.args ]
+
+    # choose the RNG
     testrng = esc(isnothing(rng) ? :($Random.default_rng()) : rng)
 
-    b = esc_body(argnames, body)
+    tc = gensym()
+    ts = gensym()
+    gen_input = esc(Symbol(name, :__geninput))
+    run_input = esc(Symbol(name, :__run))
+    args = kw_to_produce(tc, kwargs)
+    argnames = Expr(:tuple)
+    argnames.args = [ e.args[1] for e in last(args.args).args ]
 
     # Build the actual testing function
     testfunc = Expr(:function)
     funchead = copy(argnames)
     funchead.head = :call
-    pushfirst!(funchead.args, name)
+    pushfirst!(funchead.args, escname)
     push!(testfunc.args, funchead)
-    push!(testfunc.args, quote
-        res = $b
-        return !res
-    end)
+    push!(testfunc.args, body)
 
     quote
+        function $gen_input($tc::$TestCase)
+            $args
+        end
+
+        function $run_input($tc::$TestCase)
+            return !$escname($gen_input($tc)...)
+        end
+
+        $testfunc
+
         @testset $namestr begin
-            function $gen_input($tc::$TestCase)
-                $args
-            end
-
-            function $run_input($tc::$TestCase)
-                $name($gen_input($tc)...)
-            end
-
-            $testfunc
-
             rng_orig = copy($testrng)
             $ts = $TestState(copy(rng_orig), $run_input, 10_000)
             $Supposition.run($ts)
@@ -94,11 +92,6 @@ macro check(e::Expr, rng=nothing)
             got_score = !isnothing($ts.best_scoring)
             if got_res
                 res = @something $ts.result $ts.best_scoring
-                obj = if got_score
-                    last(res)
-                else
-                    res
-                end
                 obj = $gen_input($Supposition.for_choices(res, copy(rng_orig)))
                 @test obj
             else
