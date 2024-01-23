@@ -4,6 +4,7 @@ using Test
 using Aqua
 using Random
 using Logging
+using Statistics: mean
 
 function sum_greater_1000(tc::TestCase)
     ls = Data.produce(Data.Vectors(Data.Integers(0, 10_000); min_size=UInt(0), max_size=UInt(1_000)), tc)
@@ -19,16 +20,16 @@ end
         ts = TestState(Random.default_rng(), Returns(true), 10_000)
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test first(test_function(ts, tc))
-        @test ts.result == Some([])
+        @test @something(ts.result) == []
 
         ts.result = Some([1,2,3,4])
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test first(test_function(ts, tc))
-        @test ts.result == Some([])
+        @test @something(ts.result) == []
 
         tc = TestCase(UInt[1,2,3,4], Random.default_rng(), 10_000)
         @test !first(test_function(ts, tc))
-        @test ts.result == Some([])
+        @test @something(ts.result) == []
     end
 
     @testset "test function valid" begin
@@ -40,7 +41,7 @@ end
 
         ts.result = Some([1,2,3,4])
         test_function(ts, TestCase(UInt[], Random.default_rng(), 10_000))
-        @test ts.result == Some(UInt[1,2,3,4])
+        @test @something(ts.result) == UInt[1,2,3,4]
     end
 
     @testset "test function invalid" begin
@@ -55,11 +56,11 @@ end
         ts = TestState(Random.default_rng(), Returns(true), 10_000)
         ts.result = Some(UInt[1,2,3])
 
-        @test shrink_remove(ts, UInt[1,2], UInt(1)) == Some([1])
-        @test shrink_remove(ts, UInt[1,2], UInt(2)) == Some(UInt[])
+        @test @something(shrink_remove(ts, UInt[1,2], UInt(1))) == [1]
+        @test @something(shrink_remove(ts, UInt[1,2], UInt(2))) == UInt[]
 
         ts.result = Some(UInt[1,2,3,4,5])
-        @test shrink_remove(ts, UInt[1,2,3,4], UInt(2)) == Some([1,2])
+        @test @something(shrink_remove(ts, UInt[1,2,3,4], UInt(2))) == [1,2]
 
         function second_is_five(tc::TestCase)
             ls = [ choice!(tc, 10) for _ in 1:3 ]
@@ -67,11 +68,11 @@ end
         end
         ts = TestState(Random.default_rng(), second_is_five, 10_000)
         ts.result = Some(UInt[1,2,5,4,5])
-        @test shrink_remove(ts, UInt[1,2,5,4,5], UInt(2)) == Some(UInt[1,2,5])
+        @test @something(shrink_remove(ts, UInt[1,2,5,4,5], UInt(2))) == UInt[1,2,5]
 
         ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
         ts.result = Some(UInt[1,10_000,1,10_000])
-        @test shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2)) == Some(UInt[1,1001,0])
+        @test @something(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2))) == UInt[1,1001,0]
 
         ts.result = Some(UInt[1,10_000,1,10_000])
         @test isnothing(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(1)))
@@ -81,23 +82,23 @@ end
         ts = TestState(Random.default_rng(), Returns(true), 10_000)
 
         ts.result = Some(UInt[500,500,500,500])
-        @test shrink_redistribute(ts, UInt[500,500], UInt(1)) == Some(UInt[0, 1000])
+        @test @something(shrink_redistribute(ts, UInt[500,500], UInt(1))) == UInt[0, 1000]
 
         ts.result = Some(UInt[500,500,500,500])
-        @test shrink_redistribute(ts, UInt[500,500,500], UInt(2)) == Some(UInt[0, 500, 1000])
+        @test @something(shrink_redistribute(ts, UInt[500,500,500], UInt(2))) == UInt[0, 500, 1000]
     end
 
     @testset "finds small list" begin
         ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
         Supposition.run(ts)
-        @test ts.result == Some([1,1001,0])
+        @test @something(ts.result) == [1,1001,0]
     end
 
     @testset "finds small list debug" begin
         ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
         ts.result = Some(UInt[1,0,1,1001,0])
-        @test shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2)) == Some([1,1001,0])
-        @test ts.result == Some(UInt[1,1001,0])
+        @test @something(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2))) == [1,1001,0]
+        @test @something(ts.result) == UInt[1,1001,0]
     end
 
     @testset "finds small list even with bad lists" begin
@@ -114,7 +115,7 @@ end
 
         ts = TestState(Random.default_rng(), bl_sum_greater_1000, 10_000)
         Supposition.run(ts)
-        @test ts.result == Some(UInt[1,1001])
+        @test @something(ts.result) == UInt[1,1001]
     end
 
     @testset "reduces additive pairs" begin
@@ -126,7 +127,7 @@ end
         end
         ts = TestState(Random.default_rng(), int_sum_greater_1000, 10_000)
         Supposition.run(ts)
-        @test ts.result == Some([1,1000])
+        @test @something(ts.result) == [1,1000]
     end
 
     @testset "test cases satisfy preconditions" begin
@@ -304,6 +305,18 @@ end
         @test isnothing(ts.result)
     end
 
+    @testset "boolean unbiased" begin
+        function unbias(tc::TestCase)
+            vs = Data.produce(Data.Vectors(Data.Booleans(); min_size=10_000, max_size=100_000), tc)
+            m = mean(vs)
+            !(m ≈ 0.5)
+        end
+
+        ts = TestState(Random.default_rng(), unbias, 10_000)
+        Supposition.run(ts)
+        @test isnothing(ts.result)
+    end
+
     @testset "size bounds on vectors" begin
         function bounds(tc::TestCase)
             ls = Data.produce(Data.Vectors(Data.Integers(0,10); min_size=UInt(1), max_size=UInt(3)), tc)
@@ -311,6 +324,16 @@ end
         end
 
         ts = TestState(Random.default_rng(), bounds, 10_000)
+        Supposition.run(ts)
+        @test isnothing(ts.result)
+    end
+
+    @testset "floats: $floatT" for floatT in (Float16, Float32, Float64)
+        function isfloat(tc::TestCase)
+            !(Data.produce(Data.Floats{floatT}(), tc) isa floatT)
+        end
+
+        ts = TestState(Random.default_rng(), isfloat, 10_000)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
