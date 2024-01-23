@@ -337,4 +337,21 @@ end
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
+
+    @testset "@check API" begin
+        @testset "regular use" begin
+            Supposition.@check function singlearg(i=Data.Integers(0x0, 0xff))
+                i isa Integer
+            end
+            Supposition.@check function twoarg(i=Data.Integers(0x0, 0xff), f=Data.Floats{Float16}())
+                i isa Integer && f isa AbstractFloat
+            end
+        end
+
+        @testset "Custom RNG" begin
+            Supposition.@check function foo(i=Data.Integers(0x0, 0xff))
+                i isa Integer
+            end Xoshiro(1)
+        end
+    end
 end
