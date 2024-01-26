@@ -234,8 +234,8 @@ Try to generate an example that falsifies the property given to `ts`.
 """
 function generate!(ts::TestState)
     while should_keep_generating(ts) & (isnothing(ts.best_scoring) || (ts.valid_test_cases <= ts.max_examples÷2))
-
-        test_function(ts, TestCase(UInt64[], ts.rng, BUFFER_SIZE[]))
+        tc = TestCase(UInt64[], ts.rng, BUFFER_SIZE[])
+        test_function(ts, tc)
     end
 end
 

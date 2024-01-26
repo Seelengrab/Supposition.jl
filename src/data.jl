@@ -308,7 +308,7 @@ uint(::Type{Float16}) = UInt16
 uint(::Type{Float32}) = UInt32
 uint(::Type{Float64}) = UInt64
 
-function produce(f::Floats{T}, tc::TestCase) where {T}
+function produce(::Floats{T}, tc::TestCase) where {T}
     iT = uint(T)
     i = Integers(typemin(iT), typemax(iT))
     reinterpret(T, produce(i, tc))

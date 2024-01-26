@@ -95,7 +95,8 @@ function choice!(tc::TestCase, n::T) where T <: Integer
 end
 
 function choice!(tc::TestCase, values::AbstractVector)
-    forced_i = choice!(tc, length(values))
+    n = length(values)
+    forced_i = choice!(tc, n - 1) + 1
     values[forced_i]
 end
 
