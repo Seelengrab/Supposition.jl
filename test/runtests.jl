@@ -360,4 +360,19 @@ end
             end Xoshiro(1)
         end
     end
+
+    @testset "@composed API" begin
+        gen = Supposition.@composed function uint8tup(
+                a=Data.Integers(0x0, 0xff),
+                b=Data.Integers(0x0, 0xff))
+            (a,b)
+        end
+
+        @test isstructtype(uint8tup)
+        @test eltype(gen) === Any
+
+        Supposition.@check function composetest(g=gen)
+            g isa Tuple{UInt8, UInt8}
+        end
+    end
 end
