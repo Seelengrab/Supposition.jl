@@ -369,7 +369,7 @@ end
         end
 
         @test isstructtype(uint8tup)
-        @test eltype(gen) === Any
+        @test postype(gen) === Any
 
         Supposition.@check function composetest(g=gen)
             g isa Tuple{UInt8, UInt8}

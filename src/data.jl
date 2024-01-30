@@ -69,14 +69,16 @@ function produce(s::Satisfying, tc::TestCase)
 end
 
 """
-    Bind(source::Possibility, map)
+    Bind(source::Possibility, f)
 
 Binds `map` to `source`, i.e., on `produce(::Bind)` this calls `produce` on
-`source`, the result of which is passed to `map` which will be used as input
+`source`, the result of which is passed to `f`, the output of which will be used as input
 to `produce` again.
 
-In other words, `map` takes a value `produce`d by `source` and gives back a
+In other words, `f` takes a value `produce`d by `source` and gives back a
 `Possibility` that is then immediately `produce`d from.
+
+Equivalent to `bind(f, source)`.
 """
 struct Bind{T, S <: Possibility{T}, M} <: Possibility{T}
     source::S
