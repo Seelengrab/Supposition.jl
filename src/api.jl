@@ -7,11 +7,9 @@ function kw_to_produce(tc::Symbol, kwargs)
 
     for e in kwargs
         name, call = e.args
-        escname = esc(name)
-        c = esc(call)
-        ass = :($escname = $Data.produce($c, $tc))
+        ass = :($name = $Data.produce($call, $tc))
         push!(res.args, ass)
-        push!(rettup.args, :($name = $escname))
+        push!(rettup.args, :($name = $name))
     end
     push!(res.args, rettup)
 
@@ -54,18 +52,17 @@ macro check(e::Expr, rng=nothing)
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
     name = first(head.args)
     namestr = string(name)
-    escname = esc(name)
     isone(length(head.args)) && throw(ArgumentError("Given function does not accept any arguments for fuzzing!"))
     kwargs = @view head.args[2:end]
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
 
     # choose the RNG
-    testrng = esc(isnothing(rng) ? :($Random.Xoshiro(rand($Random.RandomDevice(), UInt))) : rng)
+    testrng = isnothing(rng) ? :($Random.Xoshiro(rand($Random.RandomDevice(), UInt))) : rng
 
     tc = gensym()
     ts = gensym()
-    gen_input = esc(Symbol(name, :__geninput))
-    run_input = esc(Symbol(name, :__run))
+    gen_input = Symbol(name, :__geninput)
+    run_input = Symbol(name, :__run)
     args = kw_to_produce(tc, kwargs)
     argnames = Expr(:tuple)
     argnames.args = [ e.args[1] for e in last(args.args).args ]
@@ -74,17 +71,17 @@ macro check(e::Expr, rng=nothing)
     testfunc = Expr(:function)
     funchead = copy(argnames)
     funchead.head = :call
-    pushfirst!(funchead.args, escname)
+    pushfirst!(funchead.args, name)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
 
-    quote
+    esc(quote
         function $gen_input($tc::$TestCase)
             $args
         end
 
         function $run_input($tc::$TestCase)
-            return !$escname($gen_input($tc)...)
+            return !$name($gen_input($tc)...)
         end
 
         $testfunc
@@ -98,7 +95,6 @@ macro check(e::Expr, rng=nothing)
                 (e isa $MethodError && e.f == $copy && only(e.args) == initial_rng) || rethrow()
                 rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Xoshiro` and pass that instead."))
             end
-            @show rng_orig
             $ts = $TestState(copy(rng_orig), $run_input, 10_000)
             $Supposition.run($ts)
             got_res = !isnothing($ts.result)
@@ -111,7 +107,7 @@ macro check(e::Expr, rng=nothing)
                 @test true
             end
         end
-    end
+    end)
 end
 
 function kw_to_let(tc, kwargs)
@@ -120,11 +116,9 @@ function kw_to_let(tc, kwargs)
 
     for e in kwargs
         name, call = e.args
-        c = esc(call)
-        escname = esc(name)
-        ass = :($escname = $Data.produce($c, $tc))
+        ass = :($name = $Data.produce($call, $tc))
         push!(head.args, ass)
-        push!(body.args, escname)
+        push!(body.args, name)
     end
     push!(head.args, body)
 
@@ -136,36 +130,33 @@ macro composed(e::Expr)
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
     name = first(head.args)
-    escname = esc(name)
     isone(length(head.args)) && throw(ArgumentError("Given function does not accept any arguments for fuzzing!"))
     kwargs = @view head.args[2:end]
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
 
     tc = gensym()
     strategy_let = kw_to_let(tc, kwargs)
-    argnames = Expr(:tuple)
-    argnames.args = [ e.args[1] for e in last(strategy_let.args).args ]
 
     structproduce = Symbol(name, "__produce")
 
     structfunc = Expr(:function)
-    funchead = copy(argnames)
+    funchead = copy(last(strategy_let.args))
     funchead.head = :call
     pushfirst!(funchead.args, structproduce)
     push!(structfunc.args, funchead)
     push!(structfunc.args, body)
 
-    return quote
-        struct $escname{T}
-            $escname() = new{$Any}()
+    return esc(quote
+        struct $name{T} <: $Data.Possibility{T}
+            $name() = new{$Any}()
         end
 
-        function $Data.produce(::$escname, $tc::$TestCase)
+        function $Data.produce(::$name, $tc::$TestCase)
             $structproduce($strategy_let...)
         end
 
         $structfunc
 
-        $escname()
-    end
+        $name()
+    end)
 end

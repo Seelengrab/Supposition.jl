@@ -359,20 +359,40 @@ end
                 i isa Integer
             end Xoshiro(1)
         end
+
+        @testset "Calling function outside Supposition" begin
+            double(x) = 2x
+            Supposition.@check function doubleprop(i=Data.Integers(0x0, 0xff))
+                iseven(double(i))
+            end
+        end
     end
 
     @testset "@composed API" begin
-        gen = Supposition.@composed function uint8tup(
-                a=Data.Integers(0x0, 0xff),
-                b=Data.Integers(0x0, 0xff))
-            (a,b)
+        @testset "Basic usage" begin
+            gen = Supposition.@composed function uint8tup(
+                    a=Data.Integers(0x0, 0xff),
+                    b=Data.Integers(0x0, 0xff))
+                (a,b)
+            end
+
+            @test isstructtype(uint8tup)
+            @test Data.postype(gen) === Any
+
+            Supposition.@check function composetest(g=gen)
+                g isa Tuple{UInt8, UInt8}
+            end
         end
 
-        @test isstructtype(uint8tup)
-        @test postype(gen) === Any
+        @testset "Calling function outside Supposition" begin
+            double(x) = 2x
+            gen = Supposition.@composed function even(i=Data.Integers(0x0, 0xff)) 
+                double(i)
+            end
 
-        Supposition.@check function composetest(g=gen)
-            g isa Tuple{UInt8, UInt8}
+            Supposition.@check function composeeven(g=gen)
+                iseven(g)
+            end
         end
     end
 end

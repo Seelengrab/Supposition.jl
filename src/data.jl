@@ -172,9 +172,11 @@ produce(p::Pairs, tc::TestCase) = produce(p.first, tc) => produce(p.second, tc)
 """
     Just(value::T) <: Possibility{T}
 
-A `Possibility` that always produces `value`, which is not copied.
+A `Possibility` that always produces `value`.
 
-Be careful with mutable data!
+!!! warning "Mutable Data"
+    The source object given to this `Just` is not copied when `produce` is called.
+    Be careful with mutable data!
 """
 struct Just{T} <: Possibility{T}
     value::T
@@ -189,9 +191,10 @@ produce(::Nothing, tc::TestCase) = reject(tc)
 
 ## Possibility of mixing?
 
-struct MixOf{T} <: Possibility{T}
+struct MixOf{X, T, V} <: Possibility{X}
     first::Possibility{T}
-    second::Possibility{T}
+    second::Possibility{V}
+    MixOf(a::Possibility{T}, b::Possibility{V}) where {T, V} = new{Union{T,V}, T, V}(a,b)
 end
 
 function produce(mo::MixOf, tc::TestCase)
@@ -205,11 +208,11 @@ end
 ## Possibility of Characters
 
 """
-    Characters(;valid::Bool = false)
+    Characters(;valid::Bool = false) <: Possibility{Char}
 
 A `Possibility` of producing arbitrary `Char` instances.
 
-!!! warn "Unicode"
+!!! warning "Unicode"
     This will `produce` ANY possible `Char` by default, not just valid unicode codepoints!
     To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
 """
@@ -230,8 +233,7 @@ function produce(c::Characters, tc::TestCase)
 end
 
 """
-    AsciiCharacters()
-
+    AsciiCharacters() <: Possibility{Char}
 
 A `Possibility` of producing arbitrary `Char` instances that are `isascii`.
 More efficient than filtering [`Characters`](@ref).
@@ -246,7 +248,7 @@ end
 ## Possibility of Strings
 
 """
-    Text(alphabet::Possibility{Char}; min_len=0, max_len=10_000)
+    Text(alphabet::Possibility{Char}; min_len=0, max_len=10_000) <: Possibility{String}
 
 A `Possibility` for generating text containing characters of a given alphabet.
 """
@@ -269,7 +271,9 @@ A `Possibility` for sampling uniformly from `collection`.
 
 `collection`, as well as its `eachindex`, is assumed to be indexable.
 
-The produced object is _not_ copied, be careful with mutable data!
+!!! warning "Mutable Data"
+    The source objects from the collection given to this `SampledFrom`
+    is not copied when `produce` is called. Be careful with mutable data!
 """
 struct SampledFrom{T, C} <: Possibility{T}
     collection::C
@@ -300,7 +304,7 @@ produce(::Booleans, tc::TestCase) = weighted!(tc, 0.5)
 
 A `Possibility` for sampling floating point values.
 
-!!! warn "Inf, Nan"
+!!! warning "Inf, Nan"
     This possibility will generate *any* valid instance, including positive
     and negative infinities, signaling and quiet NaNs and every possible float.
 """
