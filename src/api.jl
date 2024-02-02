@@ -41,7 +41,7 @@ julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=
        end Xoshiro(1234) # use a custom Xoshiro instance
 ```
 
-!!! warn "Hardware RNG"
+!!! warning "Hardware RNG"
     Be aware that you _cannot_ pass a hardware RNG to `@check` directly. If you want to randomize
     based on hardware entropy, seed a copyable RNG like `Xoshiro` from your hardware RNG and pass
     that to `@check` instead. The RNG needs to be copyable for reproducibility.
@@ -125,6 +125,26 @@ function kw_to_let(tc, kwargs)
     return head
 end
 
+"""
+    @composed
+
+A way to compose multiple `Possibility` into one, by applying a function.
+
+The return type is inferred as a best-effort!
+
+Used like so:
+
+```julia-repl
+julia> using Supposition, Supposition.Data
+
+julia> gen = Supposition.@composed function foo(a = Data.Text(Data.AsciiCharacters(); max_len=10), num=Data.Integers(0, 10))
+              lpad(num, 2) * ": " * a
+       end
+
+julia> example(gen)
+" 8:  giR2YL\\rl"
+```
+"""
 macro composed(e::Expr)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
