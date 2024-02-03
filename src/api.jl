@@ -214,7 +214,9 @@ macro composed(e::Expr)
 
     return esc(quote
         struct $name{T} <: $Data.Possibility{T}
-            $name() = new{$Any}()
+            function $name()
+                new{$Base.promote_op($Data.produce, $name, $TestCase)}()
+            end
         end
 
         function $Data.produce(::$name, $tc::$TestCase)

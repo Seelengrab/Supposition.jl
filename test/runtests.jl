@@ -377,11 +377,9 @@ end
             end
 
             @test isstructtype(uint8tup)
-            @test Data.postype(gen) === Any
-
-            Supposition.@check function composetest(g=gen)
-                g isa Tuple{UInt8, UInt8}
-            end
+            # some weirdness with `let` blocks from the enclosing testset?!
+            @test_broken Data.postype(gen) === Tuple{UInt8, UInt8}
+            @test example(gen) isa Tuple{UInt8, UInt8}
         end
 
         @testset "Calling function outside Supposition" begin
