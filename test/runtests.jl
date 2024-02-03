@@ -388,6 +388,31 @@ end
                 iseven(double(i))
             end
         end
+
+        @testset "Using existing properties" begin
+            add(a,b) = a+b
+            commutative(a,b)   =  add(a,b) == add(b,a)
+            associative(f, a, b, c) = f(f(a,b), c) == f(a, f(b,c))
+            identity_add(f, a) = f(a,zero(a)) == a
+            function successor(a, b)
+                a,b = minmax(a,b)
+                sumres = a
+                for _ in one(b):b
+                    sumres = add(sumres, one(b))
+                end
+
+                sumres == add(a, b)
+            end
+
+            intgen = Data.Integers{UInt}()
+
+            @testset "Additive properties" begin
+                Supposition.@check associative(Data.Just(add), intgen, intgen, intgen)
+                Supposition.@check identity_add(Data.Just(add), intgen)
+                Supposition.@check successor(intgen, intgen)
+                Supposition.@check commutative(intgen, intgen)
+            end
+        end
     end
 
     @testset "@composed API" begin

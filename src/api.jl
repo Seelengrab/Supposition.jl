@@ -1,5 +1,5 @@
 using Base: isexpr
-using Test: @testset, @test
+using Test: Test, @testset, @test
 
 """
     example(gen::Possibility)
@@ -75,6 +75,18 @@ julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=
        end
 ```
 
+or on an already existing predicate function:
+
+```julia-repl
+julia> using Supposition, Supposition.Data
+
+julia> isuint8(x) = x isa UInt8
+
+julia> intgen = Data.Integers{UInt8}()
+
+julia> Supposition.@check isuint8(intgen)
+```
+
 The arguments to the given function are expected to be generator strategies. The names they are bound to
 are the names the generated object will have in the test. It is possible to optionally give a custom RNG object
 that will be used for random data generation. If none is given, `Xoshiro(rand(Random.RandomDevice(), UInt))` is used instead.
@@ -93,6 +105,16 @@ julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=
     that to `@check` instead. The RNG needs to be copyable for reproducibility.
 """
 macro check(e::Expr, rng=nothing)
+    if isexpr(e, :function, 2)
+        check_func(e, rng)
+    elseif isexpr(e, :call)
+        check_call(e, rng)
+    else
+        throw(ArgumentError("Given expression is not a function call or definition!"))
+    end
+end
+
+function check_func(e::Expr, rng)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
@@ -103,10 +125,9 @@ macro check(e::Expr, rng=nothing)
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
 
     # choose the RNG
-    testrng = isnothing(rng) ? :($Random.Xoshiro(rand($Random.RandomDevice(), UInt))) : rng
+    testrng = isnothing(rng) ? :($Random.Xoshiro($Random.rand($Random.RandomDevice(), UInt))) : rng
 
     tc = gensym()
-    ts = gensym()
     gen_input = Symbol(name, :__geninput)
     run_input = Symbol(name, :__run)
     args = kw_to_produce(tc, kwargs)
@@ -132,7 +153,45 @@ macro check(e::Expr, rng=nothing)
 
         $testfunc
 
-        @testset $namestr begin
+        $(final_check_block(namestr, testrng, run_input, gen_input))
+    end)
+end
+
+function check_call(e::Expr, rng)
+    isexpr(e, :call) || throw(ArgumentError("Given expression is not a function call!"))
+    name, kwargs... = e.args
+    namestr = string(name)
+
+    # choose the RNG
+    testrng = isnothing(rng) ? :($Random.Xoshiro($Random.rand($Random.RandomDevice(), UInt))) : rng
+
+    tc = gensym()
+    gen_input = Symbol(name, :__geninput)
+    run_input = Symbol(name, :__run)
+
+    args = Expr(:tuple)
+    for e in kwargs
+        push!(args.args, :($Data.produce($e, $tc)))
+    end
+
+    esc(quote
+        function $gen_input($tc::$TestCase)
+            $args
+        end
+
+        function $run_input($tc::$TestCase)
+            return !$name($gen_input($tc)...)
+        end
+
+        $(final_check_block(namestr, testrng, run_input, gen_input))
+    end)
+end
+
+function final_check_block(namestr, testrng, run_input, gen_input)
+    ts = gensym()
+
+    return quote
+        $Test.@testset $namestr begin
             initial_rng = $testrng
             rng_orig = try
                 copy(initial_rng)
@@ -148,12 +207,12 @@ macro check(e::Expr, rng=nothing)
             if got_res
                 res = @something $ts.result $ts.best_scoring
                 obj = $gen_input($Supposition.for_choices(res, copy(rng_orig)))
-                @test obj
+                $Test.@test obj
             else
-                @test true
+                $Test.@test true
             end
         end
-    end)
+	end
 end
 
 function kw_to_let(tc, kwargs)
