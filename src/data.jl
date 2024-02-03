@@ -253,7 +253,7 @@ end
 A `Possibility` for generating text containing characters of a given alphabet.
 """
 struct Text <: Possibility{String}
-    vectors::Possibility{Vector{Char}}
+    vectors::Vectors{Char}
     function Text(alphabet::A; min_len=0, max_len=10_000) where A <: Possibility{Char}
         vectors = Vectors(alphabet; min_size=min_len, max_size=max_len)
         new(vectors)
