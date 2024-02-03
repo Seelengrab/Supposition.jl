@@ -317,6 +317,28 @@ end
         @test isnothing(ts.result)
     end
 
+    int_types = (
+        Int8,
+        Int16,
+        Int32,
+        Int64,
+        Int128
+    )
+    @testset "Sampling from Integers{$T}() is unbiased" for T in int_types
+        pos = Data.Integers{T}()
+        n = 5_000_000
+        nums = example(pos, n)
+        count_zeros = count(iszero, nums)
+        count_gt_zero = count(>(zero(T)), nums)
+        count_lt_zero = count(<(zero(T)), nums)
+        n_nums = sizeof(T)*8
+        # it's unlikely to find zeros for the larger types, so give some headroom
+        @test isapprox(count_zeros/n, 1/n_nums; rtol=1)
+        # negative numbers are exactly as likely as positive numbers together with zeros
+        # this is because of two's complement!
+        @test isapprox(count_lt_zero, count_gt_zero+count_zeros; rtol=0.01)
+    end
+
     @testset "size bounds on vectors" begin
         function bounds(tc::TestCase)
             ls = Data.produce(Data.Vectors(Data.Integers(0,10); min_size=UInt(1), max_size=UInt(3)), tc)
@@ -371,8 +393,8 @@ end
     @testset "@composed API" begin
         @testset "Basic usage" begin
             gen = Supposition.@composed function uint8tup(
-                    a=Data.Integers(0x0, 0xff),
-                    b=Data.Integers(0x0, 0xff))
+                    a=Data.Integers{UInt8}(),
+                    b=Data.Integers{UInt8}())
                 (a,b)
             end
 
@@ -382,9 +404,9 @@ end
             @test example(gen) isa Tuple{UInt8, UInt8}
         end
 
-        @testset "Calling function outside Supposition" begin
+        @testset "Calling function defined outside Supposition" begin
             double(x) = 2x
-            gen = Supposition.@composed function even(i=Data.Integers(0x0, 0xff)) 
+            gen = Supposition.@composed function even(i=Data.Integers{UInt8}())
                 double(i)
             end
 

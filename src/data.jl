@@ -94,20 +94,36 @@ end
 ## Possibilities of signed integers
 
 """
-    Integers(minimum::T, maximum::T) <: Possibility{T}
+    Integers(minimum::T, maximum::T) <: Possibility{T <: Integer}
+    Integers{T}() <: Possibility{T <: Integer}
 
 A `Possibility` representing drawing integers from `[minimum, maximum]`.
+The second constructors draws from the entirety of `T`.
 
 Produced values are of type `T`.
 """
 struct Integers{T<:Integer, U<:Unsigned} <: Possibility{T}
     minimum::T
     range::U
-    Integers(minimum::T, maximum::T) where T<:Integer = new{T,unsigned(T)}(minimum, (maximum - minimum) % unsigned(T))
+    function Integers(minimum::T, maximum::T) where T<:Integer
+        minimum <= maximum || throw(ArgumentError("`minimum` must be `<= maximum`!"))
+        new{T,unsigned(T)}(minimum, (maximum - minimum) % unsigned(T))
+    end
+    Integers{T}() where T <: Integer = new{T, unsigned(T)}(typemin(T), typemax(unsigned(T)))
 end
 
 function produce(i::Integers{T}, tc::TestCase) where T
-    offset = choice!(tc, i.range)
+    offset = choice!(tc, i.range % UInt) % T
+    return (i.minimum + offset) % T
+end
+
+function produce(i::Integers{T}, tc::TestCase) where T <: Union{Int128, UInt128}
+    # FIXME: this assumes a 64-bit architecture!
+    upperbound = (i.range >> 64) % UInt
+    lowerbound = i.range % UInt
+    upper = choice!(tc, upperbound) % T
+    lower = choice!(tc, lowerbound) % T
+    offset = (upper << 64) | lower
     return (i.minimum + offset) % T
 end
 

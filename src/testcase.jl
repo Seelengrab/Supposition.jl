@@ -91,9 +91,9 @@ function choice!(tc::TestCase, n::UInt)
     end
 end
 
-function choice!(tc::TestCase, n::T) where T <: Integer
-    s = sign(n)
-    choice!(tc, n % UInt) % T
+function choice!(tc::TestCase, n::Int)
+    n >= 0 || throw(ArgumentError("Can't make a negative number of choices!"))
+    choice!(tc, n % UInt) % Int
 end
 
 function choice!(tc::TestCase, values::AbstractVector)
