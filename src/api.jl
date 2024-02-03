@@ -27,6 +27,8 @@ Generate `n` examples for the given `Possibility`.
 ```julia-repl
 julia> using Supposition, Supposition.Data
 
+julia> is = Data.Integers(0, 10);
+
 julia> example(is, 10)
 10-element Vector{Int64}:
   9
@@ -41,10 +43,26 @@ julia> example(is, 10)
   8
 ```
 """
-function example(gen::Data.Possibility, n::Integer)
-    tc = for_choices(UInt[])
-    tc.max_size = typemax(UInt)
-    [ Data.produce(gen, tc) for _ in 1:n ]
+function example(gen::Data.Possibility{T}, n::Integer) where {T}
+    res = Vector{T}(undef, n)
+
+    for idx in eachindex(res)
+        # by chance, the TestCase may be rejected by `gen`
+        # so we have to try again and again until it works out
+        while true
+            tc = for_choices(UInt[])
+            tc.max_size = typemax(UInt)
+            try
+                res[idx] = Data.produce(gen, tc)
+                break
+            catch e
+                e isa Error && continue
+                rethrow()
+            end
+        end
+    end
+
+    res
 end
 
 function kw_to_produce(tc::Symbol, kwargs)
@@ -242,7 +260,9 @@ Used like so:
 ```julia-repl
 julia> using Supposition, Supposition.Data
 
-julia> gen = Supposition.@composed function foo(a = Data.Text(Data.AsciiCharacters(); max_len=10), num=Data.Integers(0, 10))
+julia> text = Data.Text(Data.AsciiCharacters(); max_len=10)
+
+julia> gen = Supposition.@composed function foo(a = text, num=Data.Integers(0, 10))
               lpad(num, 2) * ": " * a
        end
 

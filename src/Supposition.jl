@@ -2,6 +2,7 @@ module Supposition
 
 using Base
 export TestCase, TestState, forced_choice!, choice!, weighted!, assume!, target!, reject, example
+export Data, @composed, @check
 
 import Random
 using Logging

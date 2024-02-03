@@ -10,15 +10,15 @@ A struct representing a single (ongoing) test case.
  * `choices`: The binary choices made so far.
  * `targeting_score`: The score this `TestCase` attempts to maximize.
 """
-mutable struct TestCase
+mutable struct TestCase{RNG <: Random.AbstractRNG}
     prefix::Vector{UInt64}
-    rng::Random.AbstractRNG
+    rng::RNG
     max_size::UInt
     choices::Vector{UInt64} # should this be a BitVector instead? could make shrinking slower, but save on memory
     targeting_score::Option{Float64}
 end
 
-TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, max_size) = TestCase(prefix, rng, max_size, UInt64[], nothing)
+TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, max_size) = TestCase(prefix, rng, convert(UInt, max_size), UInt64[], nothing)
 
 """
     for_choices(prefix, rng=Random.default_rng())
@@ -29,7 +29,7 @@ function for_choices(prefix::Vector{UInt64}, rng=Random.default_rng())
     return TestCase(
         prefix,
         rng,
-        length(prefix),
+        convert(UInt, length(prefix)),
         UInt64[],
         nothing)
 end

@@ -183,8 +183,8 @@ julia> example(vs, 3)
  [-0.007023, NaN, 3.805, 0.1943]
 ```
 """
-struct Vectors{T} <: Possibility{Vector{T}}
-    elements::Possibility{T}
+struct Vectors{T, P <: Possibility{T}} <: Possibility{Vector{T}}
+    elements::P
     min_size::UInt
     max_size::UInt
 
@@ -194,7 +194,7 @@ struct Vectors{T} <: Possibility{Vector{T}}
         low = UInt(min_size)
         high = UInt(max_size)
 
-        new{T}(elements, low, high)
+        new{T,typeof(elements)}(elements, low, high)
     end
 end
 
