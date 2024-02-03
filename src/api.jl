@@ -19,6 +19,34 @@ function example(gen::Data.Possibility)
     Data.produce(gen, tc)
 end
 
+"""
+    example(gen::Possibility, n::Integer)
+
+Generate `n` examples for the given `Possibility`.
+
+```julia-repl
+julia> using Supposition, Supposition.Data
+
+julia> example(is, 10)
+10-element Vector{Int64}:
+  9
+  1
+  4
+  4
+  7
+  4
+  6
+ 10
+  1
+  8
+```
+"""
+function example(gen::Data.Possibility, n::Integer)
+    tc = for_choices(UInt[])
+    tc.max_size = typemax(UInt)
+    [ Data.produce(gen, tc) for _ in 1:n ]
+end
+
 function kw_to_produce(tc::Symbol, kwargs)
     res = Expr(:block)
     rettup = Expr(:tuple)
