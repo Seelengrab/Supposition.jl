@@ -1,6 +1,24 @@
 using Base: isexpr
 using Test: @testset, @test
 
+"""
+    example(gen::Possibility)
+
+Generate an example for the given `Possibility`.
+
+```julia-repl
+julia> using Supposition, Supposition.Data
+
+julia> example(Data.Integers(0, 10))
+7
+```
+"""
+function example(gen::Data.Possibility)
+    tc = for_choices(UInt[])
+    tc.max_size = typemax(UInt)
+    Data.produce(gen, tc)
+end
+
 function kw_to_produce(tc::Symbol, kwargs)
     res = Expr(:block)
     rettup = Expr(:tuple)

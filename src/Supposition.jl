@@ -1,7 +1,7 @@
 module Supposition
 
 using Base
-export TestCase, TestState, forced_choice!, choice!, weighted!, assume!, target!, reject
+export TestCase, TestState, forced_choice!, choice!, weighted!, assume!, target!, reject, example
 
 import Random
 using Logging
