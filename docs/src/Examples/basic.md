@@ -6,14 +6,10 @@ will be familiar to you already.
 
 Consider this `add` function, which simply forwards to `+`:
 
-```jldoctest example_add; output=false
+```@example example_add; output=false
 function add(a,b)
     a + b
 end
-
-# output
-
-add (generic function with 1 method)
 ```
 
 How can we test that this function truly is the same as `+`? First, we have to decide what input we
@@ -22,32 +18,20 @@ an entire set of objects of a shared type. In other frameworks like Hypothesis, 
 In our case, we are mostly interested in integers, so the generator [`Data.Integers{UInt}`](@ref)
 is what we're going to use:
 
-```jldoctest example_add; output = false
+```@example example_add; output = false
 using Supposition, Supposition.Data
 
 intgen = Data.Integers{UInt}()
-
-# output
-
-Supposition.Data.Integers{UInt64, UInt64}(0x0000000000000000, 0xffffffffffffffff)
 ```
 
 Now that we have our input generator, we have to decide on the properties we want to enforce. Here, we simply
 want to check the mathematical properties of addition, so let's start with commutativity:
 
-```jldoctest example_add; output = false, filter = r"\d+.\d+s"
-try # hide
+```@example example_add; output = false
 Supposition.@check function commutative(a=intgen, b=intgen)
     add(a,b) == add(b,a)
 end
 nothing # hide
-catch # hide
-end # hide
-
-# output
-
-Test Summary: | Pass  Total  Time
-commutative   |    1      1  0.0s
 ```
 
 `@check` takes a function definition where each argument is given a `Possibility`, runs those generators, feeds
@@ -56,7 +40,7 @@ arguments is the same as used in the function.
 
 Here's an example for a failing property:
 
-```jldoctest example_add; output = false, filter = r"\d+\.\d+s"
+```@example example_add; output = false
 try # hide
 Supposition.@check function failprop(x=intgen)
     add(x, one(x)) < x
@@ -64,15 +48,6 @@ end
 catch # hide
 end # hide
 nothing # hide
-
-# output
-
-failprop: Error During Test at /home/sukera/Documents/projects/Supposition.jl/src/api.jl:228
-  Expression evaluated to non-Boolean
-  Expression: obj
-       Value: (x = 0x0000000000000001,)
-Test Summary: | Error  Total  Time
-failprop      |     1      1  0.0s
 ```
 
 Supposition.jl successfully found a counterexample and reduced it to a more minimal counterexample, in this
@@ -87,8 +62,7 @@ case just `UInt(1)`.
 We've still got three more properties to test, taking two or three arguments each. Since these properties
 are fairly universal, we can also write them out like so:
 
-```jldoctest example_add; output = false
-commutative(a,b)   =  add(a,b) == add(b,a) # hide
+```@example example_add; output = false
 associative(f, a, b, c) = f(f(a,b), c) == f(a, f(b,c))
 identity_add(f, a) = f(a,zero(a)) == a
 function successor(a, b)
@@ -100,18 +74,13 @@ function successor(a, b)
 
     sumres == add(a, b)
 end
-
-# output
-
-successor (generic function with 1 method)
 ```
 
 And check that they hold like so. Of course, we can also test the property implicitly defined by `@check` earlier: 
 
-```jldoctest example_add; output = false, filter = r"\d+\.\d+s"
+```@example example_add; output = false, filter = r"\d+\.\d+s"
 using Test
 
-try # hide
 @testset "Additive properties" begin
     Supposition.@check associative(Data.Just(add), intgen, intgen, intgen)
     Supposition.@check identity_add(Data.Just(add), intgen)
@@ -119,17 +88,10 @@ try # hide
     Supposition.@check commutative(intgen, intgen)
 end
 nothing # hide
-catch # hide
-end # hide
-
-
-# output
-
-Test Summary:       | Pass  Total  Time
-Additive properties |    4      4  0.0s
 ```
 
-We can use [`Data.Just`](@ref) to pass our `add` function to the generalized properties.
+In this way, we can even reuse properties from other invocations of `@check` with new, prehaps more specialized, inputs.
+For generalization, we can use [`Data.Just`](@ref) to pass our `add` function to the generalized properties.
 
 Be aware that while all checks pass, we _do not have a guarantee that our code is correct for all cases_.
 Sampling elements to test is a statistical process and as such we can only gain _confidence_ that our code
