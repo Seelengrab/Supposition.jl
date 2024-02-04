@@ -7,6 +7,8 @@ It features choice-sequence based generation & shrinking of examples, which can 
 initial failures to smaller example while preserving the invariants the original input was generated
 under. It's also easy to combine generators into new generators.
 
+Check out the Examples in the sidebar to get an introduction to property based testing and to learn how to write your own tests!
+
 Here's also a sitemap for the rest of the documentation:
 
 ```@contents

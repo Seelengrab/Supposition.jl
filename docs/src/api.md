@@ -17,14 +17,14 @@
 ### Functions
 
 ```@autodocs
-Modules = [Supposition.Data]
+Modules = [Data]
 Order = [:function]
 ```
 
 ### Generators
 
 ```@autodocs
-Modules = [Supposition.Data]
+Modules = [Data]
 Order = [:type]
 ```
 
@@ -32,5 +32,5 @@ Order = [:type]
 
 ```@autodocs
 Modules = [Supposition]
-Order = [:function, :type]
+Order = [:macro, :function, :type]
 ```
