@@ -1,5 +1,6 @@
 using Base: isexpr
 using Test: Test, @testset, @test
+using Logging: @debug
 
 """
     example(gen::Possibility)
@@ -14,9 +15,22 @@ julia> example(Data.Integers(0, 10))
 ```
 """
 function example(gen::Data.Possibility)
-    tc = for_choices(UInt[])
-    tc.max_size = typemax(UInt)
-    Data.produce(gen, tc)
+    tries = 100_000
+    # by chance, the TestCase may be rejected by `gen`
+    # so we have to try again and again until it works out
+    for i in 1:tries
+        tc = for_choices(UInt[])
+        tc.max_size = typemax(UInt)
+        try
+            res = Data.produce(gen, tc)
+            @debug "Number of tries to sample an example:" Tries=i
+            return res
+        catch e
+            e isa Error && continue
+            rethrow()
+        end
+    end
+    error("Tried sampling $tries times, without getting a result. Perhaps you're filtering out too many examples?")
 end
 
 """
@@ -45,23 +59,7 @@ julia> example(is, 10)
 """
 function example(gen::Data.Possibility{T}, n::Integer) where {T}
     res = Vector{T}(undef, n)
-
-    for idx in eachindex(res)
-        # by chance, the TestCase may be rejected by `gen`
-        # so we have to try again and again until it works out
-        while true
-            tc = for_choices(UInt[])
-            tc.max_size = typemax(UInt)
-            try
-                res[idx] = Data.produce(gen, tc)
-                break
-            catch e
-                e isa Error && continue
-                rethrow()
-            end
-        end
-    end
-
+    res .= example.(Ref(gen))
     res
 end
 
