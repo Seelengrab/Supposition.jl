@@ -34,7 +34,7 @@ end
 nothing # hide
 ```
 
-`@check` takes a function definition where each argument is given a `Possibility`, runs those generators, feeds
+[`@check`](@ref) takes a function definition where each argument is given a `Possibility`, runs those generators, feeds
 the generated values into the given function and shrinks any failing examples. Note that the name given in the
 arguments is the same as used in the function.
 
