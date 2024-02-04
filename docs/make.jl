@@ -24,11 +24,11 @@ function builddocs(clear=false)
             "Examples" => [
                 "Basic Usage" => "Examples/basic.md",
                 "Composing Generators" => "Examples/composition.md",
-                "Fuzzing" => "Examples/fuzzing.md",
-                "Stateful PBT" => "Examples/stateful.md",
+                "Stateful Testing" => "Examples/stateful.md",
             ],
             "FAQ" => "faq.md",
             "Interfaces" => "interfaces.md",
+            "Benchmarks" => "benchmarks.md",
             "API Reference" => "api.md"
         ]
     )
