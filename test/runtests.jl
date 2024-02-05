@@ -436,6 +436,14 @@ end
                 @check allInt(Data.Integers{UInt}())
             end
         end
+
+        @testset "targeting score" begin
+            high = 0xaaaaaaaaaaaaaaaa # a reckless disregard for gravity
+            @check function target_test(i=Data.Integers(zero(UInt),high))
+                target!(1/abs(high - i))
+                i < high+1
+            end
+        end
     end
 
     @testset "@composed API" begin

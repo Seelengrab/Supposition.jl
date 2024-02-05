@@ -305,3 +305,20 @@ macro composed(e::Expr)
         $name()
     end)
 end
+
+"""
+    target!(score::Float64)
+
+Update the currently running testcase to track the given score as its target.
+"""
+function target!(score::Float64)
+    # CURRENT_TESTCASE is a ScopedValue that's being managed by the testing framework
+    target!(CURRENT_TESTCASE[], score)
+end
+
+"""
+    assume!(precondition::Bool)
+
+If this precondition is not met, abort the test and mark the currently running testcase as invalid.
+"""
+assume!(precondition::Bool) = precondition || assume!(CURRENT_TESTCASE[], precondition)

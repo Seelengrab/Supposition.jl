@@ -7,6 +7,10 @@ export Data, @composed, @check
 import Random
 using Logging
 
+@static if VERSION < v"1.11"
+    using ScopedValues
+end
+
 abstract type Error <: Exception end
 struct Overrun <: Error end
 struct Invalid <: Error end

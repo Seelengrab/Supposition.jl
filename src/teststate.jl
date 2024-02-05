@@ -32,6 +32,15 @@ mutable struct TestState
 end
 
 """
+    CURRENT_TESTCASE
+
+A `ScopedValue` containing the currently active test case. Intended for use in user-facing
+functions like `target!` or `assume!` that need access to the current testcase, but shouldn't
+require it as an argument to make the API more user friendly.
+"""
+const CURRENT_TESTCASE = ScopedValue{TestCase}()
+
+"""
     test_function(ts::TestState, tc::TestCase)
 
 Test the function given to `ts` on the test case `tc`.
@@ -48,7 +57,9 @@ function test_function(ts::TestState, tc::TestCase)
     ts.calls += 1
 
     interesting = try
-        ts.is_interesting(tc)
+        @with CURRENT_TESTCASE => tc begin
+            ts.is_interesting(tc)
+        end
     catch e
         e isa Error && return (false, false)
         # TODO: instead of rethrowing, try to handle this explicitly by marking it as an error-shrink?

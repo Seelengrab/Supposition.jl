@@ -111,11 +111,6 @@ function reject(::TestCase)
     throw(Invalid())
 end
 
-"""
-    assume!(::TestCase, precondition::Bool)
-
-If this precondition is not met, abort the test and mark this test case as invalid.
-"""
 function assume!(::TestCase, precondition::Bool)
     if !precondition
         throw(Invalid())
