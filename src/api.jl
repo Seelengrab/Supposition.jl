@@ -216,13 +216,13 @@ function final_check_block(namestr, testrng, run_input, gen_input)
                 (e isa $MethodError && e.f == $copy && only(e.args) == initial_rng) || rethrow()
                 rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Xoshiro` and pass that instead."))
             end
-            $ts = $TestState(copy(rng_orig), $run_input, 10_000)
+            $ts = $TestState(rng_orig, $run_input, 10_000)
             $Supposition.run($ts)
             got_res = !isnothing($ts.result)
             got_score = !isnothing($ts.best_scoring)
             if got_res
                 res = @something $ts.result $ts.best_scoring
-                obj = $gen_input($Supposition.for_choices(res, copy(rng_orig)))
+                obj = $gen_input($Supposition.for_choices(res, copy($ts.rng)))
                 $Test.@test obj
             else
                 $Test.@test true

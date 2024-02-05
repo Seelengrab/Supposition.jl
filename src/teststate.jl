@@ -159,7 +159,7 @@ score in `ts`.
 Used exclusively for targeting.
 """
 function adjust(ts::TestState, attempt::Vector{UInt64})
-    result = test_function(ts, for_choices(attempt))
+    result = test_function(ts, for_choices(attempt, copy(ts.rng)))
     last(result)
 end
 
@@ -262,6 +262,6 @@ function consider(ts::TestState, choices::Vector{UInt64})::Bool
     if choices == @something(ts.result, Some(nothing))
         true
     else
-        first(test_function(ts, for_choices(choices)))
+        first(test_function(ts, for_choices(choices, copy(ts.rng))))
     end
 end
