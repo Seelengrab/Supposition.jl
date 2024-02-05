@@ -455,7 +455,7 @@ end
             end
 
             @test isstructtype(uint8tup)
-            # some weirdness with `let` blocks from the enclosing testset?!
+            # FIXME: This is just the closure bug in disguise
             @test_broken Data.postype(gen) === Tuple{UInt8, UInt8}
             @test example(gen) isa Tuple{UInt8, UInt8}
         end
