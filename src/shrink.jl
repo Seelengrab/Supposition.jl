@@ -1,10 +1,11 @@
 function shrink!(ts::TestState)
     isnothing(ts.result) && return
-    attempt = copy(@something ts.result)
+    attempt = @something ts.result
     improved = true
     while improved
         improved = false
 
+        @debug "Shrinking through dropping values"
         for k in UInt.((8,4,2,1))
             while true
                 res = shrink_remove(ts, attempt, k)
@@ -13,6 +14,7 @@ function shrink!(ts::TestState)
             end
         end
 
+        @debug "Shrinking through setting zero"
         for k in UInt.((8,4,2))
             while true
                 res = shrink_zeros(ts, attempt, k)
@@ -21,12 +23,14 @@ function shrink!(ts::TestState)
             end
         end
 
+        @debug "Shrinking through shrinking elements"
         res = shrink_reduce(ts, attempt)
         if !isnothing(res)
             attempt = @something res
             improved = true
         end
 
+        @debug "Shrinking through sorting views"
         for k in UInt.((8,4,2))
             while true
                 res = shrink_sort(ts, attempt, k)
@@ -35,6 +39,7 @@ function shrink!(ts::TestState)
             end
         end
 
+        @debug "Shrinking through swapping elements"
         for k in UInt.((2,1))
             while true
                 res = shrink_swap(ts, attempt, k)
@@ -43,6 +48,7 @@ function shrink!(ts::TestState)
             end
         end
 
+        @debug "Shrinking through redistributing in a window"
         for k in UInt.((2,1))
             while true
                 res = shrink_redistribute(ts, attempt, k)
