@@ -124,14 +124,10 @@ function assume!(::TestCase, precondition::Bool)
     end
 end
 
-"""
-    target!(::TestCase, score::Float64)
-
-Add a score to target. Put an expression here!
-"""
 function target!(tc::TestCase, score::Float64)
     if !isnothing(tc.targeting_score)
-        @warn "target! called twice on test case object. Overwriting score." TestCase=tc
+        @warn "`target!` called twice on test case object. Overwriting score." OldScore=@something(tc.targeting_score) NewScore=score
     end
     tc.targeting_score = Some(score)
+    score
 end
