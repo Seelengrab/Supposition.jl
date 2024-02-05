@@ -109,8 +109,11 @@ Run the checking algorithm on `ts`, generating values until we should stop, targ
 the score we want to target on and finally shrinking the result.
 """
 function run(ts::TestState)
+    @debug "Starting generating values"
     generate!(ts)
+    @debug "Improving targeted example"
     target!(ts)
+    @debug "Shrinking targeted example"
     shrink!(ts)
     nothing
 end
