@@ -144,8 +144,8 @@ function check_func(e::Expr, rng)
     testrng = isnothing(rng) ? :($Random.Xoshiro($Random.rand($Random.RandomDevice(), UInt))) : rng
 
     tc = gensym()
-    gen_input = Symbol(name, :__geninput)
-    run_input = Symbol(name, :__run)
+    gen_input = gensym(Symbol(name, :__geninput))
+    run_input = gensym(Symbol(name, :__run))
     args = kw_to_produce(tc, kwargs)
     argnames = Expr(:tuple)
     argnames.args = [ e.args[1] for e in last(args.args).args ]
@@ -182,8 +182,8 @@ function check_call(e::Expr, rng)
     testrng = isnothing(rng) ? :($Random.Xoshiro($Random.rand($Random.RandomDevice(), UInt))) : rng
 
     tc = gensym()
-    gen_input = Symbol(name, :__geninput)
-    run_input = Symbol(name, :__run)
+    gen_input = gensym(Symbol(name, :__geninput))
+    run_input = gensym(Symbol(name, :__run))
 
     args = Expr(:tuple)
     for e in kwargs

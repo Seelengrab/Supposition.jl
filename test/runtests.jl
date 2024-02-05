@@ -431,6 +431,12 @@ end
                 Supposition.@check successor(intgen, intgen)
                 Supposition.@check commutative(intgen, intgen)
             end
+
+            @testset "double `@check` of the same function, with distinct generator doesn't clash names" begin
+                allInt(x) = x isa Integer
+                @check allInt(Data.Integers{Int}())
+                @check allInt(Data.Integers{UInt}())
+            end
         end
     end
 
