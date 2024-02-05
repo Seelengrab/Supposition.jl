@@ -324,19 +324,38 @@ end
         Int64,
         Int128
     )
-    @testset "Sampling from Integers{$T}() is unbiased" for T in int_types
-        pos = Data.Integers{T}()
-        n = 5_000_000
-        nums = example(pos, n)
-        count_zeros = count(iszero, nums)
-        count_gt_zero = count(>(zero(T)), nums)
-        count_lt_zero = count(<(zero(T)), nums)
-        n_nums = sizeof(T)*8
-        # it's unlikely to find zeros for the larger types, so give some headroom
-        @test isapprox(count_zeros/n, 1/n_nums; rtol=1)
-        # negative numbers are exactly as likely as positive numbers together with zeros
-        # this is because of two's complement!
-        @test isapprox(count_lt_zero, count_gt_zero+count_zeros; rtol=0.01)
+    @testset "Sampling from Integers is unbiased" begin
+        @testset for T in int_types
+            pos = Data.Integers{T}()
+            n = 5_000_000
+            nums = example(pos, n)
+            count_zeros = count(iszero, nums)
+            count_gt_zero = count(>(zero(T)), nums)
+            count_lt_zero = count(<(zero(T)), nums)
+            n_nums = sizeof(T)*8
+            # it's unlikely to find zeros for the larger types, so give some headroom
+            @test isapprox(count_zeros/n, 1/n_nums; rtol=1)
+            # negative numbers are exactly as likely as positive numbers together with zeros
+            # this is because of two's complement!
+            @test isapprox(count_lt_zero, count_gt_zero+count_zeros; rtol=0.01)
+        end
+    end
+
+    integer_types = (
+        unsigned.(int_types)...,
+        int_types...
+    )
+    @testset "Can find the smallest even Integer" begin
+        @testset for T in integer_types
+            gen = Data.Integers{T}()
+            findEven(tc) = iseven(Data.produce(gen, tc))
+
+            orig_rng = copy(Random.default_rng())
+            ts = TestState(copy(orig_rng), findEven, 10_000)
+            Supposition.run(ts)
+            obj = Data.produce(gen, Supposition.for_choices(@something(ts.result), copy(orig_rng)))
+            @test obj == typemin(T)
+        end
     end
 
     @testset "size bounds on vectors" begin

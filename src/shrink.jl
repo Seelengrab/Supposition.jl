@@ -106,7 +106,7 @@ Try to shrink `attempt` by making the elements smaller.
 function shrink_reduce(ts::TestState, attempt::Vector{UInt64})
     new = copy(attempt)
     for i in reverse(1:length(attempt))
-        res = bin_search_down(1, new[i], n -> begin
+        res = bin_search_down(0, new[i], n -> begin
             new[i] = n
             consider(ts, new)
         end)
