@@ -23,7 +23,6 @@ function example(gen::Data.Possibility)
         tc.max_size = typemax(UInt)
         try
             res = Data.produce(gen, tc)
-            @debug "Number of tries to sample an example:" Tries=i
             return res
         catch e
             e isa Error && continue
@@ -91,18 +90,6 @@ julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=
        end
 ```
 
-or on an already existing predicate function:
-
-```julia-repl
-julia> using Supposition, Supposition.Data
-
-julia> isuint8(x) = x isa UInt8
-
-julia> intgen = Data.Integers{UInt8}()
-
-julia> Supposition.@check isuint8(intgen)
-```
-
 The arguments to the given function are expected to be generator strategies. The names they are bound to
 are the names the generated object will have in the test. It is possible to optionally give a custom RNG object
 that will be used for random data generation. If none is given, `Xoshiro(rand(Random.RandomDevice(), UInt))` is used instead.
@@ -119,6 +106,19 @@ julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=
     Be aware that you _cannot_ pass a hardware RNG to `@check` directly. If you want to randomize
     based on hardware entropy, seed a copyable RNG like `Xoshiro` from your hardware RNG and pass
     that to `@check` instead. The RNG needs to be copyable for reproducibility.
+
+If you already have a predicate defined, you can also use the calling syntax in `@check`. Here, the
+generator is passed purely positionally to the given function.
+
+```julia-repl
+julia> using Supposition, Supposition.Data
+
+julia> isuint8(x) = x isa UInt8
+
+julia> intgen = Data.Integers{UInt8}()
+
+julia> Supposition.@check isuint8(intgen)
+```
 """
 macro check(e::Expr, rng=nothing)
     if isexpr(e, :function, 2)
