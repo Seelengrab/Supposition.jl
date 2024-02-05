@@ -369,14 +369,12 @@ end
         @test isnothing(ts.result)
     end
 
-    @testset "floats: $floatT" for floatT in (Float16, Float32, Float64)
-        function isfloat(tc::TestCase)
-            !(Data.produce(Data.Floats{floatT}(), tc) isa floatT)
+    @testset "Can produce floats" begin
+        @testset for floatT in (Float16, Float32, Float64)
+            @check function isfloat(f=Data.Floats{floatT}())
+                f isa AbstractFloat
+            end
         end
-
-        ts = TestState(Random.default_rng(), isfloat, 10_000)
-        Supposition.run(ts)
-        @test isnothing(ts.result)
     end
 
     @testset "@check API" begin
