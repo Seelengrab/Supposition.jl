@@ -1,3 +1,5 @@
+using Base: stacktrace, StackFrame
+
 """
     TestState
 
@@ -5,8 +7,9 @@
  * `max_examples`: The maximum number of examples to draw
  * `is_interesting`: The user given property to investigate
  * `valid_test_cases`: The count of (so far) valid encountered testcases
- * `result`: The resulting shrunken choice sequence, if any
- * `best_scoring`: The best scoring result that was encountered during shrinking
+ * `result`: The choice sequence leading to a non-throwing counterexample
+ * `best_scoring`: The best scoring result that was encountered during targeting
+ * `target_err`: The error this test has previously encountered and the smallest choice sequence leading to it
  * `test_is_trivial`: Whether `is_interesting` is trivial, i.e. led to no choices being required
 """
 mutable struct TestState
@@ -17,6 +20,7 @@ mutable struct TestState
     calls::UInt
     result::Option{Vector{UInt64}}
     best_scoring::Option{Tuple{Float64, Vector{UInt64}}}
+    target_err::Option{Tuple{Exception, Vector{StackFrame}, Int, Vector{UInt64}}}
     test_is_trivial::Bool
     function TestState(rng::Random.AbstractRNG, test_function, max_examples)
         new(
@@ -27,9 +31,18 @@ mutable struct TestState
             0,                # no calls so far
             nothing,          # no result so far
             nothing,          # no target score so far
+            nothing,          # no error thrown so far
             false)            # test is presumed nontrivial
     end
 end
+
+"""
+    err_choices
+
+Return the choices that led to the recorded error, if any.
+If none, return `Nothing`.
+"""
+err_choices(ts::TestState) = last(@something ts.target_err Some((nothing,)))
 
 """
     CURRENT_TESTCASE
@@ -56,16 +69,17 @@ function test_function(ts::TestState, tc::TestCase)
     # one call == one test of the function in `ts` for the given `TestCase`
     ts.calls += 1
 
-    interesting = try
+    interesting, threw = try
         @with CURRENT_TESTCASE => tc begin
             ts.is_interesting(tc)
-        end
+        end, nothing
     catch e
+        # Interrupts are an abort signal, so rethrow
+        e isa InterruptException && rethrow()
+        # These are wanted rejections
         e isa Error && return (false, false)
-        # TODO: instead of rethrowing, try to handle this explicitly by marking it as an error-shrink?
-        # could be more interesting, by shrinking e.g. the length of a stacktrace while keeping the error
-        # origin the same, to get the same failure earlier.
-        rethrow()
+        # true errors are always interesting
+        true, Some((e, stacktrace(catch_backtrace())))
     end
 
     !(interesting isa Bool) && return (false, false)
@@ -92,9 +106,9 @@ function test_function(ts::TestState, tc::TestCase)
 
         # Check for interestingness
         was_more_interesting = false
-        if isnothing(ts.result) ||
+        if isnothing(threw) && (isnothing(ts.result) ||
                 length(@something ts.result) > length(tc.choices) ||
-                @something(ts.result) > tc.choices
+                @something(ts.result) > tc.choices)
             ts.result = Some(tc.choices)
             was_more_interesting = true
         end
@@ -109,8 +123,50 @@ function test_function(ts::TestState, tc::TestCase)
             end
         end
 
+        if isnothing(ts.target_err)
+            # we haven't had an error so far, but have we hit one now?
+            if !isnothing(threw)
+                err, trace = @something threw
+                len = find_user_stack_depth(trace)
+                ts.target_err = Some((err, trace, len, tc.choices))
+                return (true, true)
+            end
+        else # we already had an error - did we hit the same one?
+            # we didn't throw, so this is strictly less interesting
+            isnothing(threw) && return (false, false)
+            err, trace = @something threw
+            old_err, old_trace, old_len, old_choices = @something ts.target_err
+            old_frame = first(old_trace)
+            frame = first(trace)
+            # if the error isn't the same, it can't possibly be better
+            if !(err == old_err && frame == old_frame)
+                @warn "Encountered an error, but it was different from the previously seen one - Ignoring!" Error=err Location=frame
+                return (false, false)
+            end
+            was_more_interesting = true
+            len = find_user_stack_depth(trace)
+
+            was_better |= len < old_len || (len == old_len && tc.choices < old_choices)
+            if was_better
+                ts.target_err = Some((err, trace, len, tc.choices))
+            end
+        end
+
         return (was_more_interesting, was_better)
     end
+end
+
+"""
+    find_user_stack_depth
+
+Return a heuristic guess for how many functions deep in user code an error was thrown.
+Falls back to the full length of the stacktrace.
+"""
+function find_user_stack_depth(trace)::Int
+    res = findfirst(trace) do sf
+        sf.func == :test_function && sf.file == Symbol(@__FILE__)
+    end
+    @something res Some(length(trace))
 end
 
 """
@@ -124,8 +180,9 @@ function run(ts::TestState)
     generate!(ts)
     @debug "Improving targeted example"
     target!(ts)
-    @debug "Shrinking targeted example"
+    @debug "Shrinking example"
     shrink!(ts)
+    @debug "Done!"
     nothing
 end
 
@@ -139,7 +196,9 @@ and we have room for more examples.
 """
 function should_keep_generating(ts::TestState)
     triv = ts.test_is_trivial
-    no_result = isnothing(ts.result)
+    # we either found a falsifying example, or threw an error
+    # both need to shrink
+    no_result = isnothing(ts.result) && isnothing(ts.target_err)
     more_examples = ts.valid_test_cases < ts.max_examples
     # this 10x ensures that we can make many more calls than
     # we need to fill valid test cases, especially when targeting
@@ -168,10 +227,13 @@ end
 
 If `ts` has a target to go towards set, this will try to climb towards that target
 by adjusting the choice sequence until `ts` shouldn't generate anymore.
+
+If `ts` is currently tracking an error it encountered, it will try to minimize the
+stacktrace there instead.
 """
 function target!(ts::TestState)
     !isnothing(ts.result) && return
-    isnothing(ts.best_scoring) && return
+    isnothing(ts.best_scoring) && isnothing(ts.target_err) && return
 
     while should_keep_generating(ts)
         # It may happen that choices is all zeroes, and that targeting upwards
@@ -179,7 +241,7 @@ function target!(ts::TestState)
         # is exhausted.
 
         # can we climb up?
-        new = copy(last(@something ts.best_scoring))
+        new = copy(last(@something ts.target_err ts.best_scoring))
         i = rand(ts.rng, 1:length(new))
         new[i] += 1
 
@@ -199,7 +261,7 @@ function target!(ts::TestState)
         end
 
         # Or should we climb down?
-        new = copy(last(@something ts.best_scoring))
+        new = copy(last(@something ts.target_err ts.best_scoring))
         if new[i] < 1
             continue
         end

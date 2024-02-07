@@ -219,11 +219,28 @@ function final_check_block(namestr, testrng, run_input, gen_input)
             $ts = $TestState(rng_orig, $run_input, 10_000)
             $Supposition.run($ts)
             got_res = !isnothing($ts.result)
+            got_err = !isnothing($ts.target_err)
             got_score = !isnothing($ts.best_scoring)
-            if got_res
-                res = @something $ts.result $ts.best_scoring
-                obj = $gen_input($Supposition.for_choices(res, copy($ts.rng)))
-                $Test.@test obj
+            if got_res | got_err | got_score
+                res = @something $ts.target_err $ts.best_scoring $ts.result
+                choices = if got_err | got_score
+                    last(res)
+                else
+                    res
+                end
+                obj = $gen_input($Supposition.for_choices(choices, copy($ts.rng)))
+                if got_err
+                    err, trace, len = res
+                    println()
+                    display(@view trace[1:len-2])
+                    println()
+                    $Test.@test (err, obj)
+                elseif got_score
+                    score = first(res)
+                    $Test.@test (score, obj)
+                else # res
+                    $Test.@test obj
+                end
             else
                 $Test.@test true
             end

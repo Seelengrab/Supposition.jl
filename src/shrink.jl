@@ -1,6 +1,6 @@
 function shrink!(ts::TestState)
-    isnothing(ts.result) && return
-    attempt = @something ts.result
+    isnothing(ts.result) && isnothing(ts.target_err) && return
+    attempt = @something err_choices(ts) ts.result
     improved = true
     while improved
         improved = false
