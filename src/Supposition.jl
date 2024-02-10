@@ -11,9 +11,9 @@ using Logging
     using ScopedValues
 end
 
-abstract type Error <: Exception end
-struct Overrun <: Error end
-struct Invalid <: Error end
+abstract type TestException <: Exception end
+struct Overrun <: TestException end
+struct Invalid <: TestException end
 const Option{T} = Union{Some{T}, Nothing}
 
 include("testcase.jl")
@@ -22,5 +22,6 @@ include("data.jl")
 include("teststate.jl")
 include("shrink.jl")
 include("api.jl")
+include("testset.jl")
 
 end # Supposition module

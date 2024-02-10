@@ -77,7 +77,7 @@ function test_function(ts::TestState, tc::TestCase)
         # Interrupts are an abort signal, so rethrow
         e isa InterruptException && rethrow()
         # These are wanted rejections
-        e isa Error && return (false, false)
+        e isa TestException && return (false, false)
         # true errors are always interesting
         true, Some((e, stacktrace(catch_backtrace())))
     end

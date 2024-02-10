@@ -25,7 +25,7 @@ function example(gen::Data.Possibility)
             res = Data.produce(gen, tc)
             return res
         catch e
-            e isa Error && continue
+            e isa TestException && continue
             rethrow()
         end
     end
@@ -122,15 +122,15 @@ julia> Supposition.@check isuint8(intgen)
 """
 macro check(e::Expr, rng=nothing)
     if isexpr(e, :function, 2)
-        check_func(e, rng)
+        check_func(e, rng, __source__)
     elseif isexpr(e, :call)
-        check_call(e, rng)
+        check_call(e, rng, __source__)
     else
         throw(ArgumentError("Given expression is not a function call or definition!"))
     end
 end
 
-function check_func(e::Expr, rng)
+function check_func(e::Expr, rng, __source__)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
@@ -158,6 +158,8 @@ function check_func(e::Expr, rng)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
 
+    final_block = final_check_block(namestr, testrng, run_input, gen_input, __source__)
+
     esc(quote
         function $gen_input($tc::$TestCase)
             $args
@@ -169,11 +171,11 @@ function check_func(e::Expr, rng)
 
         $testfunc
 
-        $(final_check_block(namestr, testrng, run_input, gen_input))
+        $final_block
     end)
 end
 
-function check_call(e::Expr, rng)
+function check_call(e::Expr, rng, __source__)
     isexpr(e, :call) || throw(ArgumentError("Given expression is not a function call!"))
     name, kwargs... = e.args
     namestr = string(name)
@@ -190,6 +192,8 @@ function check_call(e::Expr, rng)
         push!(args.args, :($Data.produce($e, $tc)))
     end
 
+    final_block = final_check_block(namestr, testrng, run_input, gen_input, __source__)
+
     esc(quote
         function $gen_input($tc::$TestCase)
             $args
@@ -199,16 +203,20 @@ function check_call(e::Expr, rng)
             return !$name($gen_input($tc)...)
         end
 
-        $(final_check_block(namestr, testrng, run_input, gen_input))
+        $final_block
     end)
 end
 
-function final_check_block(namestr, testrng, run_input, gen_input)
+function final_check_block(namestr, testrng, run_input, gen_input, source)
     ts = gensym()
+    sr = gensym()
 
     return quote
-        $Test.@testset $namestr begin
-            initial_rng = $testrng
+        # need this for backwards compatibility
+        $sr = $SuppositionReport
+        $Test.@testset $sr $namestr begin
+            report = $Test.get_testset()
+            initial_rng = report.initial_rng
             rng_orig = try
                 copy(initial_rng)
             catch e
@@ -230,19 +238,24 @@ function final_check_block(namestr, testrng, run_input, gen_input)
                 end
                 obj = $gen_input($Supposition.for_choices(choices, copy($ts.rng)))
                 if got_err
-                    err, trace, len = res
-                    println()
-                    display(@view trace[1:len-2])
-                    println()
-                    $Test.@test (err, obj)
+                    # This is an unexpected error, report as `Error`
+                    exc, trace, len = res
+                    err = $Error(obj, exc, trace)
+                    $Test.record(report, err)
+                elseif got_res # res
+                    # This is an unexpected failure, report as `Fail`
+                    fail = $Fail(obj, nothing)
+                    $Test.record(report, fail)
                 elseif got_score
+                    # This means we didn't actually get a result, so report as `Pass`
+                    # Also mark this, so we can display this correctly during `finish`
                     score = first(res)
-                    $Test.@test (score, obj)
-                else # res
-                    $Test.@test obj
+                    pass = $Pass(Some(obj), Some(score))
+                    $Test.record(report, pass)
                 end
             else
-                $Test.@test true
+                pass = $Supposition.Pass(nothing, nothing)
+                $Test.record(report, pass)
             end
         end
 	end
@@ -332,6 +345,7 @@ function target!(score::Float64)
     # CURRENT_TESTCASE is a ScopedValue that's being managed by the testing framework
     target!(CURRENT_TESTCASE[], score)
 end
+target!(score) = target!(convert(Float64, score))
 
 """
     assume!(precondition::Bool)
