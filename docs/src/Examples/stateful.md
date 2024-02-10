@@ -104,7 +104,7 @@ And now, to finally combine all of these:
 
 ```@example jugs
 gen_ops = Data.Vectors(Data.SampledFrom(raw_ops)) # hide
-# do a little dance so that this expected failure doesn't kill doc building
+# do a little dance so that this expected failure doesn't kill doc building # hide
 try # hide
 @check function solve_die_hard(ops = gen_ops)
     jugs = Jugs()
@@ -133,10 +133,11 @@ This pattern is very extensible, and a good candidate for the next UX overhaul. 
 The previous example showed how we can check these kinds of operations based invariants on an immutable struct.
 There is no reason why we can't do the same with a mutable struct (or at least, a struct containing a mutable
 object) though, so let's look at another example: ensuring a heap observes its heap property. As a quick reminder,
-the heap property for a binary heap is that each element in the left child of a node is less than that node,
-and each element on the right child of a node is greater (or equal) than that node.
+the heap property for a binary heap is that each child of a node is `<=` than that node, resulting in what's called
+a "Max-Heap" (due to the maximum being at the root). Similarly, if the property for children is `>=`, we get a
+"Min-Heap". Here, we're going to implement a Min-Heap.
 
-First, we need to define our `Heap`:
+First, we need to define our datastructure:
 
 ```@example heap
 struct Heap{T}
@@ -149,7 +150,7 @@ as well as the usual operations (`isempty`, `push!`, `pop!`) on that heap:
 
  * `isempty`: Whether the heap has elements
  * `push!`: Put an element onto the heap
- * `pop!`: Retrieve the smallest element of the heap
+ * `pop!`: Retrieve the smallest element of the heap (i.e., remove the root)
 
 Written in code, this might look like this:
 
@@ -174,10 +175,10 @@ end
 Base.pop!(heap::Heap) = popfirst!(heap.data)
 ```
 
-In this implementation, we're simply using an array as the backing store for our heap. The first half of the vector
-is always smaller than the element in the middle, which itself is always smaller than all elements in the latter half.
-As implemented, `pop!` will return the correct element if the heap is currently balanced, but because it doesn't rebalance
-the heap, it may leave it in an invalid state. A subsequent `pop!` may then remove an element that is not the smallest
+In this implementation, we're simply using an array as the backing store for our heap. The first element is the root,
+followed by the left subtree, followed by the right subtree.
+As implemented, `pop!` will return the correct element if the heap is currently balanced, but because `pop!` doesn't rebalance
+the heap after removing the root, `pop!` may leave it in an invalid state. A subsequent `pop!` may then remove an element that is not the smallest
 currently stored.
 
 We can very easily test this manually:
@@ -204,15 +205,15 @@ end # hide
 nothing # hide
 ```
 
-And as expected, a counterexample is `[0x0, 0x2, 0x1]`. We first `pop!` `0x0`, followed by `0x2` while it should be
-`0x1`, and only *then* `0x2`.
+And as expected, the minimal counterexample is `[0x0, 0x1, 0x0]`. We first `pop!` `0x0`, followed by `0x1` while it should be
+`0x0` again, and only *then* `0x1`.
 
 Replacing this with a (presumably) correct implementation looks like this:
 
 ```@example heap
-function fixed_pop!(h::Heap)
+function Base.pop!(h::Heap)
     isempty(h) && throw(ArgumentError("Heap is empty!"))
-    data = h.data
+    data = h.data # foo
     isone(length(data)) && return popfirst!(data)
     result = first(data)
     data[1] = pop!(data)
@@ -222,14 +223,16 @@ function fixed_pop!(h::Heap)
         children = [ i for i in children if i < length(data) ]
         @assert !isempty(children)
         sort!(children; by=x -> data[x+1])
-        isempty(children) && break
+        broke = false
         for c in children
             if data[index+1] > data[c+1]
                 data[index+1], data[c+1] = data[c+1], data[index+1]
                 index = c
+                broke = true
                 break
             end
         end
+        !broke && break
     end
     return result
 end
