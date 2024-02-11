@@ -85,21 +85,33 @@ The main way to declare & run a property based test. Called like so:
 ```julia-repl
 julia> using Supposition, Supposition.Data
 
-julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=10))
+julia> Supposition.@check [options...] function foo(a = Data.Text(Data.Characters(); max_len=10))
           length(a) > 8
        end
 ```
 
+Supported options, passed as `key=value`:
+
+ * `rng::Random.AbstractRNG`: Pass an RNG to use. Defaults to `Random.Xoshiro(rand(Random.RandomDevice(), UInt))`.
+ * `max_examples::Int`: The maximum number of generated examples that are passed to the property.
+ * `broken::Bool`: Mark a property that should pass but doesn't as broken, so that failures are not counted.
+ * `record::Bool`: Whether the result of the invocation should be recorded with any parent testsets.
+
 The arguments to the given function are expected to be generator strategies. The names they are bound to
-are the names the generated object will have in the test. It is possible to optionally give a custom RNG object
-that will be used for random data generation. If none is given, `Xoshiro(rand(Random.RandomDevice(), UInt))` is used instead.
+are the names the generated object will have in the test.
+
+# Extended help
+
+It is possible to optionally give a custom RNG object that will be used for random data generation.
+If none is given, `Xoshiro(rand(Random.RandomDevice(), UInt))` is used instead.
 
 ```julia-repl
 julia> using Supposition, Supposition.Data, Random
 
-julia> Supposition.@check function foo(a = Data.Text(Data.Characters(); max_len=10))
+# use a custom Xoshiro instance
+julia> Supposition.@check rng=Xoshiro(1234) function foo(a = Data.Text(Data.Characters(); max_len=10))
           length(a) > 8
-       end Xoshiro(1234) # use a custom Xoshiro instance
+       end
 ```
 
 !!! warning "Hardware RNG"
@@ -120,17 +132,20 @@ julia> intgen = Data.Integers{UInt8}()
 julia> Supposition.@check isuint8(intgen)
 ```
 """
-macro check(e::Expr, rng=nothing)
-    if isexpr(e, :function, 2)
-        check_func(e, rng, __source__)
-    elseif isexpr(e, :call)
-        check_call(e, rng, __source__)
+macro check(args...)
+    isempty(args) && throw(ArgumentError("No arguments supplied to `@check`! Please refer to the documentation for usage information."))
+    func = last(args)
+    args = collect(args[begin:end-1])
+    if isexpr(func, :function, 2)
+        check_func(func, args)
+    elseif isexpr(func, :call)
+        check_call(func, args)
     else
         throw(ArgumentError("Given expression is not a function call or definition!"))
     end
 end
 
-function check_func(e::Expr, rng, __source__)
+function check_func(e::Expr, tsargs)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
@@ -139,9 +154,6 @@ function check_func(e::Expr, rng, __source__)
     isone(length(head.args)) && throw(ArgumentError("Given function does not accept any arguments for fuzzing!"))
     kwargs = @view head.args[2:end]
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
-
-    # choose the RNG
-    testrng = isnothing(rng) ? :($Random.Xoshiro($Random.rand($Random.RandomDevice(), UInt))) : rng
 
     tc = gensym()
     gen_input = gensym(Symbol(name, :__geninput))
@@ -158,7 +170,7 @@ function check_func(e::Expr, rng, __source__)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
 
-    final_block = final_check_block(namestr, testrng, run_input, gen_input, __source__)
+    final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
         function $gen_input($tc::$TestCase)
@@ -175,13 +187,10 @@ function check_func(e::Expr, rng, __source__)
     end)
 end
 
-function check_call(e::Expr, rng, __source__)
+function check_call(e::Expr, tsargs)
     isexpr(e, :call) || throw(ArgumentError("Given expression is not a function call!"))
     name, kwargs... = e.args
     namestr = string(name)
-
-    # choose the RNG
-    testrng = isnothing(rng) ? :($Random.Xoshiro($Random.rand($Random.RandomDevice(), UInt))) : rng
 
     tc = gensym()
     gen_input = gensym(Symbol(name, :__geninput))
@@ -192,7 +201,7 @@ function check_call(e::Expr, rng, __source__)
         push!(args.args, :($Data.produce($e, $tc)))
     end
 
-    final_block = final_check_block(namestr, testrng, run_input, gen_input, __source__)
+    final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
         function $gen_input($tc::$TestCase)
@@ -207,24 +216,16 @@ function check_call(e::Expr, rng, __source__)
     end)
 end
 
-function final_check_block(namestr, testrng, run_input, gen_input, source)
+function final_check_block(namestr, run_input, gen_input, tsargs)
     ts = gensym()
     sr = gensym()
 
     return quote
         # need this for backwards compatibility
         $sr = $SuppositionReport
-        $Test.@testset $sr $namestr begin
+        $Test.@testset $sr $(tsargs...) $namestr begin
             report = $Test.get_testset()
-            initial_rng = report.initial_rng
-            rng_orig = try
-                copy(initial_rng)
-            catch e
-                # we only care about this outermost `copy` call
-                (e isa $MethodError && e.f == $copy && only(e.args) == initial_rng) || rethrow()
-                rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Xoshiro` and pass that instead."))
-            end
-            $ts = $TestState(rng_orig, $run_input, 10_000)
+            $ts = $TestState(report.config, $run_input)
             $Supposition.run($ts)
             got_res = !isnothing($ts.result)
             got_err = !isnothing($ts.target_err)
@@ -240,7 +241,7 @@ function final_check_block(namestr, testrng, run_input, gen_input, source)
                 if got_err
                     # This is an unexpected error, report as `Error`
                     exc, trace, len = res
-                    err = $Error(obj, exc, trace)
+                    err = $Error(obj, exc, trace[begin:len-2])
                     $Test.record(report, err)
                 elseif got_res # res
                     # This is an unexpected failure, report as `Fail`

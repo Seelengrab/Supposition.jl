@@ -1,11 +1,33 @@
 using Base: stacktrace, StackFrame
 
 """
+    CheckConfig
+
+A struct holding the initial configuration for an invocation of `@check`.
+
+Fields:
+
+ * `rng`: The initial RNG object given to `@check`
+ * `max_examples`: The maximum number of examples allowed to be drawn with this config
+ * `record`: Whether the result should be recorded in the parent testset, if there is one
+"""
+struct CheckConfig
+    rng::Random.AbstractRNG
+    max_examples::Int
+    record::Bool
+    function CheckConfig(; rng::Random.AbstractRNG, max_examples::Int, record=true, kws...)
+        new(rng,
+            max_examples,
+            record)
+    end
+end
+
+"""
     TestState
 
- * `rng`: The RNG object this test is ultimately drawing from
- * `max_examples`: The maximum number of examples to draw
+ * `config`: The configuration this `TestState` is running with
  * `is_interesting`: The user given property to investigate
+ * `rng`: The currently used RNG
  * `valid_test_cases`: The count of (so far) valid encountered testcases
  * `result`: The choice sequence leading to a non-throwing counterexample
  * `best_scoring`: The best scoring result that was encountered during targeting
@@ -13,20 +35,27 @@ using Base: stacktrace, StackFrame
  * `test_is_trivial`: Whether `is_interesting` is trivial, i.e. led to no choices being required
 """
 mutable struct TestState
-    rng::Random.AbstractRNG
-    max_examples::UInt
+    config::CheckConfig
     is_interesting::Any
+    rng::Random.AbstractRNG
     valid_test_cases::UInt
     calls::UInt
     result::Option{Vector{UInt64}}
     best_scoring::Option{Tuple{Float64, Vector{UInt64}}}
     target_err::Option{Tuple{Exception, Vector{StackFrame}, Int, Vector{UInt64}}}
     test_is_trivial::Bool
-    function TestState(rng::Random.AbstractRNG, test_function, max_examples)
+    function TestState(conf::CheckConfig, test_function)
+        rng_orig = try
+            copy(conf.rng)
+        catch e
+            # we only care about this outermost `copy` call
+            (e isa MethodError && e.f == copy && only(e.args) == conf.rng) || rethrow()
+            rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Random.Xoshiro` and pass that instead."))
+        end
         new(
-            rng,              # pass the given arguments through
-            max_examples,
+            conf,              # pass the given arguments through
             test_function,
+            rng_orig,
             0,                # no tests so far
             0,                # no calls so far
             nothing,          # no result so far
@@ -199,10 +228,10 @@ function should_keep_generating(ts::TestState)
     # we either found a falsifying example, or threw an error
     # both need to shrink
     no_result = isnothing(ts.result) && isnothing(ts.target_err)
-    more_examples = ts.valid_test_cases < ts.max_examples
+    more_examples = ts.valid_test_cases < ts.config.max_examples
     # this 10x ensures that we can make many more calls than
     # we need to fill valid test cases, especially when targeting
-    more_calls = ts.calls < (10*ts.max_examples)
+    more_calls = ts.calls < (10*ts.config.max_examples)
     ret = !triv & no_result & more_examples & more_calls
     return ret
 end
@@ -309,7 +338,7 @@ const BUFFER_SIZE = Ref((8 * 1024) % UInt)
 Try to generate an example that falsifies the property given to `ts`.
 """
 function generate!(ts::TestState)
-    while should_keep_generating(ts) & (isnothing(ts.best_scoring) || (ts.valid_test_cases <= ts.max_examples÷2))
+    while should_keep_generating(ts) & (isnothing(ts.best_scoring) || (ts.valid_test_cases <= ts.config.max_examples÷2))
         tc = TestCase(UInt64[], ts.rng, BUFFER_SIZE[])
         test_function(ts, tc)
     end

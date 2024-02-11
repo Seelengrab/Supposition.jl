@@ -17,7 +17,8 @@ end
     end
     # Write your tests here.
     @testset "test function interesting" begin
-        ts = TestState(Random.default_rng(), Returns(true), 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, Returns(true))
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test first(test_function(ts, tc))
         @test @something(ts.result) == []
@@ -33,7 +34,8 @@ end
     end
 
     @testset "test function valid" begin
-        ts = TestState(Random.default_rng(), Returns(false), 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, Returns(false))
 
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test !first(test_function(ts, tc))
@@ -45,7 +47,8 @@ end
     end
 
     @testset "test function invalid" begin
-        ts = TestState(Random.default_rng(), _ -> throw(Supposition.Invalid()), 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, _ -> throw(Supposition.Invalid()))
 
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test !first(test_function(ts, tc))
@@ -53,7 +56,8 @@ end
     end
 
     @testset "shrink remove" begin
-        ts = TestState(Random.default_rng(), Returns(true), 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, Returns(true))
         ts.result = Some(UInt[1,2,3])
 
         @test @something(shrink_remove(ts, UInt[1,2], UInt(1))) == [1]
@@ -66,11 +70,13 @@ end
             ls = [ choice!(tc, 10) for _ in 1:3 ]
             last(ls) == 5
         end
-        ts = TestState(Random.default_rng(), second_is_five, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, second_is_five)
         ts.result = Some(UInt[1,2,5,4,5])
         @test @something(shrink_remove(ts, UInt[1,2,5,4,5], UInt(2))) == UInt[1,2,5]
 
-        ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, sum_greater_1000)
         ts.result = Some(UInt[1,10_000,1,10_000])
         @test @something(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2))) == UInt[1,1001,0]
 
@@ -79,7 +85,8 @@ end
     end
 
     @testset "shrink redistribute" begin
-        ts = TestState(Random.default_rng(), Returns(true), 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, Returns(true))
 
         ts.result = Some(UInt[500,500,500,500])
         @test @something(shrink_redistribute(ts, UInt[500,500], UInt(1))) == UInt[0, 1000]
@@ -89,13 +96,15 @@ end
     end
 
     @testset "finds small list" begin
-        ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, sum_greater_1000)
         Supposition.run(ts)
         @test @something(ts.result) == [1,1001,0]
     end
 
     @testset "finds small list debug" begin
-        ts = TestState(Random.default_rng(), sum_greater_1000, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, sum_greater_1000)
         ts.result = Some(UInt[1,0,1,1001,0])
         @test @something(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2))) == [1,1001,0]
         @test @something(ts.result) == UInt[1,1001,0]
@@ -113,7 +122,8 @@ end
             sum(ls) > 1000
         end
 
-        ts = TestState(Random.default_rng(), bl_sum_greater_1000, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, bl_sum_greater_1000)
         Supposition.run(ts)
         @test @something(ts.result) == UInt[1,1001]
     end
@@ -125,7 +135,8 @@ end
 
             return (n+m) > 1_000
         end
-        ts = TestState(Random.default_rng(), int_sum_greater_1000, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, int_sum_greater_1000)
         Supposition.run(ts)
         @test @something(ts.result) == [1,1000]
     end
@@ -136,7 +147,8 @@ end
             assume!(tc, !iszero(n))
             iszero(n)
         end
-        ts = TestState(Random.default_rng(), test, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, test)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -151,7 +163,8 @@ end
             return m == 500 || n == 500
         end
 
-        ts = TestState(Random.default_rng(), test_maxima, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, test_maxima)
         Supposition.run(ts)
         @test !isnothing(ts.result)
     end
@@ -165,7 +178,8 @@ end
             score >= 2000.0
         end
 
-        ts = TestState(Random.default_rng(), target_upwards, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, target_upwards)
         Supposition.run(ts)
         @test !isnothing(ts.result)
     end
@@ -179,7 +193,8 @@ end
             false
         end
 
-        ts = TestState(Random.default_rng(), target_upwards_nofail, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, target_upwards_nofail)
         Supposition.run(ts)
         @test isnothing(ts.result)
         @test !isnothing(ts.best_scoring)
@@ -195,7 +210,8 @@ end
             score >= 1_000
         end
 
-        ts = TestState(Random.default_rng(), no_benefit, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, no_benefit)
         Supposition.run(ts)
         @test !isnothing(ts.result)
     end
@@ -209,7 +225,8 @@ end
             score <= 0.0
         end
 
-        ts = TestState(Random.default_rng(), target_downwards, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, target_downwards)
         Supposition.run(ts)
         @test !isnothing(ts.result)
         @test !isnothing(ts.best_scoring)
@@ -222,7 +239,8 @@ end
             isodd(n)
         end
 
-        ts = TestState(Random.default_rng(), map_pos, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, map_pos)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -233,7 +251,8 @@ end
             return isodd(n)
         end
 
-        ts = TestState(Random.default_rng(), sel_pos, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, sel_pos)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -246,7 +265,8 @@ end
             last(t) < first(t) || (first(t)+10) < last(t)
         end
 
-        ts = TestState(Random.default_rng(), bound_pos, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, bound_pos)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -257,7 +277,8 @@ end
             return true
         end
 
-        ts = TestState(Random.default_rng(), witness_nothing, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, witness_nothing)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -268,7 +289,8 @@ end
             return (-5 > m) || (m > 5) || (m == 1)
         end
 
-        ts = TestState(Random.default_rng(), draw_mix, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, draw_mix)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -284,7 +306,8 @@ end
             return false
         end
 
-        ts = TestState(Random.default_rng(), impos, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, impos)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -300,19 +323,21 @@ end
             return false
         end
 
-        ts = TestState(Random.default_rng(), guaran, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, guaran)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
 
     @testset "boolean unbiased" begin
         function unbias(tc::TestCase)
-            vs = Data.produce(Data.Vectors(Data.Booleans(); min_size=10_000, max_size=100_000), tc)
+            vs = Data.produce(Data.Vectors(Data.Booleans(); min_size=10_000, max_size=10_000), tc)
             m = mean(vs)
             !(m ≈ 0.5)
         end
 
-        ts = TestState(Random.default_rng(), unbias, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, unbias)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -350,10 +375,10 @@ end
             gen = Data.Integers{T}()
             findEven(tc) = iseven(Data.produce(gen, tc))
 
-            orig_rng = copy(Random.default_rng())
-            ts = TestState(copy(orig_rng), findEven, 10_000)
+            conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+            ts = TestState(conf, findEven)
             Supposition.run(ts)
-            obj = Data.produce(gen, Supposition.for_choices(@something(ts.result), copy(orig_rng)))
+            obj = Data.produce(gen, Supposition.for_choices(@something(ts.result), copy(conf.rng)))
             @test obj == typemin(T)
         end
     end
@@ -364,7 +389,8 @@ end
             length(ls) < 1 || 3 < length(ls)
         end
 
-        ts = TestState(Random.default_rng(), bounds, 10_000)
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, bounds)
         Supposition.run(ts)
         @test isnothing(ts.result)
     end
@@ -394,9 +420,9 @@ end
         end
 
         @testset "Custom RNG" begin
-            Supposition.@check function foo(i=Data.Integers(0x0, 0xff))
+            Supposition.@check rng=Xoshiro(1) function foo(i=Data.Integers(0x0, 0xff))
                 i isa Integer
-            end Xoshiro(1)
+            end
         end
 
         @testset "Calling function outside Supposition" begin

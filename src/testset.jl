@@ -41,10 +41,14 @@ mutable struct SuppositionReport <: AbstractTestSet
     time_end::Float64
     verbose::Bool
     expect_broken::Bool
-    initial_rng::Random.AbstractRNG
-    function SuppositionReport(desc::String; verbose=false, rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
-                                             broken=false, kws...)
-        new(desc, nothing, nothing, time(), 0.0, verbose, broken, rng)
+    config::CheckConfig
+    function SuppositionReport(func::String; verbose=false, broken=false, description="", kws...)
+        desc = isempty(description) ? func : func * ": " * description
+        conf = CheckConfig(;
+            rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
+            max_examples=50_000,
+            kws...)
+        new(desc, nothing, nothing, time(), 0.0, verbose, broken, conf)
     end
 end
 
@@ -111,11 +115,13 @@ function Test.finish(sr::SuppositionReport)
         print_results(sr, res)
     elseif !sr.expect_broken && !(res isa Pass)
         print_results(sr, res)
+    elseif sr.expect_broken && res isa Pass
+        print_fix_broken(sr)
     end
 
     if Test.get_testset_depth() != 0
         parent_ts = Test.get_testset()
-        Test.record(parent_ts, sr)
+        sr.config.record && Test.record(parent_ts, sr)
         return sr
     end
 
@@ -136,8 +142,7 @@ function print_results(sr::SuppositionReport, p::Pass)
 end
 
 function print_results(sr::SuppositionReport, e::Error)
-    errmsg = string(e.exception)
-    @error "Property errored!" Description=sr.description Exception=errmsg Example=e.example
+    @error "Property errored!" Description=sr.description Example=e.example exception=(e.exception, e.trace)
 end
 
 function print_results(sr::SuppositionReport, f::Fail)
@@ -146,4 +151,8 @@ function print_results(sr::SuppositionReport, f::Fail)
     else
         @error "Property doesn't hold!" Description=sr.description Example=f.example Score=f.score
     end
+end
+
+function print_fix_broken(sr::SuppositionReport)
+    @warn "Property was marked as broken, but holds now! Mark as non-broken!" Description=sr.description
 end
