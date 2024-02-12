@@ -102,6 +102,23 @@ are the names the generated object will have in the test.
 
 # Extended help
 
+## Reusing existing properties
+
+If you already have a predicate defined, you can also use the calling syntax in `@check`. Here, the
+generator is passed purely positionally to the given function.
+
+```julia-repl
+julia> using Supposition, Supposition.Data
+
+julia> isuint8(x) = x isa UInt8
+
+julia> intgen = Data.Integers{UInt8}()
+
+julia> Supposition.@check isuint8(intgen)
+```
+
+## Passing a custom RNG
+
 It is possible to optionally give a custom RNG object that will be used for random data generation.
 If none is given, `Xoshiro(rand(Random.RandomDevice(), UInt))` is used instead.
 
@@ -118,19 +135,6 @@ julia> Supposition.@check rng=Xoshiro(1234) function foo(a = Data.Text(Data.Char
     Be aware that you _cannot_ pass a hardware RNG to `@check` directly. If you want to randomize
     based on hardware entropy, seed a copyable RNG like `Xoshiro` from your hardware RNG and pass
     that to `@check` instead. The RNG needs to be copyable for reproducibility.
-
-If you already have a predicate defined, you can also use the calling syntax in `@check`. Here, the
-generator is passed purely positionally to the given function.
-
-```julia-repl
-julia> using Supposition, Supposition.Data
-
-julia> isuint8(x) = x isa UInt8
-
-julia> intgen = Data.Integers{UInt8}()
-
-julia> Supposition.@check isuint8(intgen)
-```
 """
 macro check(args...)
     isempty(args) && throw(ArgumentError("No arguments supplied to `@check`! Please refer to the documentation for usage information."))
@@ -189,6 +193,7 @@ end
 
 function check_call(e::Expr, tsargs)
     isexpr(e, :call) || throw(ArgumentError("Given expression is not a function call!"))
+    any(kw -> isexpr(kw, :kw), e.args) && throw(ArgumentError("Can't pass a generator using keyword syntax to `@check` when reusing a property!"))
     name, kwargs... = e.args
     namestr = string(name)
 
@@ -341,6 +346,8 @@ end
     target!(score::Float64)
 
 Update the currently running testcase to track the given score as its target.
+
+`score` must be `convert`ible to a `Float64`.
 """
 function target!(score::Float64)
     # CURRENT_TESTCASE is a ScopedValue that's being managed by the testing framework
