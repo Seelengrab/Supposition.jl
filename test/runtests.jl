@@ -14,7 +14,7 @@ end
 # whether printing of `@check` should be verbose or not
 # this is only used because otherwise, there's no way to tell
 # whether the tests actually passed on earlier versions
-const verb = VERSION < v"1.11"
+const verb = VERSION.major == 1 && VERSION.minor < 11
 
 @testset "Supposition.jl" begin
     @testset "Code quality (Aqua.jl)" begin
