@@ -46,7 +46,7 @@ mutable struct SuppositionReport <: AbstractTestSet
         desc = isempty(description) ? func : func * ": " * description
         conf = CheckConfig(;
             rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
-            max_examples=50_000,
+            max_examples=10_000,
             kws...)
         new(desc, nothing, nothing, time(), 0.0, verbose, broken, conf)
     end
