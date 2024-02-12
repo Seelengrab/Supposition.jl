@@ -52,7 +52,24 @@ mutable struct SuppositionReport <: AbstractTestSet
     end
 end
 
+@static if VERSION >= v"1.11"
+# these are only defined from 1.11 onwards, earlier the printing didn't do anything anyway
 Test.print_verbose(sr::SuppositionReport) = sr.verbose
+
+function Test.format_duration(sr::SuppositionReport)
+    (; time_start, time_end) = sr
+    isnothing(time_end) && return "?s"
+
+    dur_s = time_end - time_start
+    if dur_s < 60
+        string(round(dur_s, digits = 1), "s")
+    else
+        m, s = divrem(dur_s, 60)
+        s = lpad(string(round(s, digits = 1)), 4, "0")
+        string(round(Int, m), "m", s, "s")
+    end
+end
+end
 
 struct InvalidInvocation <: Exception
     res::Test.Result
@@ -90,20 +107,6 @@ function Test.get_test_counts(sr::SuppositionReport)
         0,
         Test.format_duration(sr)
     )
-end
-
-function Test.format_duration(sr::SuppositionReport)
-    (; time_start, time_end) = sr
-    isnothing(time_end) && return "?s"
-
-    dur_s = time_end - time_start
-    if dur_s < 60
-        string(round(dur_s, digits = 1), "s")
-    else
-        m, s = divrem(dur_s, 60)
-        s = lpad(string(round(s, digits = 1)), 4, "0")
-        string(round(Int, m), "m", s, "s")
-    end
 end
 
 function Test.finish(sr::SuppositionReport)

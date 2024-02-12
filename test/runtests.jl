@@ -11,6 +11,11 @@ function sum_greater_1000(tc::TestCase)
     sum(ls) > 1_000
 end
 
+# whether printing of `@check` should be verbose or not
+# this is only used because otherwise, there's no way to tell
+# whether the tests actually passed on earlier versions
+const verb = VERSION < v"1.11"
+
 @testset "Supposition.jl" begin
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(Supposition; ambiguities = false,)
@@ -397,37 +402,37 @@ end
 
     @testset "Can produce floats" begin
         @testset for floatT in (Float16, Float32, Float64)
-            @check function isfloat(f=Data.Floats{floatT}())
+            @check verbose=verb function isfloat(f=Data.Floats{floatT}())
                 f isa AbstractFloat
             end
         end
     end
 
-    @testset "@check API" begin
+    @testset "@check verbose=verb API" begin
         @testset "regular use" begin
-            Supposition.@check function singlearg(i=Data.Integers(0x0, 0xff))
+            Supposition.@check verbose=verb function singlearg(i=Data.Integers(0x0, 0xff))
                 i isa Integer
             end
-            Supposition.@check function twoarg(i=Data.Integers(0x0, 0xff), f=Data.Floats{Float16}())
+            Supposition.@check verbose=verb function twoarg(i=Data.Integers(0x0, 0xff), f=Data.Floats{Float16}())
                 i isa Integer && f isa AbstractFloat
             end
         end
 
         @testset "interdependent generation" begin
-            Supposition.@check function depend(a=Data.Integers(0x0, 0xff), b=Data.Integers(a, 0xff))
+            Supposition.@check verbose=verb function depend(a=Data.Integers(0x0, 0xff), b=Data.Integers(a, 0xff))
                 a <= b
             end
         end
 
         @testset "Custom RNG" begin
-            Supposition.@check rng=Xoshiro(1) function foo(i=Data.Integers(0x0, 0xff))
+            Supposition.@check verbose=verb rng=Xoshiro(1) function foo(i=Data.Integers(0x0, 0xff))
                 i isa Integer
             end
         end
 
         @testset "Calling function outside Supposition" begin
             double(x) = 2x
-            Supposition.@check function doubleprop(i=Data.Integers(0x0, 0xff))
+            Supposition.@check verbose=verb function doubleprop(i=Data.Integers(0x0, 0xff))
                 iseven(double(i))
             end
         end
@@ -450,22 +455,22 @@ end
             intgen = Data.Integers{UInt}()
 
             @testset "Additive properties" begin
-                Supposition.@check associative(Data.Just(add), intgen, intgen, intgen)
-                Supposition.@check identity_add(Data.Just(add), intgen)
-                Supposition.@check successor(intgen, intgen)
-                Supposition.@check commutative(intgen, intgen)
+                Supposition.@check verbose=verb associative(Data.Just(add), intgen, intgen, intgen)
+                Supposition.@check verbose=verb identity_add(Data.Just(add), intgen)
+                Supposition.@check verbose=verb successor(intgen, intgen)
+                Supposition.@check verbose=verb commutative(intgen, intgen)
             end
 
-            @testset "double `@check` of the same function, with distinct generator doesn't clash names" begin
+            @testset "double `@check`verbose=verb  of the same function, with distinct generator doesn't clash names" begin
                 allInt(x) = x isa Integer
-                @check allInt(Data.Integers{Int}())
-                @check allInt(Data.Integers{UInt}())
+                @check verbose=verb allInt(Data.Integers{Int}())
+                @check verbose=verb allInt(Data.Integers{UInt}())
             end
         end
 
         @testset "targeting score" begin
             high = 0xaaaaaaaaaaaaaaaa # a reckless disregard for gravity
-            @check function target_test(i=Data.Integers(zero(UInt),high))
+            @check verbose=verb function target_test(i=Data.Integers(zero(UInt),high))
                 target!(1/abs(high - i))
                 i < high+1
             end
@@ -492,7 +497,7 @@ end
                 double(i)
             end
 
-            Supposition.@check function composeeven(g=gen)
+            Supposition.@check verbose=verb function composeeven(g=gen)
                 iseven(g)
             end
         end
