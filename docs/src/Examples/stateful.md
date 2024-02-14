@@ -1,4 +1,4 @@
-# Stateful testing
+# Stateful Testing
 
 So far, we've only seem examples of very simple & trivial properties, doing little more than showcasing syntax.
 However, what if we're operating on some more complicated datastructure and want to check whether
@@ -7,7 +7,7 @@ be done with Supposition.jl.
 
 ## Juggling Jugs
 
-Consider this example from the classic christmas movie Die Hard:
+Consider this example from the movie Die Hard With A Vengeance:
 
 ```@raw html
 <p style="display: flex; justify-content: center;">
@@ -20,7 +20,7 @@ Consider this example from the classic christmas movie Die Hard:
 </p>
 ```
 
-The problem John McClane & Zeus Carver have to solve is the well known 3L & 5L jug problem. You have two jugs,
+The problem John McClane & Zeus Carver have to solve is the well known 3L & 5L variation on the [water pouring puzzle](https://en.wikipedia.org/wiki/Water_pouring_puzzle). You have two jugs,
 one that can hold 3L of liquid and one that can hold 5L. The task is to measure out _precisely_ 4L of liquid, using
 nothing but those two jugs. Let's model the problem and have Supposition.jl solve it for us:
 
@@ -35,19 +35,25 @@ Jugs() = Jugs(0,0)
 We start out with a struct holding our two jugs; one `Int` for the small jug and one `Int` for the large jug.
 Next, we need the operations we can perform on these jugs. These are
 
- * Filling a jug
+ * Filling a jug to the brim
+   * No partial filling! That's not accurate enough.
  * Emptying a jug
+   * No partial emptying! That's not accurate enough.
  * Pouring one jug into the other
+   * Any leftover liquid stays in the jug we poured from - don't spill anything!
 
 Defining them as functions returning a new `Jugs`, we get:
 
 ```@example jugs
+# filling
 fill_small(j::Jugs) = Jugs(3, j.large)
 fill_large(j::Jugs) = Jugs(j.small, 5)
 
+# emptying
 empty_small(j::Jugs) = Jugs(0, j.large)
 empty_large(j::Jugs) = Jugs(j.small, 0)
 
+# pouring
 function pour_small_into_large(j::Jugs)
     nlarge = min(5, j.large + j.small)
     nsmall = j.small - (nlarge - j.large)
@@ -126,7 +132,7 @@ end # hide
 nothing # hide
 ```
 
-This pattern is very extensible, and a good candidate for the next UX overhaul. Nevertheless, it already works right now!
+This pattern is very extensible, and a good candidate for the next UX overhaul (getting a reported failure for the target we actually want to find is quite bad UX). Nevertheless, it already works right now!
 
 ## Balancing a heap
 
@@ -170,6 +176,7 @@ function Base.push!(heap::Heap{T}, value::T) where T
             break
         end
     end
+    heap
 end
 
 Base.pop!(heap::Heap) = popfirst!(heap.data)
@@ -191,13 +198,19 @@ intvec = Data.Vectors(Data.Integers{UInt8}())
 try # hide
 @check function test_pop_in_sorted_order(ls=intvec)
     h = Heap{eltype(ls)}()
+    
+    # push all items
     for l in ls
         push!(h, l)
     end
+
+    # pop! all items
     r = eltype(ls)[]
     while !isempty(h)
         push!(r, pop!(h))
     end
+
+    # the pop!ed items should be sorted
     r == sort(ls)
 end
 catch # hide
@@ -206,14 +219,14 @@ nothing # hide
 ```
 
 And as expected, the minimal counterexample is `[0x0, 0x1, 0x0]`. We first `pop!` `0x0`, followed by `0x1` while it should be
-`0x0` again, and only *then* `0x1`.
+`0x0` again, and only *then* `0x1`, resulting in `[0x0, 0x0, 0x1]` instead of `[0x0, 0x1, 0x0]`.
 
 Replacing this with a (presumably) correct implementation looks like this:
 
 ```@example heap
-function Base.pop!(h::Heap)
+function fixed_pop!(h::Heap)
     isempty(h) && throw(ArgumentError("Heap is empty!"))
-    data = h.data # foo
+    data = h.data
     isone(length(data)) && return popfirst!(data)
     result = first(data)
     data[1] = pop!(data)
@@ -239,5 +252,115 @@ end
 ```
 
 Me telling you that this is correct though should only be taken as well-intentioned, but not necessarily as true.
-There might be more bugs that have sneaked in after all. So let's use stateful testing techniques, similar
-to how we tested the `Jugs` example above, to fuzz better!
+There might be more bugs that have sneaked in after all, that aren't caught by our naive "pop in order and check
+that it's sorted" test. There could be a nasty bug waiting for us that only happens when various `push!` and `pop!`
+are interwoven in just the right way. Using stateful testing techniques and the insight that we can generate
+sequences of operations on our `Heap` with Supposition.jl too! We're first going to try with the existing, known
+broken `pop!`:
+
+```@example heap
+gen_push = map(Data.Integers{UInt}()) do i
+    (push!, i)
+end
+gen_pop = Data.Just((pop!, nothing))
+gen_ops = Data.Vectors(Data.MixOf(gen_push, gen_pop); max_size=10_000)
+nothing # hide
+```
+
+We either `push!` an element, or we `pop!` from the heap. Using `(pop!, nothing)` here will make it
+a bit easier to actually define our test. Note how the second element acts as the eventual argument
+to `pop!`.
+
+There's also an additional complication - because we don't
+have the guarantee anymore that the `Heap` contains elements, we have to guard the use of `pop!`
+behind a precondition check. In case the heap is empty, we can just consume the operation and treat it
+as a no-op, continuing with the next operation:
+
+```@example heap
+# let's dance again, Documenter.jl! # hide
+try # hide
+@check function test_heap(ops = gen_ops)
+    heap = Heap{UInt}()
+
+    for (op, val) in ops
+        if op === push!
+            # we can always push
+            heap = op(heap, val)
+        else
+            # check our precondition!
+            isempty(heap) && continue
+
+            # the popped minimum must always == the minimum
+            # of the backing array, so retrieve the minimum
+            # through alternative internals
+            correct = minimum(heap.data)
+            val = op(heap)
+
+            # there's only one invariant this time around
+            # and it only needs checking in this branch:
+            val != correct && return false
+        end
+    end
+
+    # by default, we pass the test!
+    # this happens if our `ops` is empty or all operations
+    # worked successfully
+    return true
+end
+catch # hide
+end # hide
+nothing # hide
+```
+
+Once again, we find our familiar example `UInt[0x0, 0x1, 0x0]`, though this time in the form of operations done on the heap:
+
+```julia
+ops = Union{Tuple{typeof(pop!), Nothing}, Tuple{typeof(push!), UInt64}}[
+    (push!, 0x0000000000000001),
+    (push!, 0x0000000000000000),
+    (push!, 0x0000000000000000),
+    (pop!, nothing),
+    (pop!, nothing)
+]
+```
+
+We push three elements (0x1, 0x0 and 0x0) and when popping two, the second doesn't match the expected minimum anymore!
+
+Now let's try the same property with our (hopefully correct) `fixed_pop!`:
+
+```@example heap
+gen_fixed_pop = Data.Just((fixed_pop!, nothing))
+gen_fixed_ops = Data.Vectors(Data.MixOf(gen_push, gen_fixed_pop); max_size=10_000)
+# Documenter shenanigans require me to repeat this. # hide
+function test_heap(ops) # hide
+    heap = Heap{UInt}() # hide
+ # hide
+    for (op, val) in ops # hide
+        if op === push! # hide
+            # we can always push # hide
+            heap = op(heap, val) # hide
+        else # hide
+            # check our precondition! # hide
+            isempty(heap) && continue # hide
+ # hide
+            # the popped minimum must always == the minimum # hide
+            # of the backing array, so retrieve the minimum # hide
+            # through alternative internals # hide
+            correct = minimum(heap.data) # hide
+            val = op(heap) # hide
+ # hide
+            # there's only one invariant this time around # hide
+            # and it only needs checking in this branch: # hide
+            val != correct && return false # hide
+        end # hide
+    end # hide
+ # hide
+    # by default, we pass the test! # hide
+    return true # hide
+end # hide
+
+@check test_heap(gen_fixed_ops)
+nothing # hide
+```
+
+Now this is much more thorough testing!
