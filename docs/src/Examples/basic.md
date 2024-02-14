@@ -51,7 +51,7 @@ nothing # hide
 ```
 
 Supposition.jl successfully found a counterexample and reduced it to a more minimal counterexample, in this
-case just `UInt(1)`.
+case just `UInt(0)`.
 
 !!! note "Overflow"
     There is a subtle bug here - if `x+1` overflows when `x == typemax(UInt)`, the resulting comparison is
@@ -60,7 +60,7 @@ case just `UInt(1)`.
     to check the datatype and its functions for.
 
 We've still got three more properties to test, taking two or three arguments each. Since these properties
-are fairly universal, we can also write them out like so:
+are fairly universal, we can also write them out like so, passing a function of interest:
 
 ```@example example_add; output = false
 associative(f, a, b, c) = f(f(a,b), c) == f(a, f(b,c))
@@ -90,7 +90,7 @@ end
 nothing # hide
 ```
 
-In this way, we can even reuse properties from other invocations of `@check` with new, prehaps more specialized, inputs.
+In this way, we can even reuse properties from other invocations of `@check` with new, perhaps more specialized, inputs.
 For generalization, we can use [`Data.Just`](@ref) to pass our `add` function to the generalized properties.
 
 Be aware that while all checks pass, we _do not have a guarantee that our code is correct for all cases_.
