@@ -1,5 +1,4 @@
 using Documenter
-using Supposition, Supposition.Data
 
 liveserver = "livesever" in ARGS
 
@@ -8,6 +7,8 @@ if liveserver
     Revise.revise()
 end
 
+using Supposition, Supposition.Data
+
 DocMeta.setdocmeta!(Supposition, :DocTestSetup, :(using Supposition, Supposition.Data); recursive=true)
 
 function builddocs(clear=false)
@@ -15,7 +16,8 @@ function builddocs(clear=false)
     makedocs(
         sitename="Supposition.jl Documentation",
         format = Documenter.HTML(
-            prettyurls = get(ENV, "CI", nothing) == true
+            prettyurls = get(ENV, "CI", nothing) == true,
+            size_threshold_ignore = ["Examples/stateful.md"]
         ),
         remotes=nothing,
         pages = [
@@ -24,6 +26,7 @@ function builddocs(clear=false)
             "Examples" => [
                 "Basic Usage" => "Examples/basic.md",
                 "Composing Generators" => "Examples/composition.md",
+                "Alignment of Documentation" => "Examples/docalignment.md",
                 "Stateful Testing" => "Examples/stateful.md",
             ],
             "FAQ" => "faq.md",
