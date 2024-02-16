@@ -360,4 +360,12 @@ target!(score) = target!(convert(Float64, score))
 
 If this precondition is not met, abort the test and mark the currently running testcase as invalid.
 """
-assume!(precondition::Bool) = precondition || assume!(CURRENT_TESTCASE[], precondition)
+assume!(precondition::Bool) = precondition || reject!()
+
+"""
+    reject!()
+
+Reject the current testcase as invalid, meaning the generated example should not be considered as producing a
+valid counterexample.
+"""
+reject!() = reject(CURRENT_TESTCASE[])
