@@ -38,7 +38,7 @@ mutable struct SuppositionReport <: AbstractTestSet
     final_state::Option{TestState}
     result::Option{Result}
     time_start::Float64
-    time_end::Float64
+    time_end::Option{Float64}
     verbose::Bool
     expect_broken::Bool
     config::CheckConfig
@@ -48,7 +48,7 @@ mutable struct SuppositionReport <: AbstractTestSet
             rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
             max_examples=10_000,
             kws...)
-        new(desc, nothing, nothing, time(), 0.0, verbose, broken, conf)
+        new(desc, nothing, nothing, time(), nothing, verbose, broken, conf)
     end
 end
 
