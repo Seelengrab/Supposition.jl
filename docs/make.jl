@@ -17,7 +17,7 @@ function builddocs(clear=false)
         sitename="Supposition.jl Documentation",
         format = Documenter.HTML(
             prettyurls = get(ENV, "CI", nothing) == true,
-            size_threshold_ignore = ["Examples/stateful.md"]
+            size_threshold_ignore = ["Examples/stateful.md","Examples/docalignment.md"]
         ),
         remotes=nothing,
         pages = [

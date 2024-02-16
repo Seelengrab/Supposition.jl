@@ -34,14 +34,14 @@ sincosd
 ```
 
 `sincosd` is a function from Base Julia - I don't mean to pick on it, but it serves as a good example (and I also
-have a PR open to improve this very docstring!).
+have [an open PR](https://github.com/JuliaLang/julia/pull/50855) to improve this very docstring!).
 
 As written, we don't really know a whole lot about `sincosd`, other than that it computes both `sin` and `cosin`
 in some simultaneous fashion and interprets whatever we give it in degrees. In particular, there is no mention
 of what types and instances of those types are expected to work at all, and no indication of when or even if
 the function can throw an error. Nevertheless, it does:
 
-```@example sincosd
+```julia-repl
 julia> sincosd(Inf)
 ERROR: DomainError with Inf:
 `x` cannot be infinite.
@@ -63,6 +63,9 @@ Closest candidates are:
    @ Base math.jl:348
   deg2rad(::Number)
    @ Base math.jl:350
+
+Stacktrace:
+  [...]
 ```
 
 So at the very least, due to its dependence on `deg2rad`, `sincosd` expects a "number-like" object, not a `String`.
@@ -76,18 +79,18 @@ about what kinds of inputs are valid and clearly specify what happens when & why
 
 So an improved version of this docstring might look like so:
 
-```julia
-"""
-    sincosd(x::Number)
+```patch
+  """
+      sincosd(x::Number)
 
-Simultaneously compute the sine and cosine of x, where x is in degrees.
+  Simultaneously compute the sine and cosine of x, where x is in degrees.
++
++ Throws a `DomainError` if `isinf(x)` is `true`.
 
-Throws a `DomainError` if `isinf(x)` is `true`.
-
-!!! compat "Julia 1.3"
-    This function requires at least Julia 1.3.
-"""
-sincosd
+  !!! compat "Julia 1.3"
+      This function requires at least Julia 1.3.
+  """
+  sincosd
 ```
 
 By adding the `::Number` type restriction to the argument `x`, we clearly communicate what kind of object we expect to work
@@ -120,18 +123,20 @@ Looking at that test, there's another assumption that we should document: `sinco
 `sincos` (differing from `sincosd` insofar as it takes its argument in radians, not degrees) does document this,
 so we should match that documentation here too:
 
-```julia
-"""
-    sincosd(x::Number)
+```patch
+  """
+      sincosd(x::Number)
 
-Simultaneously compute the sine and cosine of x, where x is in degrees, returning a tuple (sine, cosine).
+- Simultaneously compute the sine and cosine of x, where x is in degrees.
++ Simultaneously compute the sine and cosine of x, where x is in degrees,
++ returning a tuple (sine, cosine).
 
-Throws a `DomainError` if `isinf(x)` is `true`.
+  Throws a `DomainError` if `isinf(x)` is `true`.
 
-!!! compat "Julia 1.3"
-    This function requires at least Julia 1.3.
-"""
-sincosd
+  !!! compat "Julia 1.3"
+      This function requires at least Julia 1.3.
+  """
+  sincosd
 ```
 
 This is especially important because of the order the sine and cosine are returned in. If this isn't documented,
@@ -156,13 +161,160 @@ The next level up from error checks is checking requirements & guarantees on val
 is not expected to error but must nonetheless conform to some specification. Once we can generate such a
 valid input, we can check that the output of the function actually behaves as we expect it to.
 
-Take for example this function and its associated docstring:
+Continuing on from the `sincosd` example from above, let's start out with a generator for all non-throwing `Float64`.
+Since there are just a few of these, we can `filter` them out easily, without having to worry about rejecting too many
+samples:
 
-TODO: Insert example!
+```@example guarantees
+using Supposition
 
-At the end of  this process, a developer should have
+non_throw_sincos = filter(!isinf, Data.Floats{Float64}())
+print(non_throw_sincos) # hide
+non_throw_sincos = Data.Just(NaN) # hide
+nothing # hide
+```
 
- * a clear understanding of the guarantees a function
+Now let's think about what we'd like `sin` and `cos` to obey. For starters, we could use some mathematical
+identities:
+
+```@example guarantees
+@check function pythagorean_identity(degrees=non_throw_sincos)
+  s, c = sincosd(degrees)
+  (s^2 + c^2) == one(s)
+end
+nothing # hide
+```
+
+Right away, we can find a very easy counterexample - `NaN`! Not to worry, we can simply amend the docstring to mention this too:
+
+```patch
+  """
+      sincosd(x::Number)
+
+  Simultaneously compute the sine and cosine of x, where x is in degrees,
+  returning a tuple (sine, cosine).
+
+  Throws a `DomainError` if `isinf(x)` is `true`.
++
++ If `isnan(x)`, return a 2-tuple of `NaN` of type `typeof(x)`.
+
+  !!! compat "Julia 1.3"
+      This function requires at least Julia 1.3.
+  """
+  sincosd
+```
+
+and try again, this time with `NaN` values filtered out too:
+
+```@example guarantees
+pure_float = filter(Data.Floats{Float64}()) do f
+    !(isinf(f) || isnan(f))
+end
+function pythagorean_identity(degrees) # hide
+    s, c = sincosd(degrees) # hide
+    (s^2 + c^2) ≈ one(s) # hide
+end # hide
+@check pythagorean_identity(pure_float)
+nothing # hide
+```
+
+The property holds! Very nice. What other properties do we have? Wikipedia [maintains a list](https://en.wikipedia.org/wiki/List_of_trigonometric_identities),
+so we just have to pick and choose some that are to our liking.
+
+For example, there's these:
+
+```math
+sin(\alpha \pm \beta) = sin(\alpha)cos(\beta) \pm cos(\alpha)sin(\beta) \\
+cos(\alpha \pm \beta) = cos(\alpha)cos(\beta) \pm sin(\alpha)sin(\beta) \\
+sin(2\theta) = 2sin(\theta)cos(\theta) = (sin(\theta) + cos(\theta))^2 \\
+cos(2\theta) = cos^2(\theta) - sin^2(\theta) = 2cos^2(\theta)-1 = 1-2sin^2(\theta)
+```
+
+and lots more - there's just one problem: due to floating point addition not being associative,
+almost none of these are numerically stable:
+
+```@example guarantees
+using Test
+
+try # hide
+@testset "offset identity" begin
+    @check function sin_offset(a=pure_float, b=pure_float)
+        sin_a, cos_a = sincosd(a)
+        sin_b, cos_b = sincosd(b)
+        sind(a+b) == sin_a*cos_b + cos_a*sin_b
+    end
+end
+catch # hide
+end # hide
+nothing # hide
+```
+
+We have to make do with a subset of all properties then, such as "the output of `sincos` should `==`
+the outputs of `sin` and `cos` on their own", or properties that avoid addition & subtraction.
+
+```@example guarantees
+@testset "sincos properties" begin
+@check function sincos_same(theta=pure_float)
+    s, c = sincosd(theta)
+    s == sind(theta) && c == cosd(theta)
+end
+@check function twice_sin(theta=pure_float)
+    s, c = sincosd(theta)
+    twice_theta = 2*theta
+    assume!(!isinf(twice_theta))
+    isapprox(sind(twice_theta), 2*s*c)
+end
+end
+nothing # hide
+```
+
+These somewhat milder properties seem to pass, nice!
+
+Note how we have to make use of [`assume!`](@ref) to not have `sin` error out with a `DomainError` too!
+This indicates that there are situations where `sincos` & the longer form of `sin` is preferable to the real
+thing. I'm unsure whether that should be noted in a docstring of `sincos` (this seems more appropriate for
+a computer numerics course), but it's a good example of how a developer can learn about the properties
+& tradeoffs a function can have compared to its counterparts. Perhaps a warning like the following would be best:
+
+```patch
+  """
+      sincosd(x::Number)
+
+  Simultaneously compute the sine and cosine of x, where x is in degrees,
+  returning a tuple (sine, cosine).
+
+  Throws a `DomainError` if `isinf(x)` is `true`.
+
+  If `isnan(x)`, return a 2-tuple of `NaN` of type `typeof(x)`.
++
++ !!! warning "Numerical Stability"
++     Due to floating point addition not being associative, not all
++     trigonometric identies can hold for all inputs. Choose carefully
++     and consider the operation you're doing when using trigonometric
++     identities to transform your code.
+
+  !!! compat "Julia 1.3"
+      This function requires at least Julia 1.3.
+  """
+  sincosd
+```
+
+We've now not only documented the erroring behavior of `sincosd`, but also special values and their
+special behavior. In the process we've also found that for this particular function, not everything
+we might expect actually can hold true in general - and documenting that has good chances to be
+a helpful improvement for anyone stumbling over trigonometric functions for the first time (in the long
+run, most developers are newbies; experts are rare!)
+
+At the end of this process, a developer should now have
+
+ * a better understanding of the guarantees a function gives,
+ * some behavioral tests of a function, ready to be integrated into a testsuite running in CI,
+ * a clear understanding that care must be taken when talking about what a computer ought to compute "correctly".
+
+Of course, there could be numerous other properties we'd like to test. For example, we may want to confirm
+that the output of `sincos` is always a 2-Tuple, or that if the input was non-`NaN`, the output values
+are in the closed interval `[-1, 1]`, or that the output values are evenly distributed in that interval (up
+to a point - this is surprisingly difficult to do for large inputs!)
 
 ## Interactions between functions
 
