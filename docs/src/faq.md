@@ -32,7 +32,7 @@ While there is a big overlap in capabilities between the two, there are a number
 Supposition.jl can very easily do that would require a major rework of the internals of PropCheck.jl.
 Here's a small (incomplete) list:
 
- * Shrink error examples
+ * Shrink examples that lead to an error
  * Easily use temporal & stateful property tests
  * Reproducibly replay previously found counterexamples (with caveats regarding external state)
  * Generate values based on the values that were put into a test, and have those values in turn
