@@ -79,7 +79,7 @@ using Supposition
 
 raw_ops = (fill_small, fill_large, empty_small, empty_large, pour_small_into_large, pour_large_into_small)
 gen_ops = Data.Vectors(Data.SampledFrom(raw_ops))
-gen_ops = Data.Vectors(Data.SampledFrom(raw_ops); max_size=10) # hide
+gen_ops = Data.Vectors(Data.SampledFrom(raw_ops); min_size=5, max_size=10) # hide
 example(gen_ops)
 ```
 
