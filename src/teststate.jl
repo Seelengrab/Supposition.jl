@@ -271,6 +271,16 @@ const BUFFER_SIZE = Ref((8 * 1024) % UInt)
 Try to generate an example that falsifies the property given to `ts`.
 """
 function generate!(ts::TestState)
+
+    # 1) try to reproduce a previous failure
+    if !isnothing(ts.previous_example)
+        choices = @something ts.previous_example
+        # FIXME: the RNG should be stored too!
+        tc = for_choices(choices, ts.rng)
+        test_function(ts, tc)
+    end
+
+    # 2) try to generate new counterexamples
     while should_keep_generating(ts) & (isnothing(ts.best_scoring) || (ts.valid_test_cases <= ts.config.max_examples÷2))
         tc = TestCase(UInt64[], ts.rng, BUFFER_SIZE[])
         test_function(ts, tc)

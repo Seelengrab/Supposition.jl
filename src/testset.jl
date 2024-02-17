@@ -99,6 +99,11 @@ function Test.finish(sr::SuppositionReport)
         print_fix_broken(sr)
     end
 
+    # this is a failure, so record the result in the db
+    if !(res isa Pass)
+        record(sr)
+    end
+
     if Test.get_testset_depth() != 0
         parent_ts = Test.get_testset()
         sr.config.record && Test.record(parent_ts, sr)

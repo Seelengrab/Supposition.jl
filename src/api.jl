@@ -139,7 +139,9 @@ julia> Supposition.@check rng=Xoshiro(1234) function foo(a = Data.Text(Data.Char
 macro check(args...)
     isempty(args) && throw(ArgumentError("No arguments supplied to `@check`! Please refer to the documentation for usage information."))
     func = last(args)
-    args = collect(args[begin:end-1])
+    kw_args = collect(args[begin:end-1])
+    args = similar(kw_args, Any)
+    args .= kw_args
     if isexpr(func, :function, 2)
         check_func(func, args)
     elseif isexpr(func, :call)
@@ -174,6 +176,7 @@ function check_func(e::Expr, tsargs)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
 
+    pushfirst!(tsargs, :(record_name = string($namestr, "(", Base.promote_op($gen_input, $TestCase), ")")))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
@@ -206,6 +209,7 @@ function check_call(e::Expr, tsargs)
         push!(args.args, :($Data.produce($e, $tc)))
     end
 
+    pushfirst!(tsargs, :(record_name = string($namestr, "(", Base.promote_op($gen_input, $TestCase), ")")))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
@@ -230,8 +234,10 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
         $sr = $SuppositionReport
         $Test.@testset $sr $(tsargs...) $namestr begin
             report = $Test.get_testset()
-            $ts = $TestState(report.config, $run_input)
+            previous_failure = $retrieve(report.database, report.record_name)
+            $ts = $TestState(report.config, $run_input, previous_failure)
             $Supposition.run($ts)
+            $Test.record(report, $ts)
             got_res = !isnothing($ts.result)
             got_err = !isnothing($ts.target_err)
             got_score = !isnothing($ts.best_scoring)

@@ -21,6 +21,7 @@ include("data.jl")
 include("teststate.jl")
 include("shrink.jl")
 include("api.jl")
+include("history.jl")
 include("testset.jl")
 
 end # Supposition module
