@@ -1,8 +1,11 @@
 module Supposition
 
-using Base
 export TestCase, TestState, forced_choice!, choice!, weighted!, assume!, target!, reject, example
 export Data, @composed, @check
+
+using Base
+using Base: stacktrace, StackFrame
+using Test: AbstractTestSet
 
 import Random
 using Logging
@@ -11,11 +14,7 @@ using Logging
     using ScopedValues
 end
 
-abstract type TestException <: Exception end
-struct Overrun <: TestException end
-struct Invalid <: TestException end
-const Option{T} = Union{Some{T}, Nothing}
-
+include("types.jl")
 include("testcase.jl")
 include("util.jl")
 include("data.jl")

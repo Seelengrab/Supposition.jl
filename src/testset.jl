@@ -1,7 +1,3 @@
-using Test: AbstractTestSet
-
-abstract type Result end
-
 """
     Pass
 
@@ -33,43 +29,24 @@ struct Error <: Result
     trace
 end
 
-mutable struct SuppositionReport <: AbstractTestSet
-    description::String
-    final_state::Option{TestState}
-    result::Option{Result}
-    time_start::Float64
-    time_end::Option{Float64}
-    verbose::Bool
-    expect_broken::Bool
-    config::CheckConfig
-    function SuppositionReport(func::String; verbose=false, broken=false, description="", kws...)
-        desc = isempty(description) ? func : func * ": " * description
-        conf = CheckConfig(;
-            rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
-            max_examples=10_000,
-            kws...)
-        new(desc, nothing, nothing, time(), nothing, verbose, broken, conf)
+@static if VERSION.major > 1 && VERSION.minor >= 11
+    # these are only defined from 1.11 onwards, earlier the printing didn't do anything anyway
+    Test.print_verbose(sr::SuppositionReport) = sr.verbose
+
+    function Test.format_duration(sr::SuppositionReport)
+        (; time_start, time_end) = sr
+        isnothing(time_end) && return "?s"
+
+        dur_s = time_end - time_start
+        if dur_s < 60
+            string(round(dur_s, digits = 1), "s")
+        else
+            m, s = divrem(dur_s, 60)
+            s = lpad(string(round(s, digits = 1)), 4, "0")
+            string(round(Int, m), "m", s, "s")
+        end
     end
-end
-
-@static if VERSION >= v"1.11"
-# these are only defined from 1.11 onwards, earlier the printing didn't do anything anyway
-Test.print_verbose(sr::SuppositionReport) = sr.verbose
-
-function Test.format_duration(sr::SuppositionReport)
-    (; time_start, time_end) = sr
-    isnothing(time_end) && return "?s"
-
-    dur_s = time_end - time_start
-    if dur_s < 60
-        string(round(dur_s, digits = 1), "s")
-    else
-        m, s = divrem(dur_s, 60)
-        s = lpad(string(round(s, digits = 1)), 4, "0")
-        string(round(Int, m), "m", s, "s")
-    end
-end
-end
+end # @static if
 
 struct InvalidInvocation <: Exception
     res::Test.Result
@@ -110,7 +87,7 @@ function Test.get_test_counts(sr::SuppositionReport)
 end
 
 function Test.finish(sr::SuppositionReport)
-    sr.time_end = time()
+    sr.time_end = Some(time())
 
     res = @something(sr.result)
 

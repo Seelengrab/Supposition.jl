@@ -1,26 +1,4 @@
 """
-    TestCase
-
-A struct representing a single (ongoing) test case.
-
- * `prefix`: A fixed set of choices that must be made first.
- * `rng`: The RNG this testcase ultimately uses to draw from. This is used to seed the
-          task-local RNG object before generating begins.
- * `max_size`: The maximum number of choices this `TestCase` is allowed to make.
- * `choices`: The binary choices made so far.
- * `targeting_score`: The score this `TestCase` attempts to maximize.
-"""
-mutable struct TestCase{RNG <: Random.AbstractRNG}
-    prefix::Vector{UInt64}
-    rng::RNG
-    max_size::UInt
-    choices::Vector{UInt64} # should this be a BitVector instead? could make shrinking slower, but save on memory
-    targeting_score::Option{Float64}
-end
-
-TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, max_size) = TestCase(prefix, rng, convert(UInt, max_size), UInt64[], nothing)
-
-"""
     for_choices(prefix, rng=Random.default_rng())
 
 Create a `TestCase` for a given set of known choices.
