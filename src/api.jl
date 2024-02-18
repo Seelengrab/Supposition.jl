@@ -176,7 +176,7 @@ function check_func(e::Expr, tsargs)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
 
-    pushfirst!(tsargs, :(record_name = string($namestr, "(", Base.promote_op($gen_input, $TestCase), ")")))
+    pushfirst!(tsargs, :(record_base = string($namestr, $argtypes(Base.promote_op($gen_input, $TestCase)))))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
@@ -194,6 +194,18 @@ function check_func(e::Expr, tsargs)
     end)
 end
 
+function argtypes(T)
+    T = Base.unwrap_unionall(T)
+    if T.name == @NamedTuple{}.name
+        # normalize to `Tuple`
+        return argtypes(last(T.parameters))
+    end
+    T = T isa TypeVar ? T.ub : T
+    T.name == Tuple.name || throw(ArgumentError("Only Tuple-like types are allowed!"))
+    t = Tuple(T.parameters)
+    isempty(t) ? "()" : string(t)[begin:end-2]*")"
+end
+
 function check_call(e::Expr, tsargs)
     isexpr(e, :call) || throw(ArgumentError("Given expression is not a function call!"))
     any(kw -> isexpr(kw, :kw), e.args) && throw(ArgumentError("Can't pass a generator using keyword syntax to `@check` when reusing a property!"))
@@ -209,7 +221,7 @@ function check_call(e::Expr, tsargs)
         push!(args.args, :($Data.produce($e, $tc)))
     end
 
-    pushfirst!(tsargs, :(record_name = string($namestr, "(", Base.promote_op($gen_input, $TestCase), ")")))
+    pushfirst!(tsargs, :(record_base = string($namestr, $argtypes(Base.promote_op($gen_input, $TestCase)))))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
@@ -234,7 +246,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
         $sr = $SuppositionReport
         $Test.@testset $sr $(tsargs...) $namestr begin
             report = $Test.get_testset()
-            previous_failure = $retrieve(report.database, report.record_name)
+            previous_failure = $retrieve(report.database, $record_name(report))
             $ts = $TestState(report.config, $run_input, previous_failure)
             $Supposition.run($ts)
             $Test.record(report, $ts)

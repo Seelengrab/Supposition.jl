@@ -18,7 +18,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
 @testset "Supposition.jl" begin
     @testset "Code quality (Aqua.jl)" begin
-        Aqua.test_all(Supposition; ambiguities = false,)
+        Aqua.test_all(Supposition; ambiguities = false, stale_deps=false)
+        # stdlib woes?
+        ignore = VERSION >= v"1.11" ? [:ScopedValues] : Symbol[]
+        Aqua.test_stale_deps(Supposition; ignore)
     end
     # Write your tests here.
     @testset "test function interesting" begin
@@ -461,7 +464,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 Supposition.@check verbose=verb commutative(intgen, intgen)
             end
 
-            @testset "double `@check`verbose=verb  of the same function, with distinct generator doesn't clash names" begin
+            @testset "double `@check` of the same function, with distinct generator, doesn't clash names" begin
                 allInt(x) = x isa Integer
                 @check verbose=verb allInt(Data.Integers{Int}())
                 @check verbose=verb allInt(Data.Integers{UInt}())
@@ -500,6 +503,42 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             Supposition.@check verbose=verb function composeeven(g=gen)
                 iseven(g)
             end
+        end
+    end
+
+    @testset "ExampleDB" begin
+        # sample a random target for the failing example to find
+        # We choose from Int32 and sample from Int64 so that we can
+        # *always* find a counterexample!
+        rand_target = rand(Int32)
+        expected_failure(i::Int64) = i < rand_target
+
+        @testset "NoRecordDB" begin
+            nrdb = Supposition.NoRecordDB()
+            # marked as broken so the failure is not reported and meddles CI logs
+            sr = @check record=false broken=true db=nrdb expected_failure(Data.Integers{Int64}())
+            @test isempty(Supposition.records(nrdb))
+            @test isnothing(Supposition.retrieve(nrdb, Supposition.record_name(sr)))
+        end
+
+        @testset "DirectoryDB" begin
+            ddb = Supposition.DirectoryDB(mktempdir())
+
+            # marked as broken so the failure is not reported and meddles CI logs
+            sr = @check record=false broken=true db=ddb expected_failure(Data.Integers{Int64}())
+            records = Supposition.records(ddb)
+
+            # the name of the stored file should be the same as the record
+            @test basename(only(records)) == Supposition.record_name(sr)
+
+            # the stored choices should be the same as the actual choices
+            cached = Supposition.retrieve(ddb, Supposition.record_name(sr))
+            @test @something(cached) == @something(@something(sr.final_state).result)
+
+            # running the test again should reproduce the _exact_ same failure
+            # marked as broken so the failure is not reported and meddles CI logs
+            sr2 = @check record=false broken=true db=ddb expected_failure(Data.Integers{Int64}())
+            @test @something(sr2.result).example == @something(sr.result).example
         end
     end
 end

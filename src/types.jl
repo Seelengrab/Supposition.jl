@@ -124,7 +124,7 @@ An `AbstractTestSet`, for recording the final result of `@check` in the context 
 """
 mutable struct SuppositionReport <: AbstractTestSet
     description::String
-    record_name::String
+    record_base::String
     final_state::Option{TestState}
     result::Option{Result}
     time_start::Float64
@@ -134,8 +134,8 @@ mutable struct SuppositionReport <: AbstractTestSet
     config::CheckConfig
     database::ExampleDB
     function SuppositionReport(func::String; verbose::Bool=false, broken::Bool=false, description::String="", db::Union{Bool,ExampleDB}=true,
-                                record_name::String="", kws...)
-        desc = isempty(description) ? func : func * ": " * description
+                                record_base::String="", kws...)
+        desc = isempty(description) ? func : description
         database::ExampleDB = if db isa Bool
             if db
                 default_directory_db()
@@ -149,7 +149,7 @@ mutable struct SuppositionReport <: AbstractTestSet
             rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
             max_examples=10_000,
             kws...)
-        new(desc, record_name, nothing, nothing, time(), nothing, verbose, broken, conf, database)
+        new(desc, record_base, nothing, nothing, time(), nothing, verbose, broken, conf, database)
     end
 end
 

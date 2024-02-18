@@ -48,6 +48,8 @@ end
     end
 end # @static if
 
+record_name(sr::SuppositionReport) = sr.record_base * "_" * sr.description
+
 struct InvalidInvocation <: Exception
     res::Test.Result
 end

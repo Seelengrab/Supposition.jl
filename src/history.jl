@@ -11,7 +11,7 @@ struct NoRecordDB <: ExampleDB end
 
 records(::NoRecordDB) = ()
 record!(::NoRecordDB, _, _) = nothing
-retrieve(::NoRecordDB) = nothing
+retrieve(::NoRecordDB, _) = nothing
 
 """
     DirectoryDB <: ExampleDB
@@ -20,10 +20,9 @@ An `ExampleDB` that records examples as files in a directory.
 """
 struct DirectoryDB <: ExampleDB
     basepath::String
-    records::Vector{String}
 end
 
-records(ddb::DirectoryDB) = ddb.records
+records(ddb::DirectoryDB) = filter!(!isdir, readdir(ddb.basepath; join=true))
 
 function record!(ddb::DirectoryDB, name, choices)
     storage_path = joinpath(ddb.basepath, name)
@@ -36,7 +35,7 @@ end
 function retrieve(ddb::DirectoryDB, name)
     storage_path = joinpath(ddb.basepath, name)
     !isfile(storage_path) && return nothing
-    io = open(storage_path, "r+")
+    io = open(storage_path, "r")
     return Some(mmap(io, Vector{UInt}))
 end
 
@@ -75,12 +74,12 @@ function default_directory_db()
                 """
             )
         end
-        return DirectoryDB(db_path, String[])
+        return DirectoryDB(db_path)
     end
 
     # the DB exists, so read it
     records = filter!(isfile, readdir(db_path; join=true))
-    return DirectoryDB(db_path, records)
+    return DirectoryDB(db_path)
 end
 
 #####
@@ -90,9 +89,9 @@ end
 function record(sr::SuppositionReport)
     ts = @something sr.final_state
     choices = @something ts.result
-    record!(sr.database, sr.record_name * "_" * sr.description, choices)
+    record!(sr.database, record_name(sr), choices)
     true
 end
 
-retrieve(sr::SuppositionReport) = retrieve(sr.database, sr.record_name * "_" * sr.description)
+retrieve(sr::SuppositionReport) = retrieve(sr.database, record_name(sr))
 
