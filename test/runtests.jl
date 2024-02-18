@@ -535,9 +535,9 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             cached = Supposition.retrieve(ddb, Supposition.record_name(sr))
             @test @something(cached) == @something(@something(sr.final_state).result)
 
-            # running the test again should reproduce the _exact_ same failure
+            # running the test again should reproduce the _exact_ same failure immediately
             # marked as broken so the failure is not reported and meddles CI logs
-            sr2 = @check record=false broken=true db=ddb expected_failure(Data.Integers{Int64}())
+            sr2 = @check record=false broken=true db=ddb max_examples=1 expected_failure(Data.Integers{Int64}())
             @test @something(sr2.result).example == @something(sr.result).example
         end
     end
