@@ -78,7 +78,7 @@ function kw_to_produce(tc::Symbol, kwargs)
 end
 
 """
-    @check
+    @check [key=val]... function...
 
 The main way to declare & run a property based test. Called like so:
 
@@ -98,14 +98,15 @@ Supported options, passed as `key=value`:
  * `record::Bool`: Whether the result of the invocation should be recorded with any parent testsets.
 
 The arguments to the given function are expected to be generator strategies. The names they are bound to
-are the names the generated object will have in the test.
+are the names the generated object will have in the test. These arguments will be shown should
+the property fail!
 
 # Extended help
 
 ## Reusing existing properties
 
 If you already have a predicate defined, you can also use the calling syntax in `@check`. Here, the
-generator is passed purely positionally to the given function.
+generator is passed purely positionally to the given function; no argument name is necessary.
 
 ```julia-repl
 julia> using Supposition, Supposition.Data
