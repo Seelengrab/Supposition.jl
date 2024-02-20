@@ -27,7 +27,7 @@ Depth = 3
    * It should be easily possible to reuse large parts of existing definitions (functions/structs) to
      build custom generators
  * Repeatability
-   * It should be possible to replay previous (failing) examples and reproduce the sequence of stesp taken
+   * It should be possible to replay previous (failing) examples and reproduce the sequence of steps taken
      *exactly*. The only cases where this isn't going to work is if your code relies on external state,
      such as querying a hardware RNG for random data or similar objects that are not under the control of
      the testing framework itself (such as the capacity of your harddrive, for example).
