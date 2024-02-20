@@ -22,10 +22,6 @@ Test the function given to `ts` on the test case `tc`.
 
 Returns a `NTuple{Bool, 2}` indicating whether `tc` is interesting and whether it is
 "better" than the previously best recorded example in `ts`.
-
-!!! note "Targeting"
-    If the function given to `ts` never targets anything, the second element of
-    the returned tuple will always be `false`.
 """
 function test_function(ts::TestState, tc::TestCase)
     # one call == one test of the function in `ts` for the given `TestCase`
