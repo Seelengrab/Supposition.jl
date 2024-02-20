@@ -2,9 +2,24 @@
 
 Since Julia developers can sometimes go crazy for performance and because PropCheck.jl
 already had a bunch of optimizations to (or try to, as we'll see) make it go fast, let's compare it to Supposition.jl
-to see how the two stack up against each other.
+to see how the two stack up against each other. Since both packages have been written by the same author,
+I think I'm in the clear and won't step on anyones feet :)
 
-All benchmarks are run on the same machine, with the same Julia version.
+All benchmarks were run on the same machine, with the same Julia version:
+
+```julia-repl
+julia> versioninfo()
+Julia Version 1.11.0-DEV.1610
+Commit aecd8fd379 (2024-02-16 02:40 UTC)
+Platform Info:
+  OS: Linux (x86_64-pc-linux-gnu)
+  CPU: 24 × AMD Ryzen 9 7900X 12-Core Processor
+  WORD_SIZE: 64
+  LLVM: libLLVM-16.0.6 (ORCJIT, znver4)
+Threads: 23 default, 1 interactive, 11 GC (on 24 virtual cores)
+Environment:
+  JULIA_PKG_USE_CLI_GIT = true
+```
 
 ## Integers
 
