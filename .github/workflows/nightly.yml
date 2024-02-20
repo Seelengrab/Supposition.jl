@@ -22,15 +22,12 @@ permissions:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia nightly - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.8'
-          - '1.9'
-          - '1'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -50,27 +47,3 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: lcov.info
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: julia-actions/setup-julia@v1
-        with:
-          version: '1'
-      - run: |
-          julia --project=docs -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
-      - run: |
-          julia --project=docs -e '
-            using Documenter: doctest
-            using Documenter.DocMeta: setdocmeta!
-            using FieldFlags
-            setdocmeta!(FieldFlags, :DocTestSetup, :(using FieldFlags); recursive=true)
-            doctest(FieldFlags)'
-      - run: julia --project=docs docs/make.jl
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

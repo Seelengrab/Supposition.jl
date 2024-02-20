@@ -1,6 +1,7 @@
 # Supposition.jl
 
-[![Build Status](https://github.com/Sukera/Supposition.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/Sukera/Supposition.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![CI Stable](https://github.com/Sukera/Supposition.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/Sukera/Supposition.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![CI Nightly](https://github.com/Sukera/Supposition.jl/actions/workflows/nightly.yml/badge.svg?branch=main)](https://github.com/Sukera/Supposition.jl/actions/workflows/nightly.yml)
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://seelengrab.github.io/Supposition.jl/stable)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://seelengrab.github.io/Supposition.jl/dev)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
