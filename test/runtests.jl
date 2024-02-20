@@ -466,7 +466,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @testset "Additive properties" begin
                 Supposition.@check verbose=verb associative(Data.Just(add), intgen, intgen, intgen)
                 Supposition.@check verbose=verb identity_add(Data.Just(add), intgen)
-                Supposition.@check verbose=verb successor(intgen, intgen)
+                int16gen = Data.Integers{UInt16}()
+                Supposition.@check verbose=verb max_examples=1_000 successor(int16gen, int16gen)
                 Supposition.@check verbose=verb commutative(intgen, intgen)
             end
 
