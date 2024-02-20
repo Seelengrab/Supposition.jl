@@ -1,17 +1,22 @@
-# API
-
-## Function Index
+# Documentation Reference
 
 !!! warning "Stability"
     The entries written on this page are automatically generated and DO NOT represent
     the currently supported API surface. Feel free to use anything you can find here,
-    but know that (for now) only symbols that are exported are expected to stick around
-    (they too may change, but I don't expect the underlying functionality to vanish entirely).
+    but be aware that just because it's listed here, does not mean it's covered under
+    semver.
+
+## Data reference
+
+The `Data` module contains most everyday objects you're going to use when writing property
+based tests with Supposition.jl. For example, the basic generators for integers, strings,
+floating point values etc. are defined here. Everything listed in this section is considered
+supported under semver.
 
 ```@index
+Modules = [Data]
+Order = [:function, :type]
 ```
-
-## Data reference 
 
 ### Functions
 
@@ -19,8 +24,6 @@
 Modules = [Data]
 Order = [:function]
 ```
-
-### Generators
 
 ```@autodocs
 Modules = [Data]
@@ -31,6 +34,11 @@ end
 ```
 
 ## Supposition reference
+
+```@index
+Modules = [Supposition]
+Order = [:macro, :function, :type]
+```
 
 ```@autodocs
 Modules = [Supposition]
