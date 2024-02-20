@@ -36,6 +36,7 @@ function builddocs(clear=false)
                 "Alignment of Documentation" => "Examples/docalignment.md",
                 "Stateful Testing" => "Examples/stateful.md",
             ],
+            "PBT Ressources" => "ressources.md",
             "FAQ" => "faq.md",
             "Interfaces" => "interfaces.md",
             "Benchmarks" => "benchmarks.md",
