@@ -67,9 +67,9 @@ jobs:
           julia --project=docs -e '
             using Documenter: doctest
             using Documenter.DocMeta: setdocmeta!
-            using FieldFlags
-            setdocmeta!(FieldFlags, :DocTestSetup, :(using FieldFlags); recursive=true)
-            doctest(FieldFlags)'
+            using Supposition
+            setdocmeta!(Supposition, :DocTestSetup, :(using Supposition; using Supposition.Data); recursive=true)
+            doctest(Supposition)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
