@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Benchmarks · Supposition.jl Documentation</title><meta name="title" content="Benchmarks · Supposition.jl Documentation"/><meta property="og:title" content="Benchmarks · Supposition.jl Documentation"/><meta property="twitter:title" content="Benchmarks · Supposition.jl Documentation"/><meta name="description" content="Documentation for Supposition.jl Documentation."/><meta property="og:description" content="Documentation for Supposition.jl Documentation."/><meta property="twitter:description" content="Documentation for Supposition.jl Documentation."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">Supposition.jl Documentation</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="index.html">Main Page</a></li><li><a class="tocitem" href="intro.html">Introduction to PBT</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="Examples/basic.html">Basic Usage</a></li><li><a class="tocitem" href="Examples/composition.html">Composing Generators</a></li><li><a class="tocitem" href="Examples/docalignment.html">Alignment of Documentation</a></li><li><a class="tocitem" href="Examples/stateful.html">Stateful Testing</a></li></ul></li><li><a class="tocitem" href="ressources.html">PBT Ressources</a></li><li><a class="tocitem" href="faq.html">FAQ</a></li><li><a class="tocitem" href="interfaces.html">Interfaces</a></li><li class="is-active"><a class="tocitem" href="benchmarks.html">Benchmarks</a><ul class="internal"><li><a class="tocitem" href="#Integers"><span>Integers</span></a></li><li><a class="tocitem" href="#Floats"><span>Floats</span></a></li><li><a class="tocitem" href="#Strings"><span>Strings</span></a></li><li><a class="tocitem" href="#Map"><span>Map</span></a></li><li><a class="tocitem" href="#Filtering"><span>Filtering</span></a></li><li><a class="tocitem" href="#Conclusion"><span>Conclusion</span></a></li></ul></li><li><a class="tocitem" href="api.html">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="benchmarks.html">Benchmarks</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="benchmarks.html">Benchmarks</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Benchmarks"><a class="docs-heading-anchor" href="#Benchmarks">Benchmarks</a><a id="Benchmarks-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmarks" title="Permalink"></a></h1><p>Since Julia developers can sometimes go crazy for performance and because PropCheck.jl already had a bunch of optimizations to (or try to, as we&#39;ll see) make it go fast, let&#39;s compare it to Supposition.jl to see how the two stack up against each other. Since both packages have been written by the same author, I think I&#39;m in the clear and won&#39;t step on anyones feet :)</p><p>All benchmarks were run on the same machine, with the same Julia version:</p><pre><code class="language-julia-repl hljs">julia&gt; versioninfo()
+Julia Version 1.11.0-DEV.1610
+Commit aecd8fd379 (2024-02-16 02:40 UTC)
+Platform Info:
+  OS: Linux (x86_64-pc-linux-gnu)
+  CPU: 24 × AMD Ryzen 9 7900X 12-Core Processor
+  WORD_SIZE: 64
+  LLVM: libLLVM-16.0.6 (ORCJIT, znver4)
+Threads: 23 default, 1 interactive, 11 GC (on 24 virtual cores)
+Environment:
+  JULIA_PKG_USE_CLI_GIT = true</code></pre><h2 id="Integers"><a class="docs-heading-anchor" href="#Integers">Integers</a><a id="Integers-1"></a><a class="docs-heading-anchor-permalink" href="#Integers" title="Permalink"></a></h2><p>The task is simple - generating a single <code>Vector{Int}</code> with <code>1_000_000</code> elements, through the respective interface of each package.</p><p>First, PropCheck.jl:</p><pre><code class="language-julia-repl hljs">julia&gt; using BenchmarkTools
+
+julia&gt; using PropCheck
+
+julia&gt; intgen = PropCheck.vector(PropCheck.iconst(1_000_000), itype(Int));
+
+julia&gt; @benchmark root(PropCheck.generate(intgen))
+BenchmarkTools.Trial: 1 sample with 1 evaluation.
+ Single result which took 6.826 s (31.94% GC) to evaluate,
+ with a memory estimate of 9.17 GiB, over 27284112 allocations.</code></pre><p>And now, Supposition:</p><pre><code class="language-julia-repl hljs">julia&gt; using BenchmarkTools
+
+julia&gt; using Supposition
+
+julia&gt; intgen = Data.Vectors(Data.Integers{Int}(); min_size=1_000_000, max_size=1_000_000);
+
+julia&gt; @benchmark example($intgen)
+BenchmarkTools.Trial: 373 samples with 1 evaluation.
+ Range (min … max):   7.840 ms … 46.349 ms  ┊ GC (min … max):  0.00% … 76.51%
+ Time  (median):     10.796 ms              ┊ GC (median):     7.90%
+ Time  (mean ± σ):   13.392 ms ±  6.737 ms  ┊ GC (mean ± σ):  25.16% ± 20.21%
+
+    ▃▅█▅▅▅▃
+  ▃▇███████▇██▆▄▂▃▃▁▁▁▁▁▂▁▁▁▂▁▁▂▁▁▁▁▁▁▁▂▃▂▃▂▃▄▂▄▃▃▃▄▄▃▃▂▃▂▂▂▃ ▃
+  7.84 ms         Histogram: frequency by time          32 ms &lt;
+
+ Memory estimate: 52.94 MiB, allocs estimate: 52.</code></pre><p>GC percentage is about the same, but the used memory and total number of allocations are VASTLY in favor of Supposition.jl, by about a factor of 1000 timewise and a factor 200 memorywise.</p><p>To put this into perspective, here&#39;s a benchmark of just <code>1_000_000</code> <code>Int</code> randomly generated:</p><pre><code class="language-julia-repl hljs">julia&gt; @benchmark rand(Int, 1_000_000)
+BenchmarkTools.Trial: 10000 samples with 1 evaluation.
+ Range (min … max):  182.570 μs …  11.340 ms  ┊ GC (min … max):  0.00% … 96.50%
+ Time  (median):     311.934 μs               ┊ GC (median):     0.00%
+ Time  (mean ± σ):   391.653 μs ± 244.852 μs  ┊ GC (mean ± σ):  11.15% ± 15.24%
+
+      ▆██▆▆▆▅▄▃▂▁▁▁▁            ▁▁▂▂▂▁▁                         ▂
+  ▄▆▇████████████████████▇▇▇▇▆▅▇█████████▇▇▇█▇▇▆▅▅▄▄▄▄▃▄▅▄▃▄▄▄▅ █
+  183 μs        Histogram: log(frequency) by time       1.33 ms &lt;
+
+ Memory estimate: 7.63 MiB, allocs estimate: 3.</code></pre><p>So Supposition.jl is within 300x of just generating some random numbers, suggesting there&#39;s still room for improvement.</p><h2 id="Floats"><a class="docs-heading-anchor" href="#Floats">Floats</a><a id="Floats-1"></a><a class="docs-heading-anchor-permalink" href="#Floats" title="Permalink"></a></h2><p>This is basically the same task as with <code>Int</code>, just producing <code>1_000_000</code> <code>Float64</code> instead.</p><p>We&#39;ll start with PropCheck.jl again:</p><pre><code class="language-julia-repl hljs">julia&gt; floatgen = PropCheck.vector(PropCheck.iconst(1_000_000), PropCheck.ifloatinfnan(Float64));
+
+julia&gt; @benchmark root(PropCheck.generate(floatgen))
+BenchmarkTools.Trial: 2 samples with 1 evaluation.
+ Range (min … max):  4.881 s …   4.896 s  ┊ GC (min … max): 27.50% … 24.34%
+ Time  (median):     4.889 s              ┊ GC (median):    25.92%
+ Time  (mean ± σ):   4.889 s ± 10.866 ms  ┊ GC (mean ± σ):  25.92% ±  2.24%
+
+  █                                                       █
+  █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
+  4.88 s         Histogram: frequency by time         4.9 s &lt;
+
+ Memory estimate: 4.58 GiB, allocs estimate: 16363584.</code></pre><p>And again, with Supposition.jl:</p><pre><code class="language-julia-repl hljs">julia&gt; floatgen = Data.Vectors(Data.Floats{Float64}(); min_size=1_000_000, max_size=1_000_000);
+
+julia&gt; @benchmark example($floatgen)
+BenchmarkTools.Trial: 379 samples with 1 evaluation.
+ Range (min … max):   8.112 ms … 49.929 ms  ┊ GC (min … max):  0.00% … 70.59%
+ Time  (median):     10.721 ms              ┊ GC (median):     8.58%
+ Time  (mean ± σ):   13.176 ms ±  6.559 ms  ┊ GC (mean ± σ):  24.73% ± 19.99%
+
+   ▂▂▂█▇▆█▄
+  ▆████████▇▇▆▄▃▁▂▁▂▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▃▁▁▁▁▁▃▁▁▂▁▃▃▃▃▄▃▄▄▃▅▃▂▂▁▃ ▃
+  8.11 ms         Histogram: frequency by time        30.8 ms &lt;
+
+ Memory estimate: 52.94 MiB, allocs estimate: 52.</code></pre><p>Once again, Supposition.jl beats PropCheck.jl by a factor of 500 in time and a factor of 100 in memory.</p><h2 id="Strings"><a class="docs-heading-anchor" href="#Strings">Strings</a><a id="Strings-1"></a><a class="docs-heading-anchor-permalink" href="#Strings" title="Permalink"></a></h2><p>Both Supposition.jl and PropCheck.jl can generate the full spectrum of possible <code>String</code>, by going through <em>all</em> assigned unicode codepoints using specialized generation methods. Let&#39;s compare them, starting again with PropCheck.jl:</p><pre><code class="language-julia-repl hljs"># the default uses all valid `Char`
+julia&gt; strgen = PropCheck.str(PropCheck.iconst(1_000_000));
+
+julia&gt; @benchmark root(PropCheck.generate(strgen))
+BenchmarkTools.Trial: 8 samples with 1 evaluation.
+ Range (min … max):  562.946 ms … 818.003 ms  ┊ GC (min … max): 29.31% … 53.26%
+ Time  (median):     662.959 ms               ┊ GC (median):    42.11%
+ Time  (mean ± σ):   670.489 ms ±  78.934 ms  ┊ GC (mean ± σ):  42.58% ±  7.18%
+
+  █          █ █    █          █    █ █                       █
+  █▁▁▁▁▁▁▁▁▁▁█▁█▁▁▁▁█▁▁▁▁▁▁▁▁▁▁█▁▁▁▁█▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
+  563 ms           Histogram: frequency by time          818 ms &lt;
+
+ Memory estimate: 1.01 GiB, allocs estimate: 4999791.</code></pre><p>PropCheck.jl manages to go below 1s runtime for the first time! It still doesn&#39;t manage to use less than 1GiB of memory though. Supposition.jl on the other hand..</p><pre><code class="language-julia-repl hljs">julia&gt; strgen = Data.Text(Data.Characters(); min_len=1_000_000, max_len=1_000_000);
+
+julia&gt; @benchmark example($strgen)
+BenchmarkTools.Trial: 156 samples with 1 evaluation.
+ Range (min … max):  29.273 ms … 51.403 ms  ┊ GC (min … max): 0.00% … 40.30%
+ Time  (median):     31.196 ms              ┊ GC (median):    2.21%
+ Time  (mean ± σ):   32.035 ms ±  3.192 ms  ┊ GC (mean ± σ):  2.34% ±  3.45%
+
+     ▁▁▅▆▂█▆▃▂
+  ▄▆▅█████████▆▇▆▃▄▄▁▁▁▁▁▁▁▁▁▃▁▁▃▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▃▁▄▄▁▁▁▃▁▁▃▃ ▃
+  29.3 ms         Histogram: frequency by time        42.5 ms &lt;
+
+ Memory estimate: 53.22 MiB, allocs estimate: 84.</code></pre><p>..completely obliterates PropCheck.jl yet again, being only barely slower than generating one million <code>Int</code> or <code>Float64</code>. To put this into perspective, bare <code>randstring</code> is faster by a factor of only ~3:</p><pre><code class="language-julia-repl hljs">julia&gt; using Random
+
+julia&gt; @benchmark randstring(typemin(Char):&quot;\xf7\xbf\xbf\xbf&quot;[1], 1_000_000)
+BenchmarkTools.Trial: 675 samples with 1 evaluation.
+ Range (min … max):  6.920 ms …   9.274 ms  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     7.055 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   7.221 ms ± 366.592 μs  ┊ GC (mean ± σ):  2.22% ± 3.98%
+
+   ▅█▅▃▁
+  ▄█████▇▇▅▃▃▃▃▃▃▂▃▂▁▃▂▂▂▃▃▄▃▃▄▂▃▃▃▃▂▃▃▂▂▂▂▂▂▃▂▂▂▂▂▂▂▁▁▁▂▁▁▂▂ ▃
+  6.92 ms         Histogram: frequency by time         8.5 ms &lt;
+
+ Memory estimate: 7.60 MiB, allocs estimate: 4.</code></pre><p>Considering the amount of state that is being kept track of here, I&#39;d say this is not too shabby.</p><h2 id="Map"><a class="docs-heading-anchor" href="#Map">Map</a><a id="Map-1"></a><a class="docs-heading-anchor-permalink" href="#Map" title="Permalink"></a></h2><p>Next, function mapping - which is one of the most basic tools to transform an input into something else. Our mapped function is the humble &quot;make even&quot; function, <code>x -&gt; 2x</code>. With PropCheck.jl:</p><pre><code class="language-julia-repl hljs">julia&gt; evengen = PropCheck.vector(PropCheck.iconst(1_000_000), PropCheck.map(x -&gt; 2x, PropCheck.itype(Int)));
+
+julia&gt; @benchmark root(PropCheck.generate(evengen))
+BenchmarkTools.Trial: 1 sample with 1 evaluation.
+ Single result which took 7.554 s (26.22% GC) to evaluate,
+ with a memory estimate of 9.32 GiB, over 32284641 allocations.</code></pre><p>and Supposition.jl:</p><pre><code class="language-julia-repl hljs">julia&gt; evengen = Data.Vectors(map(x -&gt; 2x, Data.Integers{Int}()); min_size=1_000_000, max_size=1_000_000);
+
+julia&gt; @benchmark example($evengen)
+BenchmarkTools.Trial: 491 samples with 1 evaluation.
+ Range (min … max):   7.926 ms … 24.521 ms  ┊ GC (min … max): 0.00% … 3.01%
+ Time  (median):     10.146 ms              ┊ GC (median):    7.19%
+ Time  (mean ± σ):   10.176 ms ±  1.696 ms  ┊ GC (mean ± σ):  6.75% ± 5.07%
+
+    ▁ ▃▁     ▃██▇▇▁▂
+  ▃▅█▆██▆▆▇▅▇████████▅▃▅▃▂▁▁▁▃▂▁▂▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▂▂▁▁▁▁▁▁▁▁▃▂▂ ▃
+  7.93 ms         Histogram: frequency by time        18.1 ms &lt;
+
+ Memory estimate: 52.94 MiB, allocs estimate: 52.</code></pre><p>And once again, Supposition.jl is victorious on all accounts.</p><h2 id="Filtering"><a class="docs-heading-anchor" href="#Filtering">Filtering</a><a id="Filtering-1"></a><a class="docs-heading-anchor-permalink" href="#Filtering" title="Permalink"></a></h2><p>Benchmarking <code>filter</code> is a bit special now - Supposition.jl tries to protect you from too-long sampling sessions, which PropCheck.jl just doesn&#39;t even try. As a result, if we naively try to filter for even numbers with PropCheck, we get a monstrosity:</p><pre><code class="language-julia-repl hljs">julia&gt; evengen = PropCheck.vector(PropCheck.iconst(1_000_000), PropCheck.filter(iseven, PropCheck.itype(Int)));
+
+julia&gt; @benchmark root(PropCheck.generate(evengen))
+BenchmarkTools.Trial: 1 sample with 1 evaluation.
+ Single result which took 37.428 s (24.58% GC) to evaluate,
+ with a memory estimate of 50.67 GiB, over 220777721 allocations.</code></pre><p>37s and 50GiB memory used is a very tall order (especially for just a single vector!), and should rightly be kindly asked to leave the venue. Supposition.jl on the other hand stops you in your tracks:</p><pre><code class="language-julia-repl hljs">julia&gt; evengen = Data.Vectors(filter(iseven, Data.Integers{Int}()); min_size=1_000_000, max_size=1_000_000);
+
+julia&gt; @benchmark example($evengen)
+ERROR: Tried sampling 100000 times, without getting a result. Perhaps you&#39;re filtering out too many examples?</code></pre><p>and asks you what you&#39;re even doing. After all, make <code>1_000_000</code> coin flips and you&#39;re vanishingly unlikely to actually get a full vector with <code>1_000_000</code> elements that are all even (somewhere on the order of 1e-301030, to be precise).</p><p>So to test this properly, we&#39;re going to make sure that the filtering step is not the bottleneck, by first using our trusty <code>x -&gt; 2x</code> again and then &quot;filtering&quot; for only even numbers. This adds the additional filtering step, but doesn&#39;t let it fail, so the probability of getting an even number doesn&#39;t come into play and we can purely focus on the relative overhead to just <code>map</code>.</p><p>With PropCheck.jl, that leads to:</p><pre><code class="language-julia-repl hljs">julia&gt; evengen = PropCheck.vector(PropCheck.iconst(1_000_000), PropCheck.filter(iseven, PropCheck.map(x -&gt; 2x, PropCheck.itype(Int))));
+
+julia&gt; @benchmark root(PropCheck.generate(evengen))
+BenchmarkTools.Trial: 1 sample with 1 evaluation.
+ Single result which took 9.294 s (25.00% GC) to evaluate,
+ with a memory estimate of 9.64 GiB, over 45284893 allocations.</code></pre><p>Almost 10s - what a monster, and that&#39;s just for a single example! As for Supposition.jl..</p><pre><code class="language-julia-repl hljs">julia&gt; evengen = Data.Vectors(filter(iseven, map(x -&gt; 2x, Data.Integers{Int}())); min_size=1_000_000, max_size=1_000_000);
+
+julia&gt; @benchmark example($evengen)
+BenchmarkTools.Trial: 488 samples with 1 evaluation.
+ Range (min … max):   7.932 ms … 41.305 ms  ┊ GC (min … max): 0.00% … 14.49%
+ Time  (median):     10.062 ms              ┊ GC (median):    7.04%
+ Time  (mean ± σ):   10.244 ms ±  2.431 ms  ┊ GC (mean ± σ):  6.91% ±  5.33%
+
+    ▁     ▃█▅▃
+  ▄▅███▆▆▆█████▇▇▅▂▃▃▁▂▂▁▁▁▂▁▁▁▂▂▁▁▁▁▁▁▁▁▂▁▁▁▂▂▁▁▁▂▁▁▁▁▂▁▁▁▂▂ ▃
+  7.93 ms         Histogram: frequency by time        21.1 ms &lt;
+
+ Memory estimate: 52.94 MiB, allocs estimate: 52.</code></pre><p>Another factor 1000 timewise, and factor 200 memory wise!</p><h2 id="Conclusion"><a class="docs-heading-anchor" href="#Conclusion">Conclusion</a><a id="Conclusion-1"></a><a class="docs-heading-anchor-permalink" href="#Conclusion" title="Permalink"></a></h2><p>If you&#39;ve read down to here, I think I don&#39;t even have to write it out - Supposition.jl is <em>fast</em>! I feel pretty confident saying that it&#39;s unlikely to be the bottleneck of a testsuite. All of that without even explicitly looking for places to optimize the package yet.</p><p>So go and incorporate fuzzing into your testsuite ;)</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="interfaces.html">« Interfaces</a><a class="docs-footer-nextpage" href="api.html">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 20 February 2024 19:56">Tuesday 20 February 2024</span>. Using Julia version 1.10.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
