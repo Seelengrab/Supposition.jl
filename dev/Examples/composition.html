@@ -19,16 +19,16 @@ intgen = Data.Integers{UInt8}()
 f = filter(iseven, intgen)
 
 example(f, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{UInt8}:
- 0xd0
- 0x14
- 0x1a
- 0x7c
- 0x54
- 0x14
- 0x7a
- 0x50
- 0xd0
- 0xac</code></pre><p>Note that filtering is, in almost all cases, strictly worse than constructing the desired objects directly. For example, if the filtering predicate rejects too many examples from the input space, it can easily happen that no suitable examples can be found:</p><pre><code class="language-julia hljs">g = filter(&gt;(typemax(UInt8)), intgen)
+ 0xfe
+ 0x36
+ 0x9a
+ 0xce
+ 0xee
+ 0xe8
+ 0xb8
+ 0x8c
+ 0xf6
+ 0x22</code></pre><p>Note that filtering is, in almost all cases, strictly worse than constructing the desired objects directly. For example, if the filtering predicate rejects too many examples from the input space, it can easily happen that no suitable examples can be found:</p><pre><code class="language-julia hljs">g = filter(&gt;(typemax(UInt8)), intgen)
 example(g, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ERROR: Tried sampling 100000 times, without getting a result. Perhaps you&#39;re filtering out too many examples?</code></pre><p>It is best to only filter when you&#39;re certain that the part of the state space you&#39;re filtering out is not substantial.</p><h3 id="map"><a class="docs-heading-anchor" href="#map"><code>map</code></a><a id="map-1"></a><a class="docs-heading-anchor-permalink" href="#map" title="Permalink"></a></h3><p>In order to make it easier to directly construct conforming instances, you can use <code>map</code>, transforming the output of one <code>Possibility</code> into a different object:</p><pre><code class="language-julia hljs">using Supposition
 
 intgen = Data.Integers{UInt8}()
@@ -36,13 +36,13 @@ makeeven(x) = (x÷0x2)*0x2
 m = map(makeeven, intgen)
 
 example(m, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{UInt8}:
+ 0xbe
+ 0xb8
+ 0xe8
+ 0xb8
+ 0x30
  0x52
- 0x84
- 0x4c
- 0x4e
- 0x62
- 0x96
- 0x44
- 0xbc
- 0x1c
- 0x80</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>map</code> is a <em>best effort</em> and may be wider than expected. Ensure your function <code>f</code> is easily inferrable to have good chances for <code>map</code>ping it to be inferable as well.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="basic.html">« Basic Usage</a><a class="docs-footer-nextpage" href="docalignment.html">Alignment of Documentation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 20 February 2024 20:14">Tuesday 20 February 2024</span>. Using Julia version 1.10.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 0x0c
+ 0x76
+ 0xf8
+ 0xda</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>map</code> is a <em>best effort</em> and may be wider than expected. Ensure your function <code>f</code> is easily inferrable to have good chances for <code>map</code>ping it to be inferable as well.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="basic.html">« Basic Usage</a><a class="docs-footer-nextpage" href="docalignment.html">Alignment of Documentation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 20 February 2024 20:18">Tuesday 20 February 2024</span>. Using Julia version 1.10.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
