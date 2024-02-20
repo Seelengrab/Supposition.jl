@@ -1,3 +1,10 @@
+import Pkg
+
+cd(@__DIR__)
+Pkg.activate(@__DIR__)
+Pkg.develop(path="..")
+Pkg.instantiate()
+
 using Documenter
 
 liveserver = "livesever" in ARGS
