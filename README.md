@@ -4,6 +4,7 @@
 [![CI Nightly](https://github.com/Seelengrab/Supposition.jl/actions/workflows/nightly.yml/badge.svg)](https://github.com/Seelengrab/Supposition.jl/actions/workflows/nightly.yml?query=branch%3Amain)
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://seelengrab.github.io/Supposition.jl/stable)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://seelengrab.github.io/Supposition.jl/dev)
+[![codecov](https://codecov.io/gh/Seelengrab/Supposition.jl/graph/badge.svg?token=BMO2XHN5JX)](https://codecov.io/gh/Seelengrab/Supposition.jl)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 This is a Julia port of the property based testing framework [Hypothesis](https://hypothesis.readthedocs.io/en/latest/).
