@@ -1,4 +1,4 @@
-name: CI
+name: Nightly
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
