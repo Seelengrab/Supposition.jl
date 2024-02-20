@@ -111,7 +111,7 @@ end
 """
     Bind(source::Possibility, f)
 
-Binds `map` to `source`, i.e., on `produce(::Bind, ::TestCase)` this calls `produce` on
+Binds `f` to `source`, i.e., on `produce(::Bind, ::TestCase)` this calls `produce` on
 `source`, the result of which is passed to `f`, the output of which will be used as input
 to `produce` again.
 
@@ -189,7 +189,7 @@ end
 A `Possibility` representing drawing vectors with length `l` in `min_size <= l <= max_size`,
 holding elements of type `T`.
 
-`min_size` and `max_size` must be positive numbers, with `min_size <= `max_size`.
+`min_size` and `max_size` must be positive numbers, with `min_size <= max_size`.
 
 ```julia-repl
 julia> using Supposition
