@@ -114,8 +114,21 @@ abstract type Result end
     ExampleDB
 
 An abstract type representing a database of previous counterexamples.
+
+Required methods:
+
+  * `records(::ExampleDB)`: Returns an iterable of all currently recorded counterexamples.
+  * `record!(::ExampleDB, key, value)`: Record the counterexample `value` under the key `key`.
+  * `retrieve(::ExampleDB, key)::Option`: Retrieve the previously recorded counterexample stored under `key`.
+        Return `nothing` if no counterexample was stored under that key.
 """
 abstract type ExampleDB end
+
+@required ExampleDB begin
+    records(::ExampleDB)
+    record!(::ExampleDB, ::Any, ::Any)
+    retrieve(::ExampleDB, ::Any)
+end
 
 """
     SuppositionReport <: AbstractTestSet

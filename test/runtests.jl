@@ -5,6 +5,8 @@ using Aqua
 using Random
 using Logging
 using Statistics: mean
+import RequiredInterfaces
+const RI = RequiredInterfaces
 
 function sum_greater_1000(tc::TestCase)
     ls = Data.produce(Data.Vectors(Data.Integers(0, 10_000); min_size=UInt(0), max_size=UInt(1_000)), tc)
@@ -22,6 +24,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         # stdlib woes?
         ignore = VERSION >= v"1.11" ? [:ScopedValues] : Symbol[]
         Aqua.test_stale_deps(Supposition; ignore)
+    end
+    @testset "Interfaces" begin
+        @testset "Possibility" RI.check_implementations(Supposition.Data.Possibility)
+        @testset "ExampleDB" RI.check_implementations(Supposition.ExampleDB)
     end
     # Write your tests here.
     @testset "test function interesting" begin
