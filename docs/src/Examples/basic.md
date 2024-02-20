@@ -81,17 +81,19 @@ And check that they hold like so. Of course, we can also test the property impli
 ```@example example_add; output = false, filter = r"\d+\.\d+s"
 using Test
 
-@testset "Additive properties" begin
-    Supposition.@check associative(Data.Just(add), intgen, intgen, intgen)
-    Supposition.@check identity_add(Data.Just(add), intgen)
-    Supposition.@check successor(intgen, intgen)
-    Supposition.@check commutative(intgen, intgen)
-end
+Supposition.@check associative(Data.Just(add), intgen, intgen, intgen)
+Supposition.@check identity_add(Data.Just(add), intgen)
+Supposition.@check successor(intgen, intgen)
+Supposition.@check commutative(intgen, intgen)
 nothing # hide
 ```
 
 In this way, we can even reuse properties from other invocations of `@check` with new, perhaps more specialized, inputs.
 For generalization, we can use [`Data.Just`](@ref) to pass our `add` function to the generalized properties.
+
+!!! note "Nesting @testset"
+    From Julia 1.11 onwards, `@check` can also report its own results as part of a parent `@testset`.
+    This is unfortunately unsupported on 1.10 and earlier.
 
 Be aware that while all checks pass, we _do not have a guarantee that our code is correct for all cases_.
 Sampling elements to test is a statistical process and as such we can only gain _confidence_ that our code
