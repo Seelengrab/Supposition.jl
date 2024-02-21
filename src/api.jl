@@ -254,6 +254,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
             got_res = !isnothing($ts.result)
             got_err = !isnothing($ts.target_err)
             got_score = !isnothing($ts.best_scoring)
+            @debug "Any result?" Res=got_res Err=got_err Score=got_score
             if got_res | got_err | got_score
                 res = @something $ts.target_err $ts.best_scoring $ts.result
                 choices = if got_err | got_score
@@ -262,6 +263,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                     res
                 end
                 obj = $gen_input($Supposition.for_choices(choices, copy($ts.rng)))
+                @debug "Recording result in testset"
                 if got_err
                     # This is an unexpected error, report as `Error`
                     exc, trace, len = res

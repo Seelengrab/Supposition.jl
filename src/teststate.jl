@@ -4,7 +4,11 @@
 Return the choices that led to the recorded error, if any.
 If none, return `Nothing`.
 """
-err_choices(ts::TestState) = last(@something ts.target_err Some((nothing,)))
+err_choices(ts::TestState) = if !isnothing(ts.target_err)
+    Some(last(@something ts.target_err))
+else
+    nothing
+end
 
 """
     CURRENT_TESTCASE
@@ -134,7 +138,7 @@ Run the checking algorithm on `ts`, generating values until we should stop, targ
 the score we want to target on and finally shrinking the result.
 """
 function run(ts::TestState)
-    @debug "Starting generating values"
+    @debug "Starting generating values" Test=ts.is_interesting
     generate!(ts)
     @debug "Improving targeted example"
     target!(ts)
@@ -154,9 +158,9 @@ and we have room for more examples.
 """
 function should_keep_generating(ts::TestState)
     triv = ts.test_is_trivial
-    # we either found a falsifying example, or threw an error
-    # both need to shrink
-    no_result = isnothing(ts.result) && isnothing(ts.target_err)
+    # Either we find a regular counterexample, or we error
+    # both mean we can stop looking, and start shrinking
+    no_result = isnothing(ts.result) & isnothing(ts.target_err)
     more_examples = ts.valid_test_cases < ts.config.max_examples
     # this 10x ensures that we can make many more calls than
     # we need to fill valid test cases, especially when targeting
@@ -190,8 +194,9 @@ If `ts` is currently tracking an error it encountered, it will try to minimize t
 stacktrace there instead.
 """
 function target!(ts::TestState)
-    !isnothing(ts.result) && return
-    isnothing(ts.best_scoring) && isnothing(ts.target_err) && return
+    !(isnothing(ts.result) && isnothing(ts.target_err)) && return
+    isnothing(ts.best_scoring) && return
+    @debug "Targeting" Score=!isnothing(ts.best_scoring) Err=!isnothing(ts.target_err)
 
     while should_keep_generating(ts)
         # It may happen that choices is all zeroes, and that targeting upwards
@@ -277,7 +282,9 @@ function generate!(ts::TestState)
     end
 
     # 2) try to generate new counterexamples
-    while should_keep_generating(ts) & (isnothing(ts.best_scoring) || (ts.valid_test_cases <= ts.config.max_examples÷2))
+    while should_keep_generating(ts) & # no result
+            (isnothing(ts.best_scoring) || # no score
+             (ts.valid_test_cases <= ts.config.max_examples÷2))
         tc = TestCase(UInt64[], ts.rng, BUFFER_SIZE[])
         test_function(ts, tc)
     end

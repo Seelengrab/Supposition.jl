@@ -1,5 +1,5 @@
 using Supposition
-using Supposition: Data, test_function, shrink_remove, shrink_redistribute
+using Supposition: Data, test_function, shrink_remove, shrink_redistribute, NoRecordDB
 using Test
 using Aqua
 using Random
@@ -378,6 +378,20 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             # this is because of two's complement!
             @test isapprox(count_lt_zero, count_gt_zero+count_zeros; rtol=0.01)
         end
+    end
+
+    @testset "Can find errors" begin
+        sr = @check record=false broken=true db=NoRecordDB() function baba(i=Data.Integers{Int8}())
+            i < -5 || error()
+        end
+        @test !isnothing(sr.result)
+        res = @something(sr.result)
+        @test res isa Supposition.Error
+        @test res.example == (i = -5,)
+        @test res.exception == ErrorException("")
+        @test length(res.trace) == 2
+        @test res.trace[1].func == :error
+        @test res.trace[2].func == :baba
     end
 
     integer_types = (
