@@ -7,7 +7,8 @@
 [![codecov](https://codecov.io/gh/Seelengrab/Supposition.jl/graph/badge.svg?token=BMO2XHN5JX)](https://codecov.io/gh/Seelengrab/Supposition.jl)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-This is a Julia port of the property based testing framework [Hypothesis](https://hypothesis.readthedocs.io/en/latest/).
+This is a Julia implementation of property based testing using choice sequences.
+It's been heavily inspired by the testing framework [Hypothesis](https://hypothesis.readthedocs.io/en/latest/).
 
 Supposition.jl features the following capabilities:
 
@@ -15,7 +16,8 @@ Supposition.jl features the following capabilities:
    * targeted shrinking, counterexample shrinking and error-based shrinking are all supported
  * Combination of generators into new ones
  * Basic stateful testing
- * Integration into existing frameworks
+ * Deterministic replaying of previously recorded counterexamples
+ * Integration into existing frameworks through `Test.AbstractTestset`
 
 Please check out the [documentation](https://seelengrab.github.io/Supposition.jl/stable) for more information!
 
