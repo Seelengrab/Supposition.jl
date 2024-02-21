@@ -174,10 +174,8 @@ end
 
 Adjust `ts` by testing for the choices given by `attempt`.
 
-Returns whether `attempt` gave a better score than the best recorded
-score in `ts`.
-
-Used exclusively for targeting.
+Returns whether `attempt` was by some measure better than the previously
+best attempt.
 """
 function adjust(ts::TestState, attempt::Vector{UInt64})
     result = test_function(ts, for_choices(attempt, copy(ts.rng)))
