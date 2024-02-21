@@ -3,9 +3,14 @@ using Test: Test, @testset, @test
 using Logging: @debug
 
 """
-    example(gen::Possibility)
+    example(gen::Possibility; tries=100_000)
 
 Generate an example for the given `Possibility`.
+
+`example` tries to have `gen` produce an example `tries` times
+and throws an error if `gen` doesn't produce one in that timeframe.
+
+Usage:
 
 ```julia-repl
 julia> using Supposition, Supposition.Data
@@ -14,8 +19,7 @@ julia> example(Data.Integers(0, 10))
 7
 ```
 """
-function example(gen::Data.Possibility)
-    tries = 100_000
+function example(gen::Data.Possibility; tries=100_000)
     # by chance, the TestCase may be rejected by `gen`
     # so we have to try again and again until it works out
     for i in 1:tries
@@ -58,9 +62,9 @@ julia> example(is, 10)
   8
 ```
 """
-function example(gen::Data.Possibility{T}, n::Integer) where {T}
+function example(gen::Data.Possibility{T}, n::Integer; tries=100_000) where {T}
     res = Vector{T}(undef, n)
-    res .= example.(Ref(gen))
+    res .= example.(Ref(gen); tries)
     res
 end
 
