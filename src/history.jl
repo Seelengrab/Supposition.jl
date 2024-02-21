@@ -6,6 +6,11 @@ using Mmap: mmap
     NoRecordDB <: ExambleDB
 
 An `ExampleDB` that doesn't record anything, and won't retrieve anything.
+
+!!! note "Doing nothing"
+    If you're wondering why this exists, I can recommend
+    ["If you're just going to sit there doing nothing, at least do nothing correctly"](https://devblogs.microsoft.com/oldnewthing/20240216-00/?p=109409)
+    by the ever insightful Raymond Chen!
 """
 struct NoRecordDB <: ExampleDB end
 
