@@ -22,7 +22,9 @@ function example(gen::Data.Possibility)
         tc = for_choices(UInt[])
         tc.max_size = typemax(UInt)
         try
-            res = Data.produce(gen, tc)
+            res = @with CURRENT_TESTCASE => tc begin
+                Data.produce(gen, tc)
+            end
             return res
         catch e
             e isa TestException && continue
@@ -262,7 +264,10 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                 else
                     res
                 end
-                obj = $gen_input($Supposition.for_choices(choices, copy($ts.rng)))
+                n_tc = $Supposition.for_choices(choices, copy($ts.rng))
+                obj = @with $Supposition.CURRENT_TESTCASE => n_tc begin
+                    $gen_input(n_tc)
+                end
                 @debug "Recording result in testset"
                 if got_err
                     # This is an unexpected error, report as `Error`

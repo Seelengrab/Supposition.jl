@@ -25,6 +25,34 @@ abstract type Possibility{T} end
 end
 
 """
+    produce(pos::Possibility{T}, tc::TestCase) -> T
+
+Produces a value from the given `Possibility`, recording the required choices in the `TestCase` `tc`.
+
+This needs to be implemented for custom `Possibility` objects, passing the given `tc` to any inner
+requirements directly.
+
+See also [`produce!`](@ref)
+
+!!! tip "Examples"
+    You should not call this function when you have a `Possibility` and want to inspect what an object
+    produced by that `Possibility` looks like - use [`example`](@ref) for that instead.
+"""
+function produce end
+
+"""
+    produce!(p::Possibility{T}) -> T
+
+Produces a value from the given `Possibility`, recording the required choices in the currently active `TestCase`.
+
+!!! warn "Callability"
+    This can only be called while a testcase is currently being examined or an example for a `Possibility`
+    is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
+    functions only intended to be called from one of those places.
+"""
+produce!(p::Possibility) = produce(p, Supposition.CURRENT_TESTCASE[])
+
+"""
     postype(::Type{P<:Possibility})
 
 Gives the type of objects this `Possibility` type will generate.

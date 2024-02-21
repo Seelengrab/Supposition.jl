@@ -525,6 +525,18 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 iseven(g)
             end
         end
+
+        @testset "inner produce" begin
+            gen = @composed function inner(i=Data.Integers{UInt8}())
+                j = Data.produce!(Data.Integers(zero(i), i))
+                i,j
+            end
+            @test example(gen) isa Tuple{UInt8,UInt8}
+            @check function in_check(t=gen)
+                i = Data.produce!(Data.Integers(minmax(t...)...))
+                t isa Tuple{UInt8,UInt8} && i isa UInt8
+            end
+        end
     end
 
     @testset "ExampleDB" begin
