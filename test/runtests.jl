@@ -644,4 +644,71 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test data_rng_5[] == data_rng_6[]
         @test default_rng_5[] == default_rng_6[]
     end
+
+    @testset "Reporting behavior" begin
+        pass(_) = true
+        fail(_) = false
+        err(_) = error()
+        db = Supposition.NoRecordDB()
+
+        pass_sr       = @check db=db record=false pass(Data.Just("Dummy"))
+        # silence the expected printing
+        fail_sr, err_sr, broke_pass_sr = redirect_stderr(devnull) do
+            fail_sr       = @check db=db record=false fail(Data.Just("Dummy"))
+            err_sr        = @check db=db record=false err(Data.Just("Dummy"))
+            broke_pass_sr = @check db=db record=false broken=true pass(Data.Just("Dummy"))
+            fail_sr, err_sr, broke_pass_sr
+        end
+        broke_fail_sr = @check db=db record=false broken=true fail(Data.Just("Dummy"))
+        broke_err_sr  = @check db=db record=false broken=true err(Data.Just("Dummy"))
+
+        @test @something(pass_sr.result) isa Supposition.Pass
+        @test @something(broke_pass_sr.result) isa Supposition.Pass
+        @test @something(fail_sr.result) isa Supposition.Fail
+        @test @something(broke_fail_sr.result) isa Supposition.Fail
+        @test @something(err_sr.result) isa Supposition.Error
+        @test @something(broke_err_sr.result) isa Supposition.Error
+
+        @testset "Pass" begin
+            @test  Supposition.results(pass_sr).ispass
+            @test !Supposition.results(pass_sr).isfail
+            @test !Supposition.results(pass_sr).iserror
+            @test !Supposition.results(pass_sr).isbroken
+        end
+
+        @testset "Fail" begin
+            @test !Supposition.results(fail_sr).ispass
+            @test  Supposition.results(fail_sr).isfail
+            @test !Supposition.results(fail_sr).iserror
+            @test !Supposition.results(fail_sr).isbroken
+        end
+
+        @testset "Error" begin
+            @test !Supposition.results(err_sr).ispass
+            @test !Supposition.results(err_sr).isfail
+            @test  Supposition.results(err_sr).iserror
+            @test !Supposition.results(err_sr).isbroken
+        end
+
+        @testset "Broken Pass" begin
+            @test !Supposition.results(broke_pass_sr).ispass
+            @test  Supposition.results(broke_pass_sr).isfail
+            @test !Supposition.results(broke_pass_sr).iserror
+            @test !Supposition.results(broke_pass_sr).isbroken
+        end
+
+        @testset "Broken Fail" begin
+            @test !Supposition.results(broke_fail_sr).ispass
+            @test !Supposition.results(broke_fail_sr).isfail
+            @test !Supposition.results(broke_fail_sr).iserror
+            @test  Supposition.results(broke_fail_sr).isbroken
+        end
+
+        @testset "Broken Error" begin
+            @test !Supposition.results(broke_err_sr).ispass
+            @test !Supposition.results(broke_err_sr).isfail
+            @test !Supposition.results(broke_err_sr).iserror
+            @test  Supposition.results(broke_err_sr).isbroken
+        end
+    end
 end

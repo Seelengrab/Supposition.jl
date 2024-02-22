@@ -30,10 +30,13 @@ struct Error <: Result
 end
 
 function results(sr::SuppositionReport)
-    ispass = @something(sr.result) isa Pass
-    isfail = @something(sr.result) isa Fail
-    iserror = @something(sr.result) isa Error
-    isbroken = sr.expect_broken && (isfail | iserror)
+    res_pass = @something(sr.result) isa Pass
+    res_fail = @something(sr.result) isa Fail
+    res_error = @something(sr.result) isa Error
+    ispass = res_pass && !sr.expect_broken
+    iserror = res_error && !sr.expect_broken
+    isfail = (res_pass && sr.expect_broken) || (res_fail && !sr.expect_broken)
+    isbroken = !(ispass | iserror | isfail)
     (;ispass,isfail,iserror,isbroken)
 end
 
@@ -59,13 +62,14 @@ end
     Test.format_duration(sr::SuppositionReport) = _format_duration(sr)
 
     function Test.get_test_counts(sr::SuppositionReport)
-        (;ispass,isfail,iserror,isbroken) = results(sr)
-        @assert count((ispass, isfail, iserror, isbroken)) in (1,2)
+        res = results(sr)
+        (;ispass,isfail,iserror,isbroken) = res
+        @assert isone(count(values(res))) values(res)
         return Test.TestCounts(
             true,
-            !isbroken & ispass,
-            !isbroken & isfail,
-            !isbroken & iserror,
+            ispass,
+            isfail,
+            iserror,
             isbroken,
             0,
             0,

@@ -247,53 +247,54 @@ function check_call(e::Expr, tsargs)
 end
 
 function final_check_block(namestr, run_input, gen_input, tsargs)
-    ts = gensym()
-    sr = gensym()
+    @gensym(ts, sr, report, previous_failure, got_res, got_err, got_score,
+            res, choices, n_tc, obj, exc, trace, len, err, fail,
+            pass, score)
 
     return quote
         # need this for backwards compatibility
         $sr = $SuppositionReport
         $Test.@testset $sr $(tsargs...) $namestr begin
-            report = $Test.get_testset()
-            previous_failure = $retrieve(report.database, $record_name(report))
-            $ts = $TestState(report.config, $run_input, previous_failure)
+            $report = $Test.get_testset()
+            $previous_failure = $retrieve($report.database, $record_name($report))
+            $ts = $TestState($report.config, $run_input, $previous_failure)
             $Supposition.run($ts)
-            $Test.record(report, $ts)
-            got_res = !isnothing($ts.result)
-            got_err = !isnothing($ts.target_err)
-            got_score = !isnothing($ts.best_scoring)
-            @debug "Any result?" Res=got_res Err=got_err Score=got_score
-            if got_res | got_err | got_score
-                res = @something $ts.target_err $ts.best_scoring $ts.result
-                choices = if got_err | got_score
-                    last(res)
+            $Test.record($report, $ts)
+            $got_res = !isnothing($ts.result)
+            $got_err = !isnothing($ts.target_err)
+            $got_score = !isnothing($ts.best_scoring)
+            $Logging.@debug "Any result?" Res=$got_res Err=$got_err Score=$got_score
+            if $got_res | $got_err | $got_score
+                $res = $Base.@something $ts.target_err $ts.best_scoring $ts.result
+                $choices = if $got_err | $got_score
+                    $last($res)
                 else
-                    res
+                    $res
                 end
-                n_tc = $Supposition.for_choices(choices, copy($ts.rng))
-                obj = $ScopedValues.@with $Supposition.CURRENT_TESTCASE => n_tc begin
-                    $gen_input(n_tc)
+                $n_tc = $Supposition.for_choices($choices, $copy($ts.rng))
+                $obj = $ScopedValues.@with $Supposition.CURRENT_TESTCASE => $n_tc begin
+                    $gen_input($n_tc)
                 end
-                @debug "Recording result in testset"
-                if got_err
+                $Logging.@debug "Recording result in testset"
+                if $got_err
                     # This is an unexpected error, report as `Error`
-                    exc, trace, len = res
-                    err = $Error(obj, exc, trace[begin:len-2])
-                    $Test.record(report, err)
-                elseif got_res # res
+                    $exc, $trace, $len = $res
+                    $err = $Error($obj, $exc, $trace[begin:$len-2])
+                    $Test.record($report, $err)
+                elseif $got_res # res
                     # This is an unexpected failure, report as `Fail`
-                    fail = $Fail(obj, nothing)
-                    $Test.record(report, fail)
-                elseif got_score
+                    $fail = $Fail($obj, $nothing)
+                    $Test.record($report, $fail)
+                elseif $got_score
                     # This means we didn't actually get a result, so report as `Pass`
                     # Also mark this, so we can display this correctly during `finish`
-                    score = first(res)
-                    pass = $Pass(Some(obj), Some(score))
-                    $Test.record(report, pass)
+                    $score = $first($res)
+                    $pass = $Pass($Some($obj), $Some($score))
+                    $Test.record($report, $pass)
                 end
             else
-                pass = $Supposition.Pass(nothing, nothing)
-                $Test.record(report, pass)
+                $pass = $Supposition.Pass($nothing, $nothing)
+                $Test.record($report, $pass)
             end
         end
 	end
