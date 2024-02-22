@@ -16,6 +16,8 @@ end
 A `ScopedValue` containing the currently active test case. Intended for use in user-facing
 functions like `target!` or `assume!` that need access to the current testcase, but shouldn't
 require it as an argument to make the API more user friendly.
+
+Not intended for user-side access, thus considered internal and not supported under semver.
 """
 const CURRENT_TESTCASE = ScopedValue{TestCase}()
 
