@@ -5,6 +5,7 @@ using Aqua
 using Random
 using Logging
 using Statistics: mean
+using .Threads: @spawn
 import RequiredInterfaces
 const RI = RequiredInterfaces
 
@@ -572,6 +573,86 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             # marked as broken so the failure is not reported and meddles CI logs
             sr2 = @check record=false broken=true db=ddb max_examples=1 expected_failure(Data.Integers{Int64}())
             @test @something(sr2.result).example == @something(sr.result).example
+        end
+    end
+
+    @testset "Randomness" begin
+        #=
+            Randomness is tricky - we want each run of `@check` to be 
+            different from the last one, even in the same session & on the same property,
+            but they should be reproducible across sessions from the stored data & RNG state.
+            This means they should NOT be influenced by the global RNG, so we must seed
+            the global RNG from the one we are given when starting a run.
+        =#
+
+        function genRand(i, a, b)
+            push!(a, i)
+            push!(b, rand(UInt))
+            true
+        end
+
+        intgen = Data.Integers{UInt}()
+
+        # For the runs where we have no shared RNG (since we by default seed from the hardware)
+        # the two runs should be _completely_ uncorrelated
+        data_rng_1 = UInt[]
+        default_rng_1 = UInt[]
+        data_rng_2 = UInt[]
+        default_rng_2 = UInt[]
+
+        @check max_examples=3 record=false genRand(intgen, Data.just(data_rng_1), Data.just(default_rng_1))
+        @check max_examples=3 record=false genRand(intgen, Data.just(data_rng_2), Data.just(default_rng_2))
+        @testset let One=data_rng_1, Two=data_rng_2
+            @test all(splat(!=), zip(data_rng_1, data_rng_2))
+        end
+        @testset let One=default_rng_1, Two=default_rng_2
+            @test all(splat(!=), zip(default_rng_1, default_rng_2))
+        end
+
+        # For the runs where we DO have an identical RNG the two runs should be identical,
+        # even if the parent RNG is modified inbetween or tasks are spawned that may or
+        # may not utilize their own RNG
+        data_rng_3 = UInt[]
+        default_rng_3 = UInt[]
+        data_rng_4 = UInt[]
+        default_rng_4 = UInt[]
+
+        @check max_examples=3 record=false rng=Xoshiro(1) genRand(intgen, Data.just(data_rng_3), Data.just(default_rng_3))
+        rand(UInt)
+        fetch(@spawn(rand(UInt)))
+        @check max_examples=3 record=false rng=Xoshiro(1) genRand(intgen, Data.just(data_rng_4), Data.just(default_rng_4))
+
+        @testset let One=data_rng_3, Two=data_rng_4
+            @test all(splat(==), zip(data_rng_3, data_rng_4))
+        end
+        @testset let One=default_rng_3, Two=default_rng_4
+            @test all(splat(==), zip(default_rng_3, default_rng_4))
+        end
+
+        # Finally, we need to make sure that these invariants also hold when
+        # replaying a stored counterexample from a DB
+        function randFail(i, a::Ref{UInt}, b::Ref{UInt})
+            a[] = i
+            b[] = rand(UInt)
+            false
+        end
+
+        data_rng_5 = Ref{UInt}()
+        default_rng_5 = Ref{UInt}()
+        data_rng_6 = Ref{UInt}()
+        default_rng_6 = Ref{UInt}()
+
+        db = Supposition.DirectoryDB(mktempdir())
+
+        @check broken=true db=db record=false randFail(intgen, Data.just(data_rng_5), Data.just(default_rng_5))
+        rand(UInt)
+        fetch(@spawn(rand(UInt)))
+        @check broken=true db=db max_examples=1 record=false randFail(intgen, Data.just(data_rng_6), Data.just(default_rng_6))
+        @testset let One=data_rng_5, Two=data_rng_6
+            @test data_rng_5[] == data_rng_6[]
+        end
+        @testset let One=default_rng_5, Two=default_rng_6
+            @test default_rng_5[] == default_rng_6[]
         end
     end
 end

@@ -233,6 +233,8 @@ function check_call(e::Expr, tsargs)
 
     esc(quote
         function $gen_input($tc::$TestCase)
+            rng_seed = $Data.produce(Data.Integers{UInt64}(), $tc)
+            $Random.seed!(rng_seed)
             $args
         end
 
