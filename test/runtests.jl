@@ -390,7 +390,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test res isa Supposition.Error
         @test res.example == (i = -5,)
         @test res.exception == ErrorException("")
-        @test length(res.trace) == 2
+        # This odd check is because of version differences pre-1.11
+        @test 2 <= length(res.trace) <= 4
         @test res.trace[1].func == :error
         @test res.trace[2].func == :baba
     end
@@ -602,12 +603,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
         @check max_examples=3 record=false genRand(intgen, Data.just(data_rng_1), Data.just(default_rng_1))
         @check max_examples=3 record=false genRand(intgen, Data.just(data_rng_2), Data.just(default_rng_2))
-        @testset let One=data_rng_1, Two=data_rng_2
-            @test all(splat(!=), zip(data_rng_1, data_rng_2))
-        end
-        @testset let One=default_rng_1, Two=default_rng_2
-            @test all(splat(!=), zip(default_rng_1, default_rng_2))
-        end
+        @test all(Base.splat(!=), zip(data_rng_1, data_rng_2))
+        @test all(Base.splat(!=), zip(default_rng_1, default_rng_2))
 
         # For the runs where we DO have an identical RNG the two runs should be identical,
         # even if the parent RNG is modified inbetween or tasks are spawned that may or
@@ -622,12 +619,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         fetch(@spawn(rand(UInt)))
         @check max_examples=3 record=false rng=Xoshiro(1) genRand(intgen, Data.just(data_rng_4), Data.just(default_rng_4))
 
-        @testset let One=data_rng_3, Two=data_rng_4
-            @test all(splat(==), zip(data_rng_3, data_rng_4))
-        end
-        @testset let One=default_rng_3, Two=default_rng_4
-            @test all(splat(==), zip(default_rng_3, default_rng_4))
-        end
+        @test all(Base.splat(==), zip(data_rng_3, data_rng_4))
+        @test all(Base.splat(==), zip(default_rng_3, default_rng_4))
 
         # Finally, we need to make sure that these invariants also hold when
         # replaying a stored counterexample from a DB
@@ -648,11 +641,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         rand(UInt)
         fetch(@spawn(rand(UInt)))
         @check broken=true db=db max_examples=1 record=false randFail(intgen, Data.just(data_rng_6), Data.just(default_rng_6))
-        @testset let One=data_rng_5, Two=data_rng_6
-            @test data_rng_5[] == data_rng_6[]
-        end
-        @testset let One=default_rng_5, Two=default_rng_6
-            @test default_rng_5[] == default_rng_6[]
-        end
+        @test data_rng_5[] == data_rng_6[]
+        @test default_rng_5[] == default_rng_6[]
     end
 end

@@ -12,9 +12,7 @@ using Logging
 
 using RequiredInterfaces: @required
 
-@static if VERSION < v"1.11"
-    using ScopedValues
-end
+using ScopedValues
 
 include("types.jl")
 include("testcase.jl")

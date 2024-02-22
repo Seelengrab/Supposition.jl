@@ -271,7 +271,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                     res
                 end
                 n_tc = $Supposition.for_choices(choices, copy($ts.rng))
-                obj = @with $Supposition.CURRENT_TESTCASE => n_tc begin
+                obj = $ScopedValues.@with $Supposition.CURRENT_TESTCASE => n_tc begin
                     $gen_input(n_tc)
                 end
                 @debug "Recording result in testset"
