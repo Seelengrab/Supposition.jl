@@ -33,6 +33,7 @@ function builddocs(clear=false)
             "Examples" => [
                 "Basic Usage" => "Examples/basic.md",
                 "Composing Generators" => "Examples/composition.md",
+                "Recursive Generation" => "Examples/recursive.md",
                 "Alignment of Documentation" => "Examples/docalignment.md",
                 "Stateful Testing" => "Examples/stateful.md",
             ],
