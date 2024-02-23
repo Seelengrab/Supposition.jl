@@ -263,7 +263,7 @@ gen_push = map(Data.Integers{UInt}()) do i
     (push!, i)
 end
 gen_pop = Data.Just((pop!, nothing))
-gen_ops = Data.Vectors(Data.MixOf(gen_push, gen_pop); max_size=10_000)
+gen_ops = Data.Vectors(Data.OneOf(gen_push, gen_pop); max_size=10_000)
 nothing # hide
 ```
 
@@ -330,7 +330,7 @@ Now let's try the same property with our (hopefully correct) `fixed_pop!`:
 
 ```@example heap
 gen_fixed_pop = Data.Just((fixed_pop!, nothing))
-gen_fixed_ops = Data.Vectors(Data.MixOf(gen_push, gen_fixed_pop); max_size=10_000)
+gen_fixed_ops = Data.Vectors(Data.OneOf(gen_push, gen_fixed_pop); max_size=10_000)
 # Documenter shenanigans require me to repeat this. # hide
 function test_heap(ops) # hide
     heap = Heap{UInt}() # hide

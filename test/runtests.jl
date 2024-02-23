@@ -54,7 +54,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test !first(test_function(ts, tc))
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
 
         ts.result = Some([1,2,3,4])
         test_function(ts, TestCase(UInt[], Random.default_rng(), 10_000))
@@ -67,7 +67,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
         tc = TestCase(UInt[], Random.default_rng(), 10_000)
         @test !first(test_function(ts, tc))
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "shrink remove" begin
@@ -165,7 +165,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, test)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "finds local maximum" begin
@@ -211,7 +211,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, target_upwards_nofail)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
         @test !isnothing(ts.best_scoring)
         @test first(something(ts.best_scoring)) == 2000.0
     end
@@ -257,7 +257,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, map_pos)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "selected possibility" begin
@@ -269,7 +269,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, sel_pos)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "bound possibility" begin
@@ -283,31 +283,31 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, bound_pos)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "cannot witness nothing" begin
         function witness_nothing(tc::TestCase)
             Data.produce(nothing, tc)
-            return true
+            return false
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, witness_nothing)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "can draw mixture" begin
         function draw_mix(tc::TestCase)
-            m = Data.produce(Data.MixOf(Data.Integers(-5, 0), Data.Integers(2,5)), tc)
+            m = Data.produce(Data.OneOf(Data.Integers(-5, 0), Data.Integers(2,5)), tc)
             return (-5 > m) || (m > 5) || (m == 1)
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, draw_mix)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "impossible weighted" begin
@@ -324,7 +324,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, impos)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "guaranteed weighted" begin
@@ -341,7 +341,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, guaran)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "boolean unbiased" begin
@@ -354,7 +354,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, unbias)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     int_types = (
@@ -422,7 +422,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, bounds)
         Supposition.run(ts)
-        @test isnothing(ts.result)
+        @test isnothing(ts.result) && isnothing(ts.target_err)
     end
 
     @testset "Can produce floats" begin
