@@ -16,7 +16,7 @@ Required methods:
 Fallback definitions:
 
   * `postype(::Possibility{T}) -> Type{T}`
-  * `example(::Possibility{T}) -> t`
+  * `example(::Possibility{T}) -> T`
 """
 abstract type Possibility{T} end
 
