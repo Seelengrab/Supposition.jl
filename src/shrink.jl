@@ -14,6 +14,13 @@ function shrink!(ts::TestState)
             end
         end
 
+        @debug "Shrinking through floating point shrinks"
+        res = shrink_float(ts, attempt)
+        if !isnothing(res)
+            attempt = @something res
+            improved = true
+        end
+
         @debug "Shrinking through setting zero"
         for k in UInt.((8,4,2))
             while true
@@ -74,6 +81,22 @@ function shrink_remove(ts::TestState, attempt::Vector{UInt64}, k::UInt)::Option{
             return Some(new)
         elseif x > 1 && new[x-1] > 0
             new[x-1] -= 1
+            if consider(ts, new)
+                return Some(new)
+            end
+        end
+    end
+    nothing
+end
+
+function shrink_float(ts::TestState, attempt::Vector{UInt64})
+    new = copy(attempt)
+    for idx in eachindex(new)
+        old = new[idx]
+        old_float = reinterpret(Float64, old)
+        if isnan(old_float)
+            n_val = copysign(Inf, old_float)
+            new[idx] = reinterpret(UInt64, n_val)
             if consider(ts, new)
                 return Some(new)
             end
