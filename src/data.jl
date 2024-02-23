@@ -313,6 +313,34 @@ produce(::Nothing, tc::TestCase) = reject(tc)
 
 ## Sampling one of N
 
+"""
+    OneOf(pos::Possibility...) <: Possibility
+
+A `Possibility` able to generate any of the examples one of the given
+`Possibility` can produce. The given `Possibility` are sampled from
+uniformly.
+
+At least one `Possibility` needs to be given to `OneOf`.
+
+`postype(::OneOf)` is inferred as a _best effort_, and may be wider than necessary.
+
+```julia-repl
+julia> of = Data.OneOf(Data.Integers{Int8}(), Data.Integers{UInt8}());
+
+julia> Data.postype(of)
+Union{Int8, UInt8}
+
+julia> ex = map(of) do i
+           (i, typeof(i))
+       end;
+
+julia> example(ex)
+(-83, Int8)
+
+julia> example(ex)
+(0x9f, UInt8)
+```
+"""
 struct OneOf{X, N} <: Possibility{X}
     strats::NTuple{N, Possibility}
     function OneOf(pos::Possibility...)
@@ -328,11 +356,52 @@ end
 
 ## Recursion
 
+"""
+    Recursive(base::Possibility, extend; max_layers::Int=5) <: Possibility{T}
+
+A `Possibility` for generating recursive data structures.
+`base` is the basecase of the recursion. `extend` is a function returning a
+new `Possibility` when given a `Possibility`, called to recursively
+expand a tree starting from `base`.
+
+`max_layers` designates the maximum number of times `extend` will be used
+to wrap `base` in new layers. This must be at least `1`, so that at least
+the base case can always be generated.
+
+## Examples
+
+```julia-repl
+julia> base = Data.Integers{UInt8}()
+
+julia> wrap(pos) = Data.Vectors(pos; min_size=2, max_size=3)
+
+julia> rec = Data.recursive(wrap, base; max_layers=3);
+
+julia> Data.postype(rec) # the result is formatted here for legibility
+Union{UInt8,
+      Vector{UInt8},
+      Vector{Union{UInt8, Vector{UInt8}}}
+}
+
+julia> example(rec)
+0x31
+
+julia> example(rec)
+2-element Vector{Union{UInt8, Vector{UInt8}}}:
+     UInt8[0xa9, 0xb4]
+ 0x9b
+
+julia> example(rec)
+2-element Vector{UInt8}:
+ 0xbd
+ 0x25
+```
+"""
 struct Recursive{T,F} <: Possibility{T}
     base::Possibility
     extend::F
     inner::Possibility{T}
-    function Recursive(base::Possibility, extend; max_layers=5)
+    function Recursive(base::Possibility, extend; max_layers::Int=5)
         max_layers < 1 && throw(ArgumentError("Must be able to produce at least the base layer!"))
         strategies = Vector{Possibility}(undef, max_layers)
         strategies[1] = base
