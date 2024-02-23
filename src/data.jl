@@ -632,9 +632,12 @@ produce(::Booleans, tc::TestCase) = weighted!(tc, 0.5)
 ## Possibility of floating point values
 
 """
-    Floats{T <: Union{Float16,Float32,Float64}} <: Possibility{T}
+    Floats{T <: Union{Float16,Float32,Float64}}(;infs=true, nans=true) <: Possibility{T}
 
 A `Possibility` for sampling floating point values.
+
+The keyword `infs` controls whether infinities can be generated. `nans` controls whether
+    any `NaN` (signaling & quiet) will be generated.
 
 !!! warning "Inf, Nan"
     This possibility will generate *any* valid instance, including positive
@@ -654,16 +657,74 @@ julia> example(floats, 5)
   -0.0001688
 ```
 """
-struct Floats{T <: Base.IEEEFloat} <: Possibility{T} end
+struct Floats{T <: Base.IEEEFloat} <: Possibility{T}
+    nans::Bool
+    infs::Bool
+    function Floats{T}(; nans=true, infs=true) where T <: Base.IEEEFloat
+        new{T}(nans, infs)
+    end
+end
 
 uint(::Type{Float16}) = UInt16
 uint(::Type{Float32}) = UInt32
 uint(::Type{Float64}) = UInt64
 
-function produce(::Floats{T}, tc::TestCase) where {T}
+fracsize(::Type{Float16}) = 10
+fracsize(::Type{Float32}) = 23
+fracsize(::Type{Float64}) = 52
+exposize(::Type{Float16}) = 5
+exposize(::Type{Float32}) = 8
+exposize(::Type{Float64}) = 11
+
+function fracmax(::Type{T}) where T <: Base.IEEEFloat
+    _, _, fracmask = masks(T)
+    fracmask
+end
+
+function expomax(::Type{T}) where T <: Base.IEEEFloat
+    ui = uint(T)
+    _, expomask, _ = masks(T)
+    ((-1 % ui) & expomask) >> fracsize(T)
+end
+
+function masks(::Type{T}) where T <: Base.IEEEFloat
+    ui = uint(T)
+    signbitmask = one(ui) << (8*sizeof(ui)-1)
+    fracbitmask =  (-1 % ui) >> (8*sizeof(ui)-fracsize(T))
+    expobitmask = ((-1 % ui) >> (8*sizeof(ui)-exposize(T))) << fracsize(T)
+    signbitmask, expobitmask, fracbitmask
+end
+
+"""
+    assemble(::T, sign::I, expo::I, frac::I) where {I, T <: Union{Float16, Float32, Float64}} -> T
+
+Assembles `sign`, `expo` and `frac` arguments into the floating point number of type `T` it represents.
+`sizeof(T)` must match `sizeof(I)`.
+"""
+function assemble(::Type{T}, sign::I, expo::I, frac::I) where {I, T <: Base.IEEEFloat}
+    sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of  `$T` needs to match the other arguments of type `I`!"))
+    signmask, expomask, fracmask = masks(T)
+    sign = (sign << (exposize(T) + fracsize(T))) & signmask
+    expo = (expo <<                fracsize(T))  & expomask
+    frac =  frac                                 & fracmask
+    ret =  sign | expo | frac
+    return reinterpret(T, ret)
+end
+
+function produce(f::Floats{T}, tc::TestCase) where {T}
     iT = uint(T)
-    i = Integers(typemin(iT), typemax(iT))
-    reinterpret(T, produce(i, tc))
+    sign = produce(Booleans(), tc) % iT
+
+    expm = expomax(T) - (!f.nans && !f.infs)
+    expdraw = Data.Integers(zero(iT), expm)
+    expo = produce(expdraw, tc) % iT
+
+    fracmin = (f.nans && !f.infs) % iT
+    fracm = expo == expomax(T) ? fracmin : fracmax(T)
+    fracdraw = Data.Integers(fracmin, fracm)
+    frac = produce(fracdraw, tc) % iT
+
+    return assemble(T, sign, expo, frac)
 end
 
 end # data module

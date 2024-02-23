@@ -430,6 +430,15 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @check verbose=verb function isfloat(f=Data.Floats{floatT}())
                 f isa AbstractFloat
             end
+            @check verbose=verb function noinf(f=Data.Floats{floatT}(;infs=false))
+                !isinf(f)
+            end
+            @check verbose=verb function nonan(f=Data.Floats{floatT}(;nans=false))
+                !isnan(f)
+            end
+            @check verbose=verb function nonaninf(f=Data.Floats{floatT}(;nans=false,infs=false))
+                !isnan(f) & !isinf(f)
+            end
         end
     end
 
