@@ -311,21 +311,42 @@ produce(j::Just, _::TestCase) = j.value
 
 produce(::Nothing, tc::TestCase) = reject(tc)
 
-## Possibility of mixing?
+## Sampling one of N
 
-struct MixOf{X, T, V} <: Possibility{X}
-    first::Possibility{T}
-    second::Possibility{V}
-    MixOf(a::Possibility{T}, b::Possibility{V}) where {T, V} = new{Union{T,V}, T, V}(a,b)
-end
-
-function produce(mo::MixOf, tc::TestCase)
-    if iszero(choice!(tc, 1))
-        produce(mo.first, tc)
-    else
-        produce(mo.second, tc)
+struct OneOf{X, N} <: Possibility{X}
+    strats::NTuple{N, Possibility}
+    function OneOf(pos::Possibility...)
+        isempty(pos) && throw(ArgumentError("Need at least one `Possibility` to draw from!"))
+        new{Union{postype.(pos)...}, length(pos)}(pos)
     end
 end
+
+function produce(@nospecialize(of::OneOf), tc::TestCase)
+    strategy = produce(SampledFrom(of.strats), tc)
+    produce(strategy, tc)::postype(of)
+end
+
+## Recursion
+
+struct Recursive{T,F} <: Possibility{T}
+    base::Possibility
+    extend::F
+    inner::Possibility{T}
+    function Recursive(base::Possibility, extend; max_layers=5)
+        max_layers < 1 && throw(ArgumentError("Must be able to produce at least the base layer!"))
+        strategies = Vector{Possibility}(undef, max_layers)
+        strategies[1] = base
+        for layer in 2:max_layers
+            prev_layers = @view strategies[1:layer-1]
+            strategies[layer] = extend(OneOf(prev_layers...))
+        end
+        inner = OneOf(strategies...)
+        new{postype(inner), typeof(extend)}(base, extend, inner)
+    end
+end
+recursive(f, pos::Possibility; max_layers=5) = Recursive(pos, f; max_layers)
+
+produce(r::Recursive, tc::TestCase) = produce(r.inner, tc)
 
 ## Possibility of Characters
 
