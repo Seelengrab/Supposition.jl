@@ -24,6 +24,8 @@ abstract type Possibility{T} end
     produce(::Possibility, ::TestCase)
 end
 
+Base.:(|)(a::Possibility, b::Possibility) = OneOf(a, b)
+
 """
     produce(pos::Possibility{T}, tc::TestCase) -> T
 
@@ -324,6 +326,11 @@ At least one `Possibility` needs to be given to `OneOf`.
 
 `postype(::OneOf)` is inferred as a _best effort_, and may be wider than necessary.
 
+`OneOf` can also be constructed through use of `a | b` on `Possibility`. Constructed
+in this way, if either `a` or `b` is already a `OneOf`, the resulting `OneOf`
+acts as if it had been given the original `Possibility` objects in the first place.
+That is, `OneOf(a, b) | c` acts like `OneOf(a, b, c)`.
+
 ```julia-repl
 julia> of = Data.OneOf(Data.Integers{Int8}(), Data.Integers{UInt8}());
 
@@ -353,6 +360,10 @@ function produce(@nospecialize(of::OneOf), tc::TestCase)
     strategy = produce(SampledFrom(of.strats), tc)
     produce(strategy, tc)::postype(of)
 end
+
+Base.:(|)(of::OneOf, b::Possibility) = OneOf(of.strats..., b)
+Base.:(|)(a::Possibility, of::OneOf) = OneOf(a, of.strats...)
+Base.:(|)(a::OneOf, b::OneOf) = OneOf(a.strats..., b.strats...)
 
 ## Recursion
 
