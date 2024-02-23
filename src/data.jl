@@ -516,6 +516,47 @@ end
 
 produce(s::Text, tc::TestCase) = join(produce(s.vectors, tc))
 
+## Dictionaries
+
+"""
+    Dicts(keys::Possibility, values::Possibility; min_size=0, max_size=10_000)
+
+A `Possibility` for generating `Dict` objects. The keys are drawn from `keys`,
+    while the values are drawn from `values`. `min_size`/`max_size` control
+    the number of objects placed into the resulting `Dict`, respectively.
+
+```julia-repl
+julia> dicts = Data.Dicts(Data.Integers{UInt8}(), Data.Integers{Int8}(); max_size=3);`
+
+julia> example(dicts)
+Dict{UInt8, Int8} with 2 entries:
+  0x54 => -29
+  0x1f => -28
+```
+"""
+struct Dicts{K,V} <: Possibility{Dict{K,V}}
+    keys::Possibility{K}
+    values::Possibility{V}
+    min_size::Int
+    max_size::Int
+    function Dicts(keys::Possibility{K}, values::Possibility{V}; min_size=0, max_size=10_000) where {K,V}
+        new{K,V}(keys, values, min_size, max_size)
+    end
+end
+
+function produce(d::Dicts{K,V}, tc::TestCase) where {K,V}
+    dict = Dict{K,V}()
+
+    bound = produce(Data.Integers(d.min_size, d.max_size), tc)
+    for _ in 1:bound
+        k = produce(d.keys, tc)
+        v = produce(d.values, tc)
+        dict[k] = v
+    end
+
+    return dict
+end
+
 ## Possibility of values from a collection
 
 """
