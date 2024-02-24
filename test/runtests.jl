@@ -720,4 +720,23 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test  Supposition.results(broke_err_sr).isbroken
         end
     end
+
+    @testset "Utility" begin
+        @testset for T in (Float16, Float32, Float64)
+            @check function floatfunc(f=Data.Floats{T}())
+                orig = bitstring(f)
+                reassembled = bitstring(Supposition.assemble(T, Supposition.tear(f)...))
+                orig == reassembled
+            end
+        end
+    end
+
+    @testset "Dicts" begin
+        @check function dictlen(m=Data.Integers(0, 200),n=Data.Integers(0,m))
+            k = Data.Integers{UInt8}()
+            v = Data.Integers{Int8}()
+            d = Data.produce!(Data.Dicts(k,v;min_size=n,max_size=m))
+            n <= length(d) <= m
+        end
+    end
 end

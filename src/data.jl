@@ -551,6 +551,7 @@ struct Dicts{K,V} <: Possibility{Dict{K,V}}
     min_size::Int
     max_size::Int
     function Dicts(keys::Possibility{K}, values::Possibility{V}; min_size=0, max_size=10_000) where {K,V}
+        min_size <= max_size || throw(ArgumentError("`min_size` must be `<= max_size`!"))
         new{K,V}(keys, values, min_size, max_size)
     end
 end
@@ -558,8 +559,15 @@ end
 function produce(d::Dicts{K,V}, tc::TestCase) where {K,V}
     dict = Dict{K,V}()
 
-    bound = produce(Data.Integers(d.min_size, d.max_size), tc)
-    for _ in 1:bound
+    while true
+        if length(dict) < d.min_size
+            forced_choice!(tc, UInt(1))
+        elseif (length(dict)+1) >= d.max_size
+            forced_choice!(tc, UInt(0))
+            break
+        elseif !weighted!(tc, 0.9)
+            break
+        end
         k = produce(d.keys, tc)
         v = produce(d.values, tc)
         dict[k] = v

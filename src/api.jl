@@ -202,6 +202,7 @@ function check_func(e::Expr, tsargs)
 end
 
 function argtypes(T)
+    T === Union{} && throw(ArgumentError("Can't `produce` from a Type, did you mean to pass an instance?"))
     T = Base.unwrap_unionall(T)
     if T.name == @NamedTuple{}.name
         # normalize to `Tuple`
