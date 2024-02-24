@@ -35,6 +35,7 @@ function builddocs(clear=false)
                 "Composing Generators" => "Examples/composition.md",
                 "Recursive Generation" => "Examples/recursive.md",
                 "Alignment of Documentation" => "Examples/docalignment.md",
+                "Targeted Operation" => "Examples/target.md",
                 "Stateful Testing" => "Examples/stateful.md",
             ],
             "PBT Ressources" => "ressources.md",
