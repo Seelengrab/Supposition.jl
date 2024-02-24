@@ -510,6 +510,32 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 i < high+1
             end
         end
+
+        @testset "Wrong usage" begin
+            int_err = ArgumentError("Can't `produce` from objects of type `Type{$Int}` for argument `i`, `@check` requires arguments of type `Possibility`!")
+            err = try
+                @check record=false function foo(i=Int)
+                    i isa Int
+                end
+            catch e
+                e
+            end
+            @test err isa Supposition.InvalidInvocation
+            @test err.res isa Test.Error
+            @test err.res.value == string(int_err)
+
+            one_err = ArgumentError("Can't `produce` from objects of type `$Int` for argument `i`, `@check` requires arguments of type `Possibility`!")
+            err = try
+                @check record=false function foo(i=1)
+                    i isa Int
+                end
+            catch e
+                e
+            end
+            @test err isa Supposition.InvalidInvocation
+            @test err.res isa Test.Error
+            @test err.res.value == string(one_err)
+        end
     end
 
     @testset "@composed API" begin

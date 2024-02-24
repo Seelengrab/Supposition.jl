@@ -68,13 +68,21 @@ function example(gen::Data.Possibility{T}, n::Integer; tries=100_000) where {T}
     res
 end
 
+@noinline function fail_typecheck(@nospecialize(x), var::Symbol)
+    argtype = x isa Type ? Type{x} : typeof(x)
+    throw(ArgumentError("Can't `produce` from objects of type `$argtype` for argument `$var`, `@check` requires arguments of type `Possibility`!"))
+end
+
 function kw_to_produce(tc::Symbol, kwargs)
     res = Expr(:block)
     rettup = Expr(:tuple)
 
     for e in kwargs
         name, call = e.args
-        ass = :($name = $Data.produce($call, $tc))
+        obj = gensym(name)
+        argtypecheck = :($obj = $call; $obj isa $Data.Possibility || $fail_typecheck($obj, $(QuoteNode(name))))
+        push!(res.args, argtypecheck)
+        ass = :($name = $Data.produce($obj, $tc))
         push!(res.args, ass)
         push!(rettup.args, :($name = $name))
     end
@@ -202,7 +210,9 @@ function check_func(e::Expr, tsargs)
 end
 
 function argtypes(T)
-    T === Union{} && throw(ArgumentError("Can't `produce` from a Type, did you mean to pass an instance?"))
+    # if we get this here, it means the generator will throw
+    # in which case we can't report anything anyway, so return the empty string
+    T === Union{} && return ""
     T = Base.unwrap_unionall(T)
     if T.name == @NamedTuple{}.name
         # normalize to `Tuple`

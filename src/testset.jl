@@ -189,7 +189,16 @@ record_name(sr::SuppositionReport) = sr.record_base * "_" * sr.description
 struct InvalidInvocation <: Exception
     res::Test.Result
 end
-Base.showerror(io::IO, ii::InvalidInvocation) = (print(io, "InvalidInvocation: Can't record results from `@test` to this kind of TestSet!"); show(io, ii.res))
+function Base.showerror(io::IO, ii::InvalidInvocation)
+    print(io, "InvalidIncovation: ")
+    msg = if ii.res isa Test.Error
+        "Got an error from outside the testsuite!"
+    else
+        "Can't record results from `@test` to this kind of TestSet!"
+    end
+    println(io, msg)
+    show(io, ii.res)
+end
 Test.record(::SuppositionReport, res::Test.Result) = throw(InvalidInvocation(res))
 
 Test.record(sr::SuppositionReport, ts::TestState) = if !isnothing(sr.final_state)
@@ -207,6 +216,11 @@ end
 function Test.finish(sr::SuppositionReport)
     sr.time_end = Some(time())
 
+    # if the report doesn't have a result, we probably got
+    # an error outside of the testsuite somewhere, somehow
+    # either way, trying to print a nonexistent result
+    # can't be done, so just return instead
+    isnothing(sr.result) && return sr
     res = @something(sr.result)
 
     if sr.verbose
