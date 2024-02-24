@@ -6,11 +6,13 @@ Supposition.jl in one form or another. If you find a new tutorial or ressource
 that helped you test your code with Supposition.jl in some manner, please don't
 hesitate to open a PR adding the ressource here!
 
+ * [The purpose of Hypothesis](https://hypothesis.readthedocs.io/en/latest/manifesto.html) by David R. MacIver
+   * > [...], the larger purpose of Hypothesis is to drag the world kicking and screaming into a new and terrifying age of high quality software.
  * [Hypothesis testing with Oracle functions](https://www.hillelwayne.com/post/hypothesis-oracles/) by Hillel Wayne
    * A blogpost about using existing (but slower/partially incorrect) implementations to make sure
      a refactored or new implementation still conforms to all expected contracts of the old implementation.
  * [Solving the Water Jug Problem from Die Hard 3 with TLA+ and Hypothesis](https://nchammas.com/writing/how-not-to-die-hard-with-hypothesis) by Nicholas Chammas
-   * A blogpost about helping out John McClan (Bruce Willis) and Zeus Carver (Samuel L. Jackson) ~defuse a bomb~ solve fun children's games.
+   * A blogpost about helping out John McClane (Bruce Willis) and Zeus Carver (Samuel L. Jackson) ~defuse a bomb~ solve fun children's games.
    * This blogpost has been translated to Supposition.jl! Check it out in [the examples](@ref "Juggling Jugs").
  * [Rule Based Stateful Testing](https://hypothesis.works/articles/rule-based-stateful-testing/) by David R. MacIver
    * A blogpost from the main developer behind Hypothesis, showing how to test stateful systems with Hypothesis.
