@@ -36,6 +36,6 @@ Here's a small (incomplete) list:
  * Easily use temporal & stateful property tests
  * Reproducibly replay previously found counterexamples (with caveats regarding external state)
  * Generate values based on the values that were put into a test, and have those values in turn
-   shrink just as well as the values that were put in
+   shrink just as well as the values that were put in while preserving the invariants they were
+   generated under.
 
-TODO: insert more

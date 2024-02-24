@@ -69,7 +69,7 @@ nothing # hide
 ```
 
 From the top, we have filling either jug (note that we can only fill the small jug up to 3L, and the large up to 5L),
-emptying either jugo, and finally pouring one into the other, taking care not to spill anything (i.e., any leftovers stay
+emptying either jug, and finally pouring one into the other, taking care not to spill anything (i.e., any leftovers stay
 in the jug we poured out of).
 
 We can very easily now generate a sequence of operations:
