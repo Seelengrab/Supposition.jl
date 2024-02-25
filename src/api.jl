@@ -20,22 +20,8 @@ julia> example(Data.Integers(0, 10))
 ```
 """
 function example(gen::Data.Possibility; tries=100_000)
-    # by chance, the TestCase may be rejected by `gen`
-    # so we have to try again and again until it works out
-    for i in 1:tries
-        tc = for_choices(UInt[])
-        tc.max_size = typemax(UInt)
-        try
-            res = @with CURRENT_TESTCASE => tc begin
-                Data.produce(gen, tc)
-            end
-            return res
-        catch e
-            e isa TestException && continue
-            rethrow()
-        end
-    end
-    error("Tried sampling $tries times, without getting a result. Perhaps you're filtering out too many examples?")
+    res = example(gen, 500; tries)
+    rand(res)
 end
 
 """
@@ -62,9 +48,30 @@ julia> example(is, 10)
   8
 ```
 """
-function example(gen::Data.Possibility{T}, n::Integer; tries=100_000) where {T}
+function example(pos::Data.Possibility{T}, n::Integer; tries=100_000) where {T}
     res = Vector{T}(undef, n)
-    res .= example.(Ref(gen); tries)
+    gen = 0
+
+    for idx in eachindex(res)
+        gen += 1
+        for i in 1:tries
+            tc = for_choices(UInt[], Random.default_rng(), convert(UInt, gen), lastindex(res))
+            tc.max_size = typemax(UInt)
+            try
+                res[idx] = @with CURRENT_TESTCASE => tc begin
+                    Data.produce(pos, tc)
+                end
+                break
+            catch e
+                e isa TestException && continue
+                rethrow()
+            end
+            i == tries && error("Tried sampling $tries times, without getting a result. Perhaps you're filtering out too many examples?")
+        end
+    end
+
+    Random.shuffle!(res)
+
     res
 end
 
@@ -259,7 +266,7 @@ end
 
 function final_check_block(namestr, run_input, gen_input, tsargs)
     @gensym(ts, sr, report, previous_failure, got_res, got_err, got_score,
-            res, choices, n_tc, obj, exc, trace, len, err, fail,
+            res, attempt, n_tc, obj, exc, trace, len, err, fail,
             pass, score)
 
     return quote
@@ -277,12 +284,12 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
             $Logging.@debug "Any result?" Res=$got_res Err=$got_err Score=$got_score
             if $got_res | $got_err | $got_score
                 $res = $Base.@something $ts.target_err $ts.best_scoring $ts.result
-                $choices = if $got_err | $got_score
+                $attempt = if $got_err | $got_score
                     $last($res)
                 else
                     $res
                 end
-                $n_tc = $Supposition.for_choices($choices, $copy($ts.rng))
+                $n_tc = $Supposition.for_choices($attempt.choices, $copy($ts.rng), $attempt.generation, $attempt.max_generation)
                 $obj = $ScopedValues.@with $Supposition.CURRENT_TESTCASE => $n_tc begin
                     $gen_input($n_tc)
                 end

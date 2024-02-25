@@ -9,6 +9,7 @@ using Test: AbstractTestSet
 
 import Random
 using Logging
+using Serialization
 
 using RequiredInterfaces: @required
 

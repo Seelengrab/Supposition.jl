@@ -22,19 +22,24 @@ A struct representing a single (ongoing) test case.
  * `prefix`: A fixed set of choices that must be made first.
  * `rng`: The RNG this testcase ultimately uses to draw from. This is used to seed the
           task-local RNG object before generating begins.
+ * `generation`: The "generation" this `TestCase` was made in. Can be used for determining how far along in the generation process we are (higher is further).
+ * `max_generation`: The maximum "generation" this `TestCase` could have been made in. Does not necessarily exist.
  * `max_size`: The maximum number of choices this `TestCase` is allowed to make.
  * `choices`: The binary choices made so far.
  * `targeting_score`: The score this `TestCase` attempts to maximize.
 """
 mutable struct TestCase{RNG <: Random.AbstractRNG}
     prefix::Vector{UInt64}
-    rng::RNG
+    const rng::RNG
+    const generation::UInt
+    const max_generation::Int
     max_size::UInt
     choices::Vector{UInt64} # should this be a BitVector instead? could make shrinking slower, but save on memory
     targeting_score::Option{Float64}
 end
 
-TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, max_size) = TestCase(prefix, rng, convert(UInt, max_size), UInt64[], nothing)
+TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation, max_generation, max_size) =
+     TestCase(prefix, rng, convert(UInt, generation), convert(Int, max_generation), convert(UInt, max_size), UInt64[], nothing)
 
 """
     CheckConfig
@@ -44,7 +49,7 @@ A struct holding the initial configuration for an invocation of `@check`.
 Fields:
 
  * `rng`: The initial RNG object given to `@check`
- * `max_examples`: The maximum number of examples allowed to be drawn with this config
+ * `max_examples`: The maximum number of examples allowed to be drawn with this config. `-1` means infinite drawing (careful!).
  * `record`: Whether the result should be recorded in the parent testset, if there is one
 """
 struct CheckConfig
@@ -58,6 +63,13 @@ struct CheckConfig
     end
 end
 
+struct Attempt
+    choices::Vector{UInt64}
+    generation::UInt
+    max_generation::Int
+end
+Base.copy(attempt::Attempt) = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+
 """
     TestState
 
@@ -65,10 +77,12 @@ end
  * `is_interesting`: The user given property to investigate
  * `rng`: The currently used RNG
  * `valid_test_cases`: The count of (so far) valid encountered testcases
+ * `calls`: The number of times `is_interesting` was called in total
  * `result`: The choice sequence leading to a non-throwing counterexample
  * `best_scoring`: The best scoring result that was encountered during targeting
  * `target_err`: The error this test has previously encountered and the smallest choice sequence leading to it
  * `test_is_trivial`: Whether `is_interesting` is trivial, i.e. led to no choices being required
+ * `previous_example`: The previously recorded attempt (if any).
 """
 mutable struct TestState
     config::CheckConfig
@@ -76,12 +90,12 @@ mutable struct TestState
     rng::Random.AbstractRNG
     valid_test_cases::UInt
     calls::UInt
-    result::Option{Vector{UInt64}}
-    best_scoring::Option{Tuple{Float64, Vector{UInt64}}}
-    target_err::Option{Tuple{Exception, Vector{StackFrame}, Int, Vector{UInt64}}}
+    result::Option{Attempt}
+    best_scoring::Option{Tuple{Float64, Attempt}}
+    target_err::Option{Tuple{Exception, Vector{StackFrame}, Int, Attempt}}
     test_is_trivial::Bool
-    previous_example::Option{Vector{UInt64}}
-    function TestState(conf::CheckConfig, test_function, previous_example::Option{Vector{UInt64}}=nothing)
+    previous_example::Option{Attempt}
+    function TestState(conf::CheckConfig, test_function, previous_example::Option{Attempt}=nothing)
         rng_orig = try
             copy(conf.rng)
         catch e

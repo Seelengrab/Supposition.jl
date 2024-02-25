@@ -6,7 +6,8 @@ function shrink!(ts::TestState)
         improved = false
 
         @debug "Shrinking through dropping values"
-        for k in UInt.((8,4,2,1))
+        large_block = max(16, length(attempt.choices)>>3)
+        for k in UInt.((large_block,8,4,2,1))
             while true
                 res = shrink_remove(ts, attempt, k)
                 attempt = @something res break
@@ -67,20 +68,20 @@ function shrink!(ts::TestState)
 end
 
 """
-    shrink_remove(ts::TestState, attempt::Vector{UInt64}, k::UInt)
+    shrink_remove(ts::TestState, attempt::Attempt, k::UInt)
 
 Try to shrink `attempt` by removing `k` elements at a time
 """
-function shrink_remove(ts::TestState, attempt::Vector{UInt64}, k::UInt)::Option{Vector{UInt64}}
-    k > length(attempt) && return nothing
-    valid = ( (j, j+k-1) for j in (length(attempt)-k+1):-1:1 )
+function shrink_remove(ts::TestState, attempt::Attempt, k::UInt)::Option{Attempt}
+    k > length(attempt.choices) && return nothing
+    valid = ( (j, j+k-1) for j in (length(attempt.choices)-k+1):-1:1 )
     for (x,y) in valid
-        head, _, tail = windows(attempt, x, y)
-        new = UInt[head; tail]
+        head, _, tail = windows(attempt.choices, x, y)
+        new = Attempt(UInt[head; tail], attempt.generation, attempt.max_generation)
         if consider(ts, new)
             return Some(new)
-        elseif x > 1 && new[x-1] > 0
-            new[x-1] -= 1
+        elseif x > 1 && new.choices[x-1] > 0
+            new.choices[x-1] -= 1
             if consider(ts, new)
                 return Some(new)
             end
@@ -89,14 +90,14 @@ function shrink_remove(ts::TestState, attempt::Vector{UInt64}, k::UInt)::Option{
     nothing
 end
 
-function shrink_float(ts::TestState, attempt::Vector{UInt64})
-    new = copy(attempt)
-    for idx in eachindex(new)
-        old = new[idx]
+function shrink_float(ts::TestState, attempt::Attempt)
+    new = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+    for idx in eachindex(new.choices)
+        old = new.choices[idx]
         old_float = reinterpret(Float64, old)
         if isnan(old_float)
             n_val = copysign(Inf, old_float)
-            new[idx] = reinterpret(UInt64, n_val)
+            new.choices[idx] = reinterpret(UInt64, n_val)
             if consider(ts, new)
                 return Some(new)
             end
@@ -106,20 +107,20 @@ function shrink_float(ts::TestState, attempt::Vector{UInt64})
 end
 
 """
-    shrink_zeros(::TestSTate, attempt::Vector{UInt64}, k::UInt)
+    shrink_zeros(::TestSTate, attempt::Attempt, k::UInt)
 
-Try to shrink `attempt` by setting `k` elements at a time to zero.    
+Try to shrink `attempt` by setting `k` elements at a time to zero.
 """
-function shrink_zeros(ts::TestState, attempt::Vector{UInt64}, k::UInt)
-    k >= length(attempt) && return nothing
-    valid = ( (j, j+k) for j in (length(attempt)-k):-1:1 )
-    
+function shrink_zeros(ts::TestState, attempt::Attempt, k::UInt)
+    k >= length(attempt.choices) && return nothing
+    valid = ( (j, j+k) for j in (length(attempt.choices)-k):-1:1 )
+
     for (x,y) in valid
-        if all(iszero, @view attempt[x:y-1])
+        if all(iszero, @view attempt.choices[x:y-1])
             continue
         end
-        head, _, tail = windows(attempt, x, y)
-        new = [head; zeros(UInt64, y-x); tail]
+        head, _, tail = windows(attempt.choices, x, y)
+        new = Attempt([head; zeros(UInt64, y-x); tail], attempt.generation, attempt.max_generation)
         if consider(ts, new)
             return Some(new)
         end
@@ -128,21 +129,21 @@ function shrink_zeros(ts::TestState, attempt::Vector{UInt64}, k::UInt)
 end
 
 """
-    shrink_reduce(::TestState, attempt::Vector{UInt64})
+    shrink_reduce(::TestState, attempt::Attempt)
 
 Try to shrink `attempt` by making the elements smaller.
 """
-function shrink_reduce(ts::TestState, attempt::Vector{UInt64})
-    new = copy(attempt)
-    for i in reverse(1:length(attempt))
-        res = bin_search_down(0, new[i], n -> begin
-            new[i] = n
+function shrink_reduce(ts::TestState, attempt::Attempt)
+    new = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+    for i in reverse(1:length(attempt.choices))
+        res = bin_search_down(0, new.choices[i], n -> begin
+            new.choices[i] = n
             consider(ts, new)
         end)
-        new[i] = @something res Some(new[i])
+        new.choices[i] = @something res Some(new.choices[i])
     end
 
-    if new == attempt
+    if new.choices == attempt.choices
         nothing
     else
         Some(new)
@@ -150,42 +151,42 @@ function shrink_reduce(ts::TestState, attempt::Vector{UInt64})
 end
 
 """
-    shrink_sort(::TestState, attempt::Vector{UInt64}, k::UInt)
+    shrink_sort(::TestState, attempt::Attempt, k::UInt)
 
 Try to shrink `attempt` by sorting `k` contiguous elements at a time.
 """
-function shrink_sort(ts::TestState, attempt::Vector{UInt64}, k::UInt)
-    k >= length(attempt) && return nothing
+function shrink_sort(ts::TestState, attempt::Attempt, k::UInt)
+    k >= length(attempt.choices) && return nothing
 
-    valid = ( (j-k+1, j) for j in length(attempt):-1:k)
+    valid = ( (j-k+1, j) for j in length(attempt.choices):-1:k)
     for (x,y) in valid
-        head, middle, tail = windows(attempt, x, y)
+        head, middle, tail = windows(attempt.choices, x, y)
         issorted(middle) && continue
         newmid = sort(middle)
-        new = [head; newmid; tail]
+        new = Attempt([head; newmid; tail], attempt.generation, attempt.max_generation)
         consider(ts, new) && return Some(new)
     end
     nothing
 end
 
 """
-    shrink_swap(::TestState, attempt::Vector{UInt64}, k::UInt)
+    shrink_swap(::TestState, attempt::Attempt, k::UInt)
 
 Try to shrink `attempt` by swapping two elements length `k` apart.
 """
-function shrink_swap(ts::TestState, attempt::Vector{UInt64}, k::UInt)
-    valid = ( (j-k+1, j) for j in (length(attempt):-1:k))
+function shrink_swap(ts::TestState, attempt::Attempt, k::UInt)
+    valid = ( (j-k+1, j) for j in (length(attempt.choices):-1:k))
     for (x,y) in valid
-        attempt[x] == attempt[y] && continue
-        new = copy(attempt)
-        new[y] = attempt[x]
+        attempt.choices[x] == attempt.choices[y] && continue
+        new = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+        new.choices[y] = attempt.choices[x]
 
-        res = bin_search_down(0, attempt[y], n -> begin
-            new[x] = n
+        res = bin_search_down(0, attempt.choices[y], n -> begin
+            new.choices[x] = n
             consider(ts, new) 
         end)
         if !isnothing(res)
-            new[x] = @something res
+            new.choices[x] = @something res
             return Some(new)
         end
     end
@@ -193,28 +194,28 @@ function shrink_swap(ts::TestState, attempt::Vector{UInt64}, k::UInt)
 end
 
 """
-    shrink_redistribute(ts::TestState, attempt::Vector{UInt64}, k::UInt)
+    shrink_redistribute(ts::TestState, attempt::Attempt, k::UInt)
 
 Try to shrink `attempt` by redistributing value between two elements length `k` apart.
 """
-function shrink_redistribute(ts::TestState, attempt::Vector{UInt64}, k::UInt)
-    length(attempt) < k && return nothing
-    new = copy(attempt)
-    valid = ( (j,j+k) for j in 1:(length(attempt)-k))
+function shrink_redistribute(ts::TestState, attempt::Attempt, k::UInt)
+    length(attempt.choices) < k && return nothing
+    new = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+    valid = ( (j,j+k) for j in 1:(length(attempt.choices)-k))
     for (x,y) in valid
-        iszero(attempt[x]) && continue
-        res = bin_search_down(0, attempt[x], n -> begin
-            new[x] = n
-            new[y] = attempt[x] + attempt[y] - n
+        iszero(attempt.choices[x]) && continue
+        res = bin_search_down(0, attempt.choices[x], n -> begin
+            new.choices[x] = n
+            new.choices[y] = attempt.choices[x] + attempt.choices[y] - n
             consider(ts, new)
         end)
         if !isnothing(res)
             v = @something res
-            new[x] = v
-            new[y] = attempt[x] + attempt[y] - v
+            new.choices[x] = v
+            new.choices[y] = attempt.choices[x] + attempt.choices[y] - v
         end
     end
-    if new == attempt
+    if new.choices == attempt.choices
         return nothing
     else
         return Some(new)

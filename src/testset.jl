@@ -236,7 +236,7 @@ function Test.finish(sr::SuppositionReport)
     # this is a failure, so record the result in the db
     if !(res isa Pass)
         ts = @something sr.final_state
-        choices::Vector{UInt64} = @something if res isa Error
+        attempt::Attempt = @something if res isa Error
             err_choices(ts)
         elseif res isa Fail
             ts.result
@@ -244,7 +244,7 @@ function Test.finish(sr::SuppositionReport)
             @warn "Unexpected result!" Res=res
             nothing
         end
-        record!(sr.database, record_name(sr), choices)
+        record!(sr.database, record_name(sr), attempt)
     end
 
     if Test.get_testset_depth() != 0

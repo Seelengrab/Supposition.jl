@@ -153,3 +153,9 @@ function sample(bn::BiasedNumbers, tc::TestCase)
     use_alternate = weighted!(tc, alternate_chance)
     use_alternate ? alternate : base
 end
+
+lerp(x,y,t) = y*t + x*(1-t)
+function smootherstep(a, b, t)
+    x = clamp((t - a)/(b-a), 0.0, 1.0)
+    return x*x*x*(x*(6.0*x - 15.00) + 10.0)
+end

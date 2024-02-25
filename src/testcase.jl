@@ -1,16 +1,21 @@
 """
-    for_choices(prefix, rng=Random.default_rng())
+    for_choices(prefix; rng=Random.default_rng())
 
 Create a `TestCase` for a given set of known choices.
 """
-function for_choices(prefix::Vector{UInt64}, rng=Random.default_rng())
+function for_choices(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation::UInt, max_generation::Int)
     return TestCase(
         prefix,
         rng,
+        generation,
+        max_generation,
         convert(UInt, length(prefix)),
         UInt64[],
         nothing)
 end
+for_choices(prefix::Vector{UInt64}; rng::Random.AbstractRNG=Random.default_rng(), generation=1, max_generation=-1) =
+    for_choices(prefix, rng, convert(UInt, generation), max_generation)
+for_choices(attempt::Attempt, rng::Random.AbstractRNG) = for_choices(attempt.choices, rng, attempt.generation, attempt.max_generation)
 
 """
     forced_choice(tc::TestCase, n::UInt64)

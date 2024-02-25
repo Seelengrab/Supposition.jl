@@ -1,5 +1,5 @@
 using Supposition
-using Supposition: Data, test_function, shrink_remove, shrink_redistribute, NoRecordDB
+using Supposition: Data, test_function, shrink_remove, shrink_redistribute, NoRecordDB, Attempt
 using Test
 using Aqua
 using Random
@@ -34,38 +34,38 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "test function interesting" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(true))
-        tc = TestCase(UInt[], Random.default_rng(), 10_000)
+        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test first(test_function(ts, tc))
-        @test @something(ts.result) == []
+        @test @something(ts.result).choices == []
 
-        ts.result = Some([1,2,3,4])
-        tc = TestCase(UInt[], Random.default_rng(), 10_000)
+        ts.result = Some(Attempt([1,2,3,4],1,10_000))
+        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test first(test_function(ts, tc))
-        @test @something(ts.result) == []
+        @test @something(ts.result).choices == []
 
-        tc = TestCase(UInt[1,2,3,4], Random.default_rng(), 10_000)
+        tc = TestCase(UInt[1,2,3,4], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
-        @test @something(ts.result) == []
+        @test @something(ts.result).choices == []
     end
 
     @testset "test function valid" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(false))
 
-        tc = TestCase(UInt[], Random.default_rng(), 10_000)
+        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
         @test isnothing(ts.result) && isnothing(ts.target_err)
 
-        ts.result = Some([1,2,3,4])
-        test_function(ts, TestCase(UInt[], Random.default_rng(), 10_000))
-        @test @something(ts.result) == UInt[1,2,3,4]
+        ts.result = Some(Attempt([1,2,3,4],1,10_000))
+        test_function(ts, TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000))
+        @test @something(ts.result).choices == UInt[1,2,3,4]
     end
 
     @testset "test function invalid" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, _ -> throw(Supposition.Invalid()))
+        ts = TestState(conf, _ -> Supposition.reject!())
 
-        tc = TestCase(UInt[], Random.default_rng(), 10_000)
+        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
         @test isnothing(ts.result) && isnothing(ts.target_err)
     end
@@ -73,13 +73,15 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "shrink remove" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(true))
-        ts.result = Some(UInt[1,2,3])
+        ts.result = Some(Attempt(UInt[1,2,3], 1, 10_000))
 
-        @test @something(shrink_remove(ts, UInt[1,2], UInt(1))) == [1]
-        @test @something(shrink_remove(ts, UInt[1,2], UInt(2))) == UInt[]
+        @test @something(shrink_remove(ts, Attempt(UInt[1,2],1,10_000), UInt(1))).choices == [1]
+        @test @something(shrink_remove(ts, Attempt(UInt[1,2],1,10_000), UInt(2))).choices == UInt[]
 
-        ts.result = Some(UInt[1,2,3,4,5])
-        @test @something(shrink_remove(ts, UInt[1,2,3,4], UInt(2))) == [1,2]
+        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
+        ts = TestState(conf, Returns(true))
+        ts.result = Some(Attempt(UInt[1,2,3,4,5], 1,10_000))
+        @test @something(shrink_remove(ts, Attempt(UInt[1,2,3,4],1,10_000), UInt(2))).choices == [1,2]
 
         function second_is_five(tc::TestCase)
             ls = [ choice!(tc, 10) for _ in 1:3 ]
@@ -87,42 +89,32 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, second_is_five)
-        ts.result = Some(UInt[1,2,5,4,5])
-        @test @something(shrink_remove(ts, UInt[1,2,5,4,5], UInt(2))) == UInt[1,2,5]
+        ts.result = Some(Attempt(UInt[1,2,5,4,5],1,10_000))
+        @test @something(shrink_remove(ts, Attempt(UInt[1,2,5,4,5],1,10_000), UInt(2))).choices == UInt[1,2,5]
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, sum_greater_1000)
-        ts.result = Some(UInt[1,10_000,1,10_000])
-        @test @something(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2))) == UInt[1,1001,0]
-
-        ts.result = Some(UInt[1,10_000,1,10_000])
-        @test isnothing(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(1)))
+        ts.result = Some(Attempt(UInt[1,1,10_000,1,10_000],1,10_000))
+        @test isnothing(shrink_remove(ts, Attempt(UInt[1,1,0,1,1001,0],1,10_000), UInt(1)))
     end
 
     @testset "shrink redistribute" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(true))
 
-        ts.result = Some(UInt[500,500,500,500])
-        @test @something(shrink_redistribute(ts, UInt[500,500], UInt(1))) == UInt[0, 1000]
+        ts.result = Some(Attempt(UInt[500,500,500,500],1,10_000))
+        @test @something(shrink_redistribute(ts, Attempt(UInt[500,500],1, 10_000), UInt(1))).choices == UInt[0, 1000]
 
-        ts.result = Some(UInt[500,500,500,500])
-        @test @something(shrink_redistribute(ts, UInt[500,500,500], UInt(2))) == UInt[0, 500, 1000]
+        ts.result = Some(Attempt(UInt[500,500,500,500],1,10_000))
+        @test @something(shrink_redistribute(ts, Attempt(UInt[500,500,500],1, 10_000), UInt(2))).choices == UInt[0, 500, 1000]
     end
 
     @testset "finds small list" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, sum_greater_1000)
         Supposition.run(ts)
-        @test @something(ts.result) == [1,1001,0]
-    end
-
-    @testset "finds small list debug" begin
-        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, sum_greater_1000)
-        ts.result = Some(UInt[1,0,1,1001,0])
-        @test @something(shrink_remove(ts, UInt[1,0,1,1001,0], UInt(2))) == [1,1001,0]
-        @test @something(ts.result) == UInt[1,1001,0]
+        # This tests the _exact_ IR of Data.Vectors!
+        @test @something(ts.result).choices == UInt[1,1,1001]
     end
 
     @testset "finds small list even with bad lists" begin
@@ -140,7 +132,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, bl_sum_greater_1000)
         Supposition.run(ts)
-        @test @something(ts.result) == UInt[1,1001]
+        @test @something(ts.result).choices == UInt[1,1001]
     end
 
     @testset "reduces additive pairs" begin
@@ -153,7 +145,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, int_sum_greater_1000)
         Supposition.run(ts)
-        @test @something(ts.result) == [1,1000]
+        @test @something(ts.result).choices == [1,1000]
     end
 
     @testset "test cases satisfy preconditions" begin
@@ -345,16 +337,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "boolean unbiased" begin
-        function unbias(tc::TestCase)
-            vs = Data.produce(Data.Vectors(Data.Booleans(); min_size=10_000, max_size=10_000), tc)
-            m = mean(vs)
-            !(m ≈ 0.5)
-        end
-
-        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, unbias)
-        Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        vs = example(Data.Booleans(), 1_000_000)
+        m = mean(vs)
+        # being off from perfect by +-5% is acceptable
+        @test m ≈ 0.5 rtol=0.05
     end
 
     int_types = (
@@ -414,15 +400,22 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "size bounds on vectors" begin
-        function bounds(tc::TestCase)
-            ls = Data.produce(Data.Vectors(Data.Integers(0,10); min_size=UInt(1), max_size=UInt(3)), tc)
-            length(ls) < 1 || 3 < length(ls)
+        vecgen = Data.Vectors(Data.Integers(0,10); min_size=UInt(1), max_size=UInt(3))
+        @check function bounds(ls=vecgen)
+            1 <= length(ls) <= 3
         end
+    end
 
-        conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, bounds)
-        Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+    @testset "Can find close-to-maximum vector length" begin
+        upper_limit = rand(150:1000)
+        offset = rand(10:50)
+        vecgen = Data.Vectors(Data.Integers{UInt8}(); min_size=min(500, upper_limit)-2*offset, max_size=upper_limit+2*offset)
+        sr = @check db=NoRecordDB() record=false broken=true function findArr(v=vecgen)
+                length(v) < (upper_limit-offset)
+            end;
+        @test @something(sr.result) isa Supposition.Fail
+        arr = only(@something(sr.result).example);
+        @test length(arr) == (upper_limit-offset)
     end
 
     @testset "Can produce floats" begin
@@ -603,7 +596,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
             # the stored choices should be the same as the actual choices
             cached = Supposition.retrieve(ddb, Supposition.record_name(sr))
-            @test @something(cached) == @something(@something(sr.final_state).result)
+            @test @something(cached).choices == @something(@something(sr.final_state).result).choices
 
             # running the test again should reproduce the _exact_ same failure immediately
             # marked as broken so the failure is not reported and meddles CI logs
@@ -614,7 +607,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "Randomness" begin
         #=
-            Randomness is tricky - we want each run of `@check` to be 
+            Randomness is tricky - we want each run of `@check` to be
             different from the last one, even in the same session & on the same property,
             but they should be reproducible across sessions from the stored data & RNG state.
             This means they should NOT be influenced by the global RNG, so we must seed

@@ -31,17 +31,14 @@ records(ddb::DirectoryDB) = filter!(!isdir, readdir(ddb.basepath; join=true))
 
 function record!(ddb::DirectoryDB, name, choices)
     storage_path = joinpath(ddb.basepath, name)
-    open(storage_path, "w") do io
-        write(io, choices)
-    end
+    serialize(storage_path, choices)
     ddb
 end
 
 function retrieve(ddb::DirectoryDB, name)
     storage_path = joinpath(ddb.basepath, name)
     !isfile(storage_path) && return nothing
-    io = open(storage_path, "r")
-    return Some(mmap(io, Vector{UInt}))
+    return Some(deserialize(storage_path))
 end
 
 #####

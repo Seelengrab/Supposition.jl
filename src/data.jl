@@ -36,6 +36,7 @@ as well as these utility functions:
 module Data
 
 using Supposition
+using Supposition: smootherstep, lerp
 using RequiredInterfaces: @required
 
 """
@@ -325,22 +326,85 @@ end
 function produce(v::Vectors{T}, tc::TestCase) where T
     result = T[]
 
-    # this does an exponential backoff - longer vectors
-    # are more and more unlikely to occur
-    # so results are biased towards min_size
-    while true
-        if length(result) < v.min_size
-            forced_choice!(tc, UInt(1))
-        elseif (length(result)+1) >= v.max_size
-            forced_choice!(tc, UInt(0))
-            break
-        elseif !weighted!(tc, 0.9)
-            break
-        end
+    # it's VERY important to let the shrinker shrink this!
+    # if we don't we get Invalids even when we shouldn't
+    max_offset = choice!(tc, v.max_size - v.min_size)
+
+    if tc.generation == tc.max_generation
+        # if we're on the last try (should that exist)
+        # guarantee that we're able to draw the maximum permissible size
+        average_offset = (v.max_size÷2 + v.min_size÷2) - v.min_size
+    else
+        # otherwise, get an average according to a beta distribution
+        raw_step = smootherstep(0.0, float(max(tc.max_generation÷2, 5_000)), tc.generation)
+        beta_param = lerp(0.5, 5.0, raw_step)
+        average_offset = floor(UInt, max_offset*(beta_param/(beta_param+1.0)))
+    end
+
+    # give some hint to the amount of data we're going to need
+    sizehint!(result, v.min_size+average_offset)
+
+    # first, make sure we hit the minimum size
+    for _ in 1:v.min_size
         push!(result, produce(v.elements, tc))
     end
 
+    # now for the fiddly bit to reaching `v.max_size`
+    # the `min` here is important, otherwise we may _oversample_ if the
+    # beta distribution drew too high after `max_offset` shrank!
+    p_continue = _calc_p_continue(min(average_offset, max_offset), max_offset)
+
+    # finally, draw with our targeted average until we're done
+    for _ in 1:max_offset
+        if weighted!(tc, p_continue)
+            push!(result, produce(v.elements, tc))
+        else
+            break
+        end
+    end
+
     return result
+end
+
+function _calc_p_continue(desired_avg, max_size)
+    @assert desired_avg <= max_size "Require target <= max_size, not $desired_avg > $max_size"
+    if desired_avg == max_size
+        return 1.0
+    end
+    p_continue = 1.0 - 1.0/(1+desired_avg)
+    if iszero(p_continue)
+        @assert 0 <= p_continue < 1
+        return p_continue
+    end
+
+    while _p_continue_to_avg(p_continue, max_size) > desired_avg
+        p_continue -= 0.0001
+        smallest_positive = nextfloat(0.0)
+        if p_continue < smallest_positive
+            p_continue = smallest_positive
+            break
+        end
+    end
+
+    hi = 1.0
+    while desired_avg - _p_continue_to_avg(p_continue, max_size) > 0.01
+        @assert 0 < p_continue < hi "Binary search failed: $p_continue, $hi"
+        # this can't overflow, since the numbers are all in [0,1]
+        mid = (p_continue + hi) / 2
+        if _p_continue_to_avg(mid, max_size) <= desired_avg
+            p_continue = mid
+        else
+            hi = mid
+        end
+    end
+    @assert 0 < p_continue < 1 "Binary search faileD: $p_continue, $hi"
+    @assert _p_continue_to_avg(p_continue, max_size) <= desired_avg "Found probability leads to higher-than-requested average"
+    return p_continue
+end
+
+function _p_continue_to_avg(p_continue, max_size)
+    p_continue >= 1 && return max_size
+    return (1.0 / (1 - p_continue) - 1.0) * (1 - p_continue^max_size)
 end
 
 ## Possibilities of pairs
