@@ -95,6 +95,15 @@ struct Map{R, S <: Possibility, F} <: Possibility{R}
     Map(s::S, f::F) where {T, S <: Possibility{T}, F} = new{Base.promote_op(f, T), S, F}(s, f)
 end
 
+"""
+    map(f, pos::Possibility)
+
+Apply `f` to the result of calling `produce` on `pos` (lazy mapping).
+
+Equivalent to calling `Map(pos, f)`.
+
+See also [`Map`](@ref).
+"""
 Base.map(f, p::Possibility) = Map(p, f)
 produce(m::Map, tc::TestCase) = m.map(produce(m.source, tc))
 
@@ -124,6 +133,17 @@ struct Satisfying{T, S <: Possibility{T}, P} <: Possibility{T}
     end
 end
 
+"""
+    filter(f, pos::Possibility)
+
+Filter the output of `produce` on `pos` by applying the predicate
+`f`.
+
+!!! note "No stalling"
+    In order not to stall generation of values, this will not
+    try to produce a value from `pos` forever, but reject the
+    testcase after some attempts.
+"""
 Base.filter(f, p::Possibility) = Satisfying(p, f)
 satisfying(f, p::Possibility) = Satisfying(p, f)
 
@@ -155,6 +175,16 @@ struct Bind{T, S <: Possibility{T}, M} <: Possibility{T}
     map::M
 end
 
+"""
+    bind(f, pos::Possibility)
+
+Maps the output of `produce` on `pos` through `f`, and calls `produce` on
+the result again. `f` is expected to take a value and return a `Possibility`.
+
+Equivalent to calling `Bind(pos, f)`.
+
+See also [`Bind`](@ref).
+"""
 bind(f, s::Possibility) = Bind(s, f)
 function produce(b::Bind, tc::TestCase)
     inner = produce(b.source, tc)
@@ -280,6 +310,22 @@ end
 
 ## Possibilities of pairs
 
+"""
+    Pairs(first::Possibility{T}, second::Possibility{S}) where {T,S} <: Possibility{Pair{T,S}}
+
+A `Possibility` for producing `a => b` pairs. `a` is produced by `first`, `b` is produced by `second`.
+
+```
+julia> p = Data.Pairs(Data.Integers{UInt8}(), Data.Floats{Float64}());
+
+julia> example(p, 4)
+4-element Vector{Pair{UInt8, Float64}}:
+ 0x41 => 4.1183566661848205e-230
+ 0x48 => -2.2653631095108555e-119
+ 0x2a => -6.564396855333643e224
+ 0xec => 1.9330751262581671e-53
+```
+"""
 struct Pairs{T,S} <: Possibility{Pair{T,S}}
     first::Possibility{T}
     second::Possibility{S}
@@ -382,11 +428,14 @@ Base.:(|)(a::OneOf, b::OneOf) = OneOf(a.strats..., b.strats...)
 A `Possibility` for generating recursive data structures.
 `base` is the basecase of the recursion. `extend` is a function returning a
 new `Possibility` when given a `Possibility`, called to recursively
-expand a tree starting from `base`.
+expand a tree starting from `base`. The returned `Possibility` is fed
+back into `extend` again, expanding the recursion by one layer.
 
 `max_layers` designates the maximum number of times `extend` will be used
 to wrap `base` in new layers. This must be at least `1`, so that at least
 the base case can always be generated.
+
+Equivalent to calling `recursive(extend, base)`.
 
 ## Examples
 
@@ -433,6 +482,18 @@ struct Recursive{T,F} <: Possibility{T}
         new{postype(inner), typeof(extend)}(base, extend, inner)
     end
 end
+
+"""
+    recursive(f, pos::Possibility; max_layers=5)
+
+Recursively expand `pos` into deeper nested `Possibility` by repeatedly
+passing `pos` itself to `f`. `f` returns a new `Possibility`, which is then
+passed into `f` again until the maximum depth is achieved.
+
+Equivalent to calling `Recursive(pos, f)`.
+
+See also [`Recursive`](@ref).
+"""
 recursive(f, pos::Possibility; max_layers=5) = Recursive(pos, f; max_layers)
 
 produce(r::Recursive, tc::TestCase) = produce(r.inner, tc)
