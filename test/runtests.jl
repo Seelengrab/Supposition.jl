@@ -745,6 +745,22 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(broke_err_sr).iserror
             @test  Supposition.results(broke_err_sr).isbroken
         end
+
+        @testset "Alignment" begin
+            and_Ive_been_through_the_desert_in_a_func_with_long_name(_) = true
+            sr = @check record=false and_Ive_been_through_the_desert_in_a_func_with_long_name(Data.Booleans())
+            # I really wish `redirect_std*` would take an IOBuffer
+            printed_output = mktemp() do _, io
+                redirect_stdout(io) do
+                    Test.print_test_results(sr)
+                end
+                seekstart(io)
+                read(io, String)
+            end
+            first_pipe, second_pipe = findall(==('|'), printed_output)
+            newline = findfirst(==('\n'), printed_output)
+            @test first_pipe == (second_pipe-newline)
+        end
     end
 
     @testset "Utility" begin

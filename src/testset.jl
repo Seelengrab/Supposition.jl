@@ -62,6 +62,8 @@ function _format_duration(sr::SuppositionReport)
     end
 end
 
+Test.get_alignment(sr::SuppositionReport, depth::Int) = 2*depth + textwidth(sr.description)
+
 @static if VERSION.major >= 1 && VERSION.minor >= 11
     # these are only defined from 1.11 onwards, earlier the printing didn't do anything anyway
     Test.print_verbose(sr::SuppositionReport) = sr.verbose
