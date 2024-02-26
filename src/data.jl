@@ -196,6 +196,15 @@ struct Integers{T<:Integer, U<:Unsigned} <: Possibility{T}
     Integers{T}() where T <: Integer = new{T, unsigned(T)}(typemin(T), typemax(unsigned(T)))
 end
 
+const BITINT_TYPES = (UInt8, Int8, UInt16, Int16, UInt32, Int32, UInt64, Int64, UInt128, Int128, )
+
+"""
+    BitIntegers() <: Possibility{$(Base.BitInteger)}
+
+A `Possibility` for generating all possible bitintegers with fixed size.
+"""
+BitIntegers() = OneOf((Integers{T}() for T in BITINT_TYPES)...)
+
 function produce(i::Integers{T}, tc::TestCase) where T
     offset = choice!(tc, i.range % UInt) % T
     return (i.minimum + offset) % T
@@ -672,6 +681,16 @@ struct Floats{T <: Base.IEEEFloat} <: Possibility{T}
         new{T}(nans, infs)
     end
 end
+
+"""
+    Floats(;nans=true, infs=true) <: Possibility{Union{Float64,Float32,Float16}}
+
+A catch-all for generating instances of all three IEEE floating point types.
+"""
+Floats(;nans=true, infs=true) = OneOf(
+    Floats{Float16}(;nans,infs),
+    Floats{Float32}(;nans,infs),
+    Floats{Float64}(;nans,infs))
 
 function produce(f::Floats{T}, tc::TestCase) where {T}
     iT = Supposition.uint(T)
