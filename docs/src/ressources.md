@@ -23,3 +23,12 @@ hesitate to open a PR adding the ressource here!
  * [Proprty Testing Stateful Code in Rust](https://rtpg.co/2024/02/02/property-testing-with-imperative-rust/) by Raphael Gashignard
    * A blogpost about fuzzing internal datastructures of [nushell](https://www.nushell.sh/) using PBT and the Rust library
      [proptest](https://github.com/proptest-rs/proptest).
+ * [Automate Your Way to Better Code: Advanced Property Testing (with Oskar Wickström)](https://youtu.be/wHJZ0icwSkc) by Kris Jenkins from Developer Voices
+   * > My Job as a programmer is to be lazy in the smart way - I see *that* many unit tests, and I just want to automate the problem away.
+     > Well that's the promise of property testing - write a bit of code that describes the shape of your software, and it will go away
+     > and create 10_000 unit tests to see if you're right, if it actually does work that way.
+     > [..] we're also going to address my biggest disappointment so far with property testing: which is that it only seems to work in theory.
+     > It's great for textbook examples, I'm sold on the principle, but I've struggled to make it work on my more gnarly real world code.
+   * This is an absolutely delightful listen! A nice definition of what property based testing is, as well as a lot of discussion
+     on how to start out with property based testing and continue with the approach onto more difficult pastures.
+     Don't let yourself be intimidated by the length - take your time with this one, it's well worth it!
