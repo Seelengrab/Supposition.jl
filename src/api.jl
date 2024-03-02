@@ -334,6 +334,23 @@ function kw_to_let(tc, kwargs)
 end
 
 """
+    Composed{S,T} <: Possibility{T}
+
+A `Possibility` composed from multiple different `Possibility` through
+`@composed`. A tiny bit more fancy/convenient compared to `map` if multiple
+`Possibility` are required to be mapped over at the same time.
+
+Should not be instantiated manually; keep the object returned by `@composed`
+around instead.
+"""
+struct Composed{S,T} <: Data.Possibility{T}
+    function Composed{S}() where S
+        prodtype = Base.promote_op(Data.produce, Composed{S}, TestCase)
+        new{S, prodtype}()
+    end
+end
+
+"""
     @composed
 
 A way to compose multiple `Possibility` into one, by applying a function.
@@ -367,29 +384,23 @@ macro composed(e::Expr)
     tc = gensym()
     strategy_let = kw_to_let(tc, kwargs)
 
-    structproduce = Symbol(name, "__produce")
+    prodname = QuoteNode(name)
 
     structfunc = Expr(:function)
     funchead = copy(last(strategy_let.args))
     funchead.head = :call
-    pushfirst!(funchead.args, structproduce)
+    pushfirst!(funchead.args, name)
     push!(structfunc.args, funchead)
     push!(structfunc.args, body)
 
     return esc(quote
-        struct $name{T} <: $Data.Possibility{T}
-            function $name()
-                new{$Base.promote_op($Data.produce, $name, $TestCase)}()
-            end
-        end
-
-        function $Data.produce(::$name, $tc::$TestCase)
-            $structproduce($strategy_let...)
-        end
-
         $structfunc
 
-        $name()
+        function $Data.produce(::$Composed{$prodname}, $tc::$TestCase)
+            $name($strategy_let...)
+        end
+
+        $Composed{$prodname}()
     end)
 end
 
