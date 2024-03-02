@@ -25,6 +25,6 @@ include("api.jl")
 include("history.jl")
 include("testset.jl")
 
-include("precompile.jl")
+# include("precompile.jl")
 
 end # Supposition module

@@ -57,10 +57,35 @@ struct CheckConfig
     max_examples::Int
     record::Bool
     function CheckConfig(; rng::Random.AbstractRNG, max_examples::Int, record=true, kws...)
+        !isempty(kws) && @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=keys(kws)
         new(rng,
             max_examples,
             record)
     end
+end
+
+"""
+    DEFAULT_CONFIG
+
+A `ScopedValue` holding the `CheckConfig` that will be used by default & as a fallback.
+
+Currently uses these values:
+
+ * `rng`: `Random.Xoshiro(rand(Random.RandomDevice(), UInt))`
+ * `max_examples`: `10_000`
+ * `record`: `true`
+
+`@check` will use a _new_ instance of `Random.Xoshiro` by itself.
+"""
+const DEFAULT_CONFIG = ScopedValue{CheckConfig}(CheckConfig(;
+    rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
+    max_examples=10_000,
+    record=true
+))
+
+function merge(cc::CheckConfig; kws...)
+    cfg = ( k => get(kws, k, getproperty(cc, k)) for k in propertynames(cc) )
+    CheckConfig(;cfg...)
 end
 
 struct Attempt
@@ -161,7 +186,7 @@ mutable struct SuppositionReport <: AbstractTestSet
     config::CheckConfig
     database::ExampleDB
     function SuppositionReport(func::String; verbose::Bool=false, broken::Bool=false, description::String="", db::Union{Bool,ExampleDB}=true,
-                                record_base::String="", kws...)
+                                record_base::String="", rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)), config=DEFAULT_CONFIG[], kws...)
         desc = isempty(description) ? func : description
         database::ExampleDB = if db isa Bool
             if db
@@ -172,10 +197,7 @@ mutable struct SuppositionReport <: AbstractTestSet
         else
             db
         end
-        conf = CheckConfig(;
-            rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
-            max_examples=10_000,
-            kws...)
+        conf = merge(config; rng, kws...)
         new(desc, record_base, nothing, nothing, time(), nothing, verbose, broken, conf, database)
     end
 end
