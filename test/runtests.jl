@@ -1,5 +1,5 @@
 using Supposition
-using Supposition: Data, test_function, shrink_remove, shrink_redistribute, NoRecordDB, Attempt
+using Supposition: Data, test_function, shrink_remove, shrink_redistribute, NoRecordDB, Attempt, DEFAULT_CONFIG
 using Test
 using Aqua
 using Random
@@ -784,6 +784,38 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             first_pipe, second_pipe = findall(==('|'), printed_output)
             newline = findfirst(==('\n'), printed_output)
             @test first_pipe == (second_pipe-newline)
+        end
+    end
+
+    @testset "Default Config" begin
+        conf = Supposition.CheckConfig(;
+            rng=Xoshiro(0),
+            max_examples=10,
+            db=NoRecordDB(),
+            record=false
+        )
+        intgen = Data.Integers{Int}()
+        @with DEFAULT_CONFIG => conf begin
+            cntr = Ref(0)
+            @testset "RecordNotOverwritten" begin
+                @check broken=true function numEx(i=intgen)
+                    cntr[] += 1
+                    true
+                end
+                @check record=true function truthy(i=Data.Integers{Int8}())
+                    true
+                end
+            end
+            @test cntr[] == 10
+        end
+
+        @testset "Partially overwrite given Config" begin
+            cntr = Ref(0)
+            @check config=conf max_examples=100 function passConfFailTestFailTest(i=intgen)
+                cntr[] += 1
+                true
+            end
+            @test cntr[] == 100
         end
     end
 

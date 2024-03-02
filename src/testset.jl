@@ -40,9 +40,10 @@ function results(sr::SuppositionReport)
     res_pass = @something(sr.result) isa Pass
     res_fail = @something(sr.result) isa Fail
     res_error = @something(sr.result) isa Error
-    ispass = res_pass && !sr.expect_broken
-    iserror = res_error && !sr.expect_broken
-    isfail = (res_pass && sr.expect_broken) || (res_fail && !sr.expect_broken)
+    expect_broken = sr.config.broken
+    ispass = res_pass && !expect_broken
+    iserror = res_error && !expect_broken
+    isfail = (res_pass && expect_broken) || (res_fail && !expect_broken)
     isbroken = !(ispass | iserror | isfail)
     (;ispass,isfail,iserror,isbroken)
 end
@@ -66,7 +67,7 @@ Test.get_alignment(sr::SuppositionReport, depth::Int) = 2*depth + textwidth(sr.d
 
 @static if VERSION.major >= 1 && VERSION.minor >= 11
     # these are only defined from 1.11 onwards, earlier the printing didn't do anything anyway
-    Test.print_verbose(sr::SuppositionReport) = sr.verbose
+    Test.print_verbose(sr::SuppositionReport) = sr.config.verbose
 
     Test.format_duration(sr::SuppositionReport) = _format_duration(sr)
 
@@ -224,12 +225,13 @@ function Test.finish(sr::SuppositionReport)
     # can't be done, so just return instead
     isnothing(sr.result) && return sr
     res = @something(sr.result)
+    expect_broken = sr.config.broken
 
-    if sr.verbose
+    if sr.config.verbose
         print_results(sr, res)
-    elseif !sr.expect_broken && !(res isa Pass)
+    elseif !expect_broken && !(res isa Pass)
         print_results(sr, res)
-    elseif sr.expect_broken && res isa Pass
+    elseif expect_broken && res isa Pass
         print_fix_broken(sr)
     end
 
@@ -244,7 +246,7 @@ function Test.finish(sr::SuppositionReport)
             @warn "Unexpected result!" Res=res
             nothing
         end
-        record!(sr.database, record_name(sr), attempt)
+        record!(sr.config.db, record_name(sr), attempt)
     end
 
     if Test.get_testset_depth() != 0

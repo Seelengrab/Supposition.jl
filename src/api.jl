@@ -117,6 +117,9 @@ Supported options, passed as `key=value`:
  * `max_examples::Int`: The maximum number of generated examples that are passed to the property.
  * `broken::Bool`: Mark a property that should pass but doesn't as broken, so that failures are not counted.
  * `record::Bool`: Whether the result of the invocation should be recorded with any parent testsets.
+ * `db`: Either a Boolean (`true` uses a fallback database, `false` stops recording examples) or an [`ExampleDB`](@ref).
+ * `config`: A `CheckConfig` object that will be used as a default for all previous options. Options that are passed
+   explicitly to `@check` will override whatever is provided through `config`.
 
 The arguments to the given function are expected to be generator strategies. The names they are bound to
 are the names the generated object will have in the test. These arguments will be shown should
@@ -274,7 +277,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
         $sr = $SuppositionReport
         $Test.@testset $sr $(tsargs...) $namestr begin
             $report = $Test.get_testset()
-            $previous_failure = $retrieve($report.database, $record_name($report))
+            $previous_failure = $retrieve($report.config.db, $record_name($report))
             $ts = $TestState($report.config, $run_input, $previous_failure)
             $Supposition.run($ts)
             $Test.record($report, $ts)

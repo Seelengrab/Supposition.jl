@@ -25,6 +25,29 @@ include("api.jl")
 include("history.jl")
 include("testset.jl")
 
-# include("precompile.jl")
+"""
+    DEFAULT_CONFIG
+
+A `ScopedValue` holding the `CheckConfig` that will be used by default & as a fallback.
+
+Currently uses these values:
+
+ * `rng`: `Random.Xoshiro(rand(Random.RandomDevice(), UInt))`
+ * `max_examples`: `10_000`
+ * `record`: `true`
+ * `verbose`: `false`
+ * `broken`: `false`
+
+`@check` will use a _new_ instance of `Random.Xoshiro` by itself.
+"""
+const DEFAULT_CONFIG = ScopedValue{CheckConfig}(CheckConfig(;
+    rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
+    max_examples=10_000,
+    record=true,
+    verbose=false,
+    broken=false,
+))
+
+include("precompile.jl")
 
 end # Supposition module

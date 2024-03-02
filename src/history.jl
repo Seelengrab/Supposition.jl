@@ -89,9 +89,9 @@ end
 function record(sr::SuppositionReport)
     ts = @something sr.final_state
     choices = @something ts.result
-    record!(sr.database, record_name(sr), choices)
+    record!(sr.config.db, record_name(sr), choices)
     true
 end
 
-retrieve(sr::SuppositionReport) = retrieve(sr.database, record_name(sr))
+retrieve(sr::SuppositionReport) = retrieve(sr.config.db, record_name(sr))
 

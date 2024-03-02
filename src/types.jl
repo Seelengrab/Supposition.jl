@@ -42,6 +42,28 @@ TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation, max_genera
      TestCase(prefix, rng, convert(UInt, generation), convert(Int, max_generation), convert(UInt, max_size), UInt64[], nothing)
 
 """
+    ExampleDB
+
+An abstract type representing a database of previous counterexamples.
+
+Required methods:
+
+  * `records(::ExampleDB)`: Returns an iterable of all currently recorded counterexamples.
+  * `record!(::ExampleDB, key, value)`: Record the counterexample `value` under the key `key`.
+  * `retrieve(::ExampleDB, key)::Option`: Retrieve the previously recorded counterexample stored under `key`.
+        Return `nothing` if no counterexample was stored under that key.
+"""
+abstract type ExampleDB end
+
+@required ExampleDB begin
+    records(::ExampleDB)
+    record!(::ExampleDB, ::Any, ::Any)
+    retrieve(::ExampleDB, ::Any)
+end
+
+function default_directory_db end
+
+"""
     CheckConfig
 
 A struct holding the initial configuration for an invocation of `@check`.
@@ -51,39 +73,39 @@ Fields:
  * `rng`: The initial RNG object given to `@check`
  * `max_examples`: The maximum number of examples allowed to be drawn with this config. `-1` means infinite drawing (careful!).
  * `record`: Whether the result should be recorded in the parent testset, if there is one
+ * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`
+ * `broken`: Whether the invocation is expected to fail
 """
 struct CheckConfig
     rng::Random.AbstractRNG
     max_examples::Int
     record::Bool
-    function CheckConfig(; rng::Random.AbstractRNG, max_examples::Int, record=true, kws...)
+    verbose::Bool
+    broken::Bool
+    db::ExampleDB
+    function CheckConfig(; rng::Random.AbstractRNG, max_examples::Int, record=true,
+                            verbose=false, broken=false, db::Union{Bool,ExampleDB}=true, kws...)
         !isempty(kws) && @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=keys(kws)
+        database::ExampleDB = if db isa Bool
+            if db
+                default_directory_db()
+            else
+                NoRecordDB()
+            end
+        else
+            db
+        end
         new(rng,
             max_examples,
-            record)
+            record,
+            verbose,
+            broken,
+            database)
     end
 end
 
-"""
-    DEFAULT_CONFIG
-
-A `ScopedValue` holding the `CheckConfig` that will be used by default & as a fallback.
-
-Currently uses these values:
-
- * `rng`: `Random.Xoshiro(rand(Random.RandomDevice(), UInt))`
- * `max_examples`: `10_000`
- * `record`: `true`
-
-`@check` will use a _new_ instance of `Random.Xoshiro` by itself.
-"""
-const DEFAULT_CONFIG = ScopedValue{CheckConfig}(CheckConfig(;
-    rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
-    max_examples=10_000,
-    record=true
-))
-
 function merge(cc::CheckConfig; kws...)
+    issubset(keys(kws), propertynames(cc)) || @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=keys(kws)
     cfg = ( k => get(kws, k, getproperty(cc, k)) for k in propertynames(cc) )
     CheckConfig(;cfg...)
 end
@@ -150,26 +172,6 @@ An abstract type representing the ultimate result a `TestState` ended up at.
 abstract type Result end
 
 """
-    ExampleDB
-
-An abstract type representing a database of previous counterexamples.
-
-Required methods:
-
-  * `records(::ExampleDB)`: Returns an iterable of all currently recorded counterexamples.
-  * `record!(::ExampleDB, key, value)`: Record the counterexample `value` under the key `key`.
-  * `retrieve(::ExampleDB, key)::Option`: Retrieve the previously recorded counterexample stored under `key`.
-        Return `nothing` if no counterexample was stored under that key.
-"""
-abstract type ExampleDB end
-
-@required ExampleDB begin
-    records(::ExampleDB)
-    record!(::ExampleDB, ::Any, ::Any)
-    retrieve(::ExampleDB, ::Any)
-end
-
-"""
     SuppositionReport <: AbstractTestSet
 
 An `AbstractTestSet`, for recording the final result of `@check` in the context of `@testset`
@@ -181,24 +183,12 @@ mutable struct SuppositionReport <: AbstractTestSet
     result::Option{Result}
     time_start::Float64
     time_end::Option{Float64}
-    verbose::Bool
-    expect_broken::Bool
     config::CheckConfig
-    database::ExampleDB
-    function SuppositionReport(func::String; verbose::Bool=false, broken::Bool=false, description::String="", db::Union{Bool,ExampleDB}=true,
+    function SuppositionReport(func::String; description::String="",
                                 record_base::String="", rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)), config=DEFAULT_CONFIG[], kws...)
         desc = isempty(description) ? func : description
-        database::ExampleDB = if db isa Bool
-            if db
-                default_directory_db()
-            else
-                NoRecordDB()
-            end
-        else
-            db
-        end
         conf = merge(config; rng, kws...)
-        new(desc, record_base, nothing, nothing, time(), nothing, verbose, broken, conf, database)
+        new(desc, record_base, nothing, nothing, time(), nothing, conf)
     end
 end
 
