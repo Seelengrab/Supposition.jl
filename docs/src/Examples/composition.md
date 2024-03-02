@@ -13,11 +13,12 @@ const intgen = Data.Integers{Int}()
 
 makeeven(x) = (x÷0x2)*0x2
 
-gen = @composed function complex_even_Int(a=intgen, b=intgen)
+even_complex = @composed function complex_even(a=intgen, b=intgen)
     a = makeeven(a)
     b = makeeven(b)
     a + b*im
 end
+example(even_complex, 5)
 ```
 
 In essence, `@composed` takes a function that is given some generators, and ultimately returns a generator that runs the function on those given generators.
@@ -25,7 +26,7 @@ As a full-fledged `Possibility`, you can of course do everything you'd expect to
 using them as input to other `@composed`! This makes them a powerful tool for composing custom generators.
 
 ```@example example_composed
-@check function all_complex_even(c=gen)
+@check function all_complex_even(c=even_complex)
     iseven(real(c)) && iseven(imag(c))
 end
 nothing # hide
@@ -36,6 +37,12 @@ nothing # hide
     than expected. E.g. if the input generators are non-`const` globals, it can easily happen that type inference
     falls back to `Any`. The same goes for other type instabilities and the usual best-practices surrounding type
     stability.
+
+In addition, `@composed` defines the function given to it as well as a regular function, which means that you can call & reuse it however you like:
+
+```@example example_composed
+complex_even(1.0,2.0)
+```
 
 ## Filtering, mapping, and other combinators
 
