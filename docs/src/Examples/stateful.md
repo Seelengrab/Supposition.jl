@@ -198,7 +198,7 @@ intvec = Data.Vectors(Data.Integers{UInt8}())
 try # hide
 @check function test_pop_in_sorted_order(ls=intvec)
     h = Heap{eltype(ls)}()
-    
+
     # push all items
     for l in ls
         push!(h, l)

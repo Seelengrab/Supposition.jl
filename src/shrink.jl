@@ -183,7 +183,7 @@ function shrink_swap(ts::TestState, attempt::Attempt, k::UInt)
 
         res = bin_search_down(0, attempt.choices[y], n -> begin
             new.choices[x] = n
-            consider(ts, new) 
+            consider(ts, new)
         end)
         if !isnothing(res)
             new.choices[x] = @something res

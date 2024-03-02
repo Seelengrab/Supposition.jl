@@ -47,7 +47,7 @@ end
 
 function default_directory_db()
     project_dir = dirname(Pkg.project().path)
-    
+
     # Ensure a stable directory
     db_path = if !endswith(project_dir, "test")
         joinpath(project_dir, "test", "SuppositionDB")
@@ -59,7 +59,7 @@ function default_directory_db()
     if !ispath(db_path)
         mkpath(db_path)
         open(joinpath(db_path, "README.md"), "w") do io
-            write(io, 
+            write(io,
                 """
                 # Example Database
 

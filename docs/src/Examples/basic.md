@@ -1,8 +1,8 @@
 # Basic Usage
 
-At its core, property based testing (PBT) is about having a function (or set of functions) to test and a set of 
-properties that should on on that function. If you're already familiar with PBT, this basic example
-will be familiar to you already. 
+At its core, property based testing (PBT) is about having a function (or set of functions) to test and a set of
+properties that should hold on that function. If you're already familiar with PBT, this basic example
+will be familiar to you already.
 
 Consider this `add` function, which simply forwards to `+`:
 
@@ -76,7 +76,7 @@ function successor(a, b)
 end
 ```
 
-And check that they hold like so. Of course, we can also test the property implicitly defined by `@check` earlier: 
+And check that they hold like so. Of course, we can also test the property implicitly defined by `@check` earlier:
 
 ```@example example_add; output = false, filter = r"\d+\.\d+s"
 using Test

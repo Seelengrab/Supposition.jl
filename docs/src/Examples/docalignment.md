@@ -7,7 +7,7 @@ In reality, this is often not the case. Docstrings can bitrot when performance o
 subtly change the semantics of a function, generic functions often can't easily write out all
 conditions a passed-in function must follow and large code bases are often so overwhelmingly full of
 possible invocations that the task to check for conformance with each and every single docstring
-can be much too daunting, to say the least. 
+can be much too daunting, to say the least.
 
 There is a silver lining though - there are a number of simple checks a developer can use
 to directly & measurably improve not only the docstring of a function, but code coverage of a testsuite.
@@ -148,7 +148,7 @@ At the end of this process, a developer should now have
 
  * a clear understanding of when the tested function errors,
  * knowledge about the requirements a function has so that it can be called without error,
-    ready to be added to the documentation of the function, 
+    ready to be added to the documentation of the function,
  * ready-made tests that can be integrated into a testsuite running in CI,
  * potentially found & fixed (or tracked on an issue tracker) a few bugs that were found during testing.
 

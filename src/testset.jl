@@ -192,7 +192,7 @@ struct InvalidInvocation <: Exception
     res::Test.Result
 end
 function Base.showerror(io::IO, ii::InvalidInvocation)
-    print(io, "InvalidIncovation: ")
+    print(io, "InvalidInvocation: ")
     msg = if ii.res isa Test.Error
         "Got an error from outside the testsuite!"
     else
