@@ -19,16 +19,16 @@ intgen = Data.Integers{UInt8}()
 f = filter(iseven, intgen)
 
 example(f, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{UInt8}:
- 0x38
- 0x9e
- 0xee
- 0x5e
- 0xc2
- 0x38
+ 0xe6
+ 0x40
  0x1a
- 0xc4
- 0x3c
- 0x4a</code></pre><p>Note that filtering is, in almost all cases, strictly worse than constructing the desired objects directly. For example, if the filtering predicate rejects too many examples from the input space, it can easily happen that no suitable examples can be found:</p><pre><code class="language-julia hljs">g = filter(&gt;(typemax(UInt8)), intgen)
+ 0x8e
+ 0xdc
+ 0xe2
+ 0x56
+ 0xae
+ 0x5e
+ 0x92</code></pre><p>Note that filtering is, in almost all cases, strictly worse than constructing the desired objects directly. For example, if the filtering predicate rejects too many examples from the input space, it can easily happen that no suitable examples can be found:</p><pre><code class="language-julia hljs">g = filter(&gt;(typemax(UInt8)), intgen)
 example(g, 10)</code></pre><p>It is best to only filter when you&#39;re certain that the part of the state space you&#39;re filtering out is not substantial.</p><h3 id="map"><a class="docs-heading-anchor" href="#map"><code>map</code></a><a id="map-1"></a><a class="docs-heading-anchor-permalink" href="#map" title="Permalink"></a></h3><p>In order to make it easier to directly construct conforming instances, you can use <code>map</code>, transforming the output of one <code>Possibility</code> into a different object:</p><pre><code class="language-julia hljs">using Supposition
 
 intgen = Data.Integers{UInt8}()
@@ -36,13 +36,13 @@ makeeven(x) = (x÷0x2)*0x2
 m = map(makeeven, intgen)
 
 example(m, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{UInt8}:
- 0xd6
+ 0x08
+ 0x66
+ 0xd8
+ 0xa0
+ 0x58
+ 0xca
+ 0xe2
+ 0x24
  0x2c
- 0x9c
- 0x9e
- 0xa6
- 0x86
- 0x2e
- 0xd4
- 0xea
- 0x74</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>map</code> is a <em>best effort</em> and may be wider than expected. Ensure your function <code>f</code> is easily inferrable to have good chances for <code>map</code>ping it to be inferable as well.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="basic.html">« Basic Usage</a><a class="docs-footer-nextpage" href="recursive.html">Recursive Generation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Saturday 2 March 2024 11:52">Saturday 2 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 0x30</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>map</code> is a <em>best effort</em> and may be wider than expected. Ensure your function <code>f</code> is easily inferrable to have good chances for <code>map</code>ping it to be inferable as well.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="basic.html">« Basic Usage</a><a class="docs-footer-nextpage" href="recursive.html">Recursive Generation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Saturday 2 March 2024 12:44">Saturday 2 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
