@@ -5,6 +5,7 @@ using Aqua
 using Random
 using Logging
 using Statistics: mean
+using InteractiveUtils: subtypes
 using .Threads: @spawn
 import RequiredInterfaces
 const RI = RequiredInterfaces
@@ -27,7 +28,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         Aqua.test_stale_deps(Supposition; ignore)
     end
     @testset "Interfaces" begin
-        @testset "Possibility" RI.check_implementations(Supposition.Data.Possibility)
+        possibility_subtypes = filter(!=(Supposition.Composed), subtypes(Data.Possibility))
+        @testset "Possibility" RI.check_implementations(Supposition.Data.Possibility, possibility_subtypes)
         @testset "ExampleDB" RI.check_implementations(Supposition.ExampleDB)
     end
     # Write your tests here.
@@ -435,7 +437,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
     end
 
-    @testset "@check verbose=verb API" begin
+    @testset "@check API" begin
         @testset "regular use" begin
             Supposition.@check verbose=verb function singlearg(i=Data.Integers(0x0, 0xff))
                 i isa Integer
@@ -539,10 +541,39 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 (a,b)
             end
 
-            @test isstructtype(uint8tup)
-            # FIXME: This is just the closure bug in disguise
-            @test_broken Data.postype(gen) === Tuple{UInt8, UInt8}
-            @test example(gen) isa Tuple{UInt8, UInt8}
+            @testset "Expected return types" begin
+                @test gen isa Supposition.Composed{:uint8tup, Tuple{UInt8,UInt8}}
+                @test Data.postype(gen) === Tuple{UInt8, UInt8}
+                @test example(gen) isa Tuple{UInt8, UInt8}
+            end
+
+            @testset "Can call defined function" begin
+                @test uint8tup(1,2) === (1,2)
+            end
+        end
+
+        @testset "Using external generators" begin
+            text = Data.Text(Data.AsciiCharacters(); max_len=10)
+            g2 = Supposition.@composed function stringcat(
+                    t=text,
+                    b=Data.Integers{UInt8}())
+                string(t, b)
+            end
+
+            @testset "Expected return types" begin
+                @test g2 isa Supposition.Composed{:stringcat, String}
+                @test Data.postype(g2) === String
+                @test example(g2) isa String
+            end
+
+            @check function stringcatcorrect(s=g2)
+                # The range-syntax in the regex captures all ASCII
+                contains(s, r"[\0-\x7f]*-?\d+")
+            end
+
+            @testset "Can call defined function" begin
+                @test stringcat("foo", "1") === "foo1"
+            end
         end
 
         @testset "Calling function defined outside Supposition" begin
