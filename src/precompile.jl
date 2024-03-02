@@ -9,7 +9,7 @@ using PrecompileTools
     @compile_workload begin
         intgen = Data.Integers{Int8}()
         redirect_stdout(devnull) do
-            @check record=false verb=false works(intgen)
+            @check record=false verbose=false works(intgen)
             @check record=false broken=true breaks(intgen)
             @check record=false broken=true errors(intgen)
         end

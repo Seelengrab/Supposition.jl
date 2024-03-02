@@ -105,7 +105,8 @@ struct CheckConfig
 end
 
 function merge(cc::CheckConfig; kws...)
-    issubset(keys(kws), propertynames(cc)) || @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=keys(kws)
+    unknown_args = setdiff(keys(kws), propertynames(cc))
+    isempty(unknown_args) || @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=unknown_args
     cfg = ( k => get(kws, k, getproperty(cc, k)) for k in propertynames(cc) )
     CheckConfig(;cfg...)
 end
