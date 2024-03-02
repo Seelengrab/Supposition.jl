@@ -6,6 +6,7 @@ using Random
 using Logging
 using Statistics: mean
 using InteractiveUtils: subtypes
+using ScopedValues: @with
 using .Threads: @spawn
 import RequiredInterfaces
 const RI = RequiredInterfaces
