@@ -40,6 +40,8 @@ function test_function(ts::TestState, tc::TestCase)
     catch e
         # Interrupts are an abort signal, so rethrow
         e isa InterruptException && rethrow()
+        # UndefVarError are a programmer error, so rethrow
+        e isa UndefVarError && rethrow()
         # These are wanted rejections
         e isa TestException && return (false, false)
         # true errors are always interesting
