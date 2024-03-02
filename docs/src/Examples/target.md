@@ -7,7 +7,8 @@ fuzzing inputs in just the right way to still get good results; Supposition.jl
 however has a tool that can make the process of finding inputs that are more
 likely to be useful for the property at hand easier.
 
-Consider this example:
+Consider this example, where we assert that no matter what number we generate,
+it won't be equal to some other number we picked at random:
 
 ```@example singulartarget
 using Supposition, Random, Logging
@@ -25,7 +26,8 @@ nothing # hide
 ```
 
 The default for the number of attempts `@check` tries to feed to `israndgoal`
-is `10_000`; the test still passes. We can increase this by an almost arbitrary
+is `10_000`; the test still passes, which means Supposition.jl was unable to
+find the number we claim can't be generated. We can increase this by an almost arbitrary
 amount, without having the test fail:
 
 ```@example singulartarget
@@ -45,6 +47,7 @@ as a score:
 
 ```@example singulartarget
 sr = @check rng=Xoshiro(1) function israndgoal(f=Data.Floats{Float64}())
+    # negative absolute distance, because we want to _minimize_ the distance
     target!(-abs(rand_goal - f))
     f != rand_goal
 end
