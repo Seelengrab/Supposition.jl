@@ -111,6 +111,7 @@ using Supposition
        rethrow()
    end
 end
+nothing # hide
 ```
 
 We first define our data generator, in this case sampling from all possible `Float64` values (including all `NaN`s and `Inf`s!).
