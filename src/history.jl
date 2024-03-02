@@ -1,7 +1,5 @@
 import Pkg
 
-using Mmap: mmap
-
 """
     NoRecordDB <: ExambleDB
 
