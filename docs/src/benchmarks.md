@@ -9,8 +9,8 @@ All benchmarks were run on the same machine, with the same Julia version:
 
 ```julia-repl
 julia> versioninfo()
-Julia Version 1.11.0-DEV.1610
-Commit aecd8fd379 (2024-02-16 02:40 UTC)
+Julia Version 1.12.0-DEV.89
+Commit 35cb8a556b (2024-02-27 06:12 UTC)
 Platform Info:
   OS: Linux (x86_64-pc-linux-gnu)
   CPU: 24 × AMD Ryzen 9 7900X 12-Core Processor
@@ -21,7 +21,9 @@ Environment:
   JULIA_PKG_USE_CLI_GIT = true
 ```
 
-## Integers
+## Generation
+
+### Integers
 
 The task is simple - generating a single `Vector{Int}` with `1_000_000` elements, through the respective
 interface of each package.
@@ -37,8 +39,8 @@ julia> intgen = PropCheck.vector(PropCheck.iconst(1_000_000), itype(Int));
 
 julia> @benchmark root(PropCheck.generate(intgen))
 BenchmarkTools.Trial: 1 sample with 1 evaluation.
- Single result which took 6.826 s (31.94% GC) to evaluate,
- with a memory estimate of 9.17 GiB, over 27284112 allocations.
+ Single result which took 5.780 s (30.71% GC) to evaluate,
+ with a memory estimate of 9.17 GiB, over 27285108 allocations.
 ```
 
 And now, Supposition:
@@ -51,20 +53,20 @@ julia> using Supposition
 julia> intgen = Data.Vectors(Data.Integers{Int}(); min_size=1_000_000, max_size=1_000_000);
 
 julia> @benchmark example($intgen)
-BenchmarkTools.Trial: 373 samples with 1 evaluation.
- Range (min … max):   7.840 ms … 46.349 ms  ┊ GC (min … max):  0.00% … 76.51%
- Time  (median):     10.796 ms              ┊ GC (median):     7.90%
- Time  (mean ± σ):   13.392 ms ±  6.737 ms  ┊ GC (mean ± σ):  25.16% ± 20.21%
+BenchmarkTools.Trial: 646 samples with 1 evaluation.
+ Range (min … max):  5.556 ms … 24.662 ms  ┊ GC (min … max):  0.00% … 72.10%
+ Time  (median):     6.344 ms              ┊ GC (median):     4.18%
+ Time  (mean ± σ):   7.734 ms ±  4.033 ms  ┊ GC (mean ± σ):  19.81% ± 19.08%
 
-    ▃▅█▅▅▅▃
-  ▃▇███████▇██▆▄▂▃▃▁▁▁▁▁▂▁▁▁▂▁▁▂▁▁▁▁▁▁▁▂▃▂▃▂▃▄▂▄▃▃▃▄▄▃▃▂▃▂▂▂▃ ▃
-  7.84 ms         Histogram: frequency by time          32 ms <
+  █▇▅▄▅▅▅▂
+  █████████▆▅▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▅█▇▆█▆▄▁▁▁▄▅▁▆▆▆▆▆▄▄▆ ▇
+  5.56 ms      Histogram: log(frequency) by time     22.7 ms <
 
- Memory estimate: 52.94 MiB, allocs estimate: 52.
+ Memory estimate: 25.04 MiB, allocs estimate: 34.
 ```
 
 GC percentage is about the same, but the used memory and total number of allocations
-are VASTLY in favor of Supposition.jl, by about a factor of 1000 timewise and a factor 200 memorywise.
+are VASTLY in favor of Supposition.jl, by about a factor of ~1000 timewise and a factor 300 memorywise.
 
 To put this into perspective, here's a benchmark of just `1_000_000` `Int` randomly generated:
 
@@ -84,7 +86,7 @@ BenchmarkTools.Trial: 10000 samples with 1 evaluation.
 
 So Supposition.jl is within 300x of just generating some random numbers, suggesting there's still room for improvement.
 
-## Floats
+### Floats
 
 This is basically the same task as with `Int`, just producing `1_000_000` `Float64` instead.
 
@@ -95,15 +97,15 @@ julia> floatgen = PropCheck.vector(PropCheck.iconst(1_000_000), PropCheck.ifloat
 
 julia> @benchmark root(PropCheck.generate(floatgen))
 BenchmarkTools.Trial: 2 samples with 1 evaluation.
- Range (min … max):  4.881 s …   4.896 s  ┊ GC (min … max): 27.50% … 24.34%
- Time  (median):     4.889 s              ┊ GC (median):    25.92%
- Time  (mean ± σ):   4.889 s ± 10.866 ms  ┊ GC (mean ± σ):  25.92% ±  2.24%
+ Range (min … max):  4.524 s …    4.677 s  ┊ GC (min … max): 24.68% … 25.56%
+ Time  (median):     4.600 s               ┊ GC (median):    25.13%
+ Time  (mean ± σ):   4.600 s ± 108.561 ms  ┊ GC (mean ± σ):  25.13% ±  0.63%
 
-  █                                                       █
-  █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
-  4.88 s         Histogram: frequency by time         4.9 s <
+  █                                                        █
+  █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
+  4.52 s         Histogram: frequency by time         4.68 s <
 
- Memory estimate: 4.58 GiB, allocs estimate: 16363584.
+ Memory estimate: 4.64 GiB, allocs estimate: 18364056.
 ```
 
 And again, with Supposition.jl:
@@ -112,21 +114,21 @@ And again, with Supposition.jl:
 julia> floatgen = Data.Vectors(Data.Floats{Float64}(); min_size=1_000_000, max_size=1_000_000);
 
 julia> @benchmark example($floatgen)
-BenchmarkTools.Trial: 379 samples with 1 evaluation.
- Range (min … max):   8.112 ms … 49.929 ms  ┊ GC (min … max):  0.00% … 70.59%
- Time  (median):     10.721 ms              ┊ GC (median):     8.58%
- Time  (mean ± σ):   13.176 ms ±  6.559 ms  ┊ GC (mean ± σ):  24.73% ± 19.99%
+BenchmarkTools.Trial: 736 samples with 1 evaluation.
+ Range (min … max):  5.547 ms …  22.696 ms  ┊ GC (min … max): 0.00% … 75.37%
+ Time  (median):     6.720 ms               ┊ GC (median):    5.02%
+ Time  (mean ± σ):   6.793 ms ± 993.344 μs  ┊ GC (mean ± σ):  6.67% ±  4.56%
 
-   ▂▂▂█▇▆█▄
-  ▆████████▇▇▆▄▃▁▂▁▂▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▃▁▁▁▁▁▃▁▁▂▁▃▃▃▃▄▃▄▄▃▅▃▂▂▁▃ ▃
-  8.11 ms         Histogram: frequency by time        30.8 ms <
+                ▂▂▂▆▁▅▃▄▃▂▃█▄▂▂▅▂▇▄ ▆ ▁▃▃▂▁▃▁▁    ▁
+  ▃▁▂▂▁▁▃▃▃▂▄▄▇▅██████████████████████████████▇▅▇▅██▇▄▃▃▃▃▂▂▃ ▅
+  5.55 ms         Histogram: frequency by time        7.88 ms <
 
- Memory estimate: 52.94 MiB, allocs estimate: 52.
+ Memory estimate: 25.04 MiB, allocs estimate: 34.
 ```
 
-Once again, Supposition.jl beats PropCheck.jl by a factor of 500 in time and a factor of 100 in memory.
+Once again, Supposition.jl beats PropCheck.jl by a factor of 500+ in time and a factor of 100 in memory.
 
-## Strings
+### Strings
 
 Both Supposition.jl and PropCheck.jl can generate the full spectrum of possible
 `String`, by going through _all_ assigned unicode codepoints using specialized
@@ -137,16 +139,16 @@ generation methods. Let's compare them, starting again with PropCheck.jl:
 julia> strgen = PropCheck.str(PropCheck.iconst(1_000_000));
 
 julia> @benchmark root(PropCheck.generate(strgen))
-BenchmarkTools.Trial: 8 samples with 1 evaluation.
- Range (min … max):  562.946 ms … 818.003 ms  ┊ GC (min … max): 29.31% … 53.26%
- Time  (median):     662.959 ms               ┊ GC (median):    42.11%
- Time  (mean ± σ):   670.489 ms ±  78.934 ms  ┊ GC (mean ± σ):  42.58% ±  7.18%
+BenchmarkTools.Trial: 9 samples with 1 evaluation.
+ Range (min … max):  458.354 ms … 631.947 ms  ┊ GC (min … max): 24.95% … 46.11%
+ Time  (median):     572.739 ms               ┊ GC (median):    39.24%
+ Time  (mean ± σ):   559.611 ms ±  55.519 ms  ┊ GC (mean ± σ):  38.24% ±  6.11%
 
-  █          █ █    █          █    █ █                       █
-  █▁▁▁▁▁▁▁▁▁▁█▁█▁▁▁▁█▁▁▁▁▁▁▁▁▁▁█▁▁▁▁█▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
-  563 ms           Histogram: frequency by time          818 ms <
+  █                   █   █ █             ██     █         █  █
+  █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁█▁█▁▁▁▁▁▁▁▁▁▁▁▁▁██▁▁▁▁▁█▁▁▁▁▁▁▁▁▁█▁▁█ ▁
+  458 ms           Histogram: frequency by time          632 ms <
 
- Memory estimate: 1.01 GiB, allocs estimate: 4999791.
+ Memory estimate: 1.01 GiB, allocs estimate: 4999798.
 ```
 
 PropCheck.jl manages to go below 1s runtime for the first time! It still doesn't manage to
@@ -156,16 +158,16 @@ use less than 1GiB of memory though. Supposition.jl on the other hand..
 julia> strgen = Data.Text(Data.Characters(); min_len=1_000_000, max_len=1_000_000);
 
 julia> @benchmark example($strgen)
-BenchmarkTools.Trial: 156 samples with 1 evaluation.
- Range (min … max):  29.273 ms … 51.403 ms  ┊ GC (min … max): 0.00% … 40.30%
- Time  (median):     31.196 ms              ┊ GC (median):    2.21%
- Time  (mean ± σ):   32.035 ms ±  3.192 ms  ┊ GC (mean ± σ):  2.34% ±  3.45%
+BenchmarkTools.Trial: 163 samples with 1 evaluation.
+ Range (min … max):  26.756 ms … 62.461 ms  ┊ GC (min … max): 0.00% … 48.46%
+ Time  (median):     28.386 ms              ┊ GC (median):    1.95%
+ Time  (mean ± σ):   30.679 ms ±  6.679 ms  ┊ GC (mean ± σ):  8.86% ± 12.41%
 
-     ▁▁▅▆▂█▆▃▂
-  ▄▆▅█████████▆▇▆▃▄▄▁▁▁▁▁▁▁▁▁▃▁▁▃▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▃▁▄▄▁▁▁▃▁▁▃▃ ▃
-  29.3 ms         Histogram: frequency by time        42.5 ms <
+  ▄██▅▃
+  █████▆█▆▃▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▂▁▃▁▄▂▃▂▂▁▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄ ▂
+  26.8 ms         Histogram: frequency by time        56.9 ms <
 
- Memory estimate: 53.22 MiB, allocs estimate: 84.
+ Memory estimate: 30.22 MiB, allocs estimate: 66.
 ```
 
 ..completely obliterates PropCheck.jl yet again, being only barely slower than generating one million
@@ -189,7 +191,7 @@ BenchmarkTools.Trial: 675 samples with 1 evaluation.
 
 Considering the amount of state that is being kept track of here, I'd say this is not too shabby.
 
-## Map
+### Map
 
 Next, function mapping - which is one of the most basic tools to transform an input into something else.
 Our mapped function is the humble "make even" function, `x -> 2x`. With PropCheck.jl:
@@ -208,22 +210,22 @@ and Supposition.jl:
 ```julia-repl
 julia> evengen = Data.Vectors(map(x -> 2x, Data.Integers{Int}()); min_size=1_000_000, max_size=1_000_000);
 
-julia> @benchmark example($evengen)
-BenchmarkTools.Trial: 491 samples with 1 evaluation.
- Range (min … max):   7.926 ms … 24.521 ms  ┊ GC (min … max): 0.00% … 3.01%
- Time  (median):     10.146 ms              ┊ GC (median):    7.19%
- Time  (mean ± σ):   10.176 ms ±  1.696 ms  ┊ GC (mean ± σ):  6.75% ± 5.07%
+julia> @benchmark example($evengen, 1)
+BenchmarkTools.Trial: 724 samples with 1 evaluation.
+ Range (min … max):  5.444 ms … 34.544 ms  ┊ GC (min … max):  0.00% … 82.94%
+ Time  (median):     5.900 ms              ┊ GC (median):     3.80%
+ Time  (mean ± σ):   6.905 ms ±  3.775 ms  ┊ GC (mean ± σ):  16.51% ± 16.42%
 
-    ▁ ▃▁     ▃██▇▇▁▂
-  ▃▅█▆██▆▆▇▅▇████████▅▃▅▃▂▁▁▁▃▂▁▂▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▂▂▁▁▁▁▁▁▁▁▃▂▂ ▃
-  7.93 ms         Histogram: frequency by time        18.1 ms <
+  ▅█▅▄▁
+  █████▄▅▅▅▄▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▅▆▅▆▅▄▅▁▅▁▅▅▆▆▅ ▇
+  5.44 ms      Histogram: log(frequency) by time     21.7 ms <
 
- Memory estimate: 52.94 MiB, allocs estimate: 52.
+ Memory estimate: 25.04 MiB, allocs estimate: 36.
 ```
 
 And once again, Supposition.jl is victorious on all accounts.
 
-## Filtering
+### Filtering
 
 Benchmarking `filter` is a bit special now - Supposition.jl tries to protect you from too-long sampling sessions,
 which PropCheck.jl just doesn't even try. As a result, if we naively try to filter for even numbers
@@ -264,34 +266,156 @@ julia> evengen = PropCheck.vector(PropCheck.iconst(1_000_000), PropCheck.filter(
 
 julia> @benchmark root(PropCheck.generate(evengen))
 BenchmarkTools.Trial: 1 sample with 1 evaluation.
- Single result which took 9.294 s (25.00% GC) to evaluate,
- with a memory estimate of 9.64 GiB, over 45284893 allocations.
+ Single result which took 8.756 s (21.85% GC) to evaluate,
+ with a memory estimate of 9.63 GiB, over 45284301 allocations.
 ```
 
-Almost 10s - what a monster, and that's just for a single example! As for Supposition.jl..
+Almost 9s - what a monster, and that's just for a single example! As for Supposition.jl..
 
 ```julia-repl
 julia> evengen = Data.Vectors(filter(iseven, map(x -> 2x, Data.Integers{Int}())); min_size=1_000_000, max_size=1_000_000);
 
 julia> @benchmark example($evengen)
-BenchmarkTools.Trial: 488 samples with 1 evaluation.
- Range (min … max):   7.932 ms … 41.305 ms  ┊ GC (min … max): 0.00% … 14.49%
- Time  (median):     10.062 ms              ┊ GC (median):    7.04%
- Time  (mean ± σ):   10.244 ms ±  2.431 ms  ┊ GC (mean ± σ):  6.91% ±  5.33%
+BenchmarkTools.Trial: 712 samples with 1 evaluation.
+ Range (min … max):  5.594 ms … 29.914 ms  ┊ GC (min … max): 5.10% … 68.75%
+ Time  (median):     6.672 ms              ┊ GC (median):    4.67%
+ Time  (mean ± σ):   7.019 ms ±  2.362 ms  ┊ GC (mean ± σ):  9.82% ±  9.84%
 
-    ▁     ▃█▅▃
-  ▄▅███▆▆▆█████▇▇▅▂▃▃▁▂▂▁▁▁▂▁▁▁▂▂▁▁▁▁▁▁▁▁▂▁▁▁▂▂▁▁▁▂▁▁▁▁▂▁▁▁▂▂ ▃
-  7.93 ms         Histogram: frequency by time        21.1 ms <
+   ▃█▄▅▅▃
+  ███████▅▃▂▂▂▂▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▁▂▁▂▂▂▂ ▃
+  5.59 ms        Histogram: frequency by time        21.2 ms <
 
- Memory estimate: 52.94 MiB, allocs estimate: 52.
+ Memory estimate: 25.04 MiB, allocs estimate: 34.
 ```
 
 Another factor 1000 timewise, and factor 200 memory wise!
 
+## Shrinking
+
+Generating values is only half the effort though; what about shrinking values to find a
+counterexample?
+
+We're again going to use vectors of things as inputs, though we're going to use
+a slight modification. Shrinking is already pretty complicated, so we're going to
+look at much shorter inputs (only 1000 elements long), as well as hold their size
+constant. This way, only the elements of each collection will shrink, and neither
+framework can get "lucky" by only having to shrink short collections.
+
+In order to prevent clobbering the output with unnecessary text, both PropCheck.jl
+and Supposition.jl are silenced through `redirect_*` and/or any switches they
+may provide themselves. This way, the resulting measurement should mostly be related
+to the shrinking itself, rather than any printing badness creeping in.
+
+### Integers
+
+Without further ado, here's PropCheck.jl:
+
+```julia-repl
+julia> intgen = PropCheck.vector(PropCheck.iconst(1000), itype(Int));
+
+julia> @time check(isempty, intgen; show_initial=false)
+[ Info: Found counterexample for 'isempty', beginning shrinking...
+Internal error: during type inference of
+iterate(Base.Iterators.ProductIterator{Tuple{Base.Generator{Array{Int64, 1}, Base.Fix1{typeof(PropCheck.unfold), Base.ComposedFunction{Type{PropCheck.Shuffle{T} where T}, typeof(PropCheck.shrink)}}}, Vararg{Array{PropCheck.Tree{Int64}, 1}, 999}}})
+Encountered stack overflow.
+This might be caused by recursion over very long tuples or argument lists.
+```
+
+You'll notice that I'm using `@time` here instead of `@benchmark`. The reason
+for this is pragmatic - I don't want to wait all day on PropCheck.jl. In this
+case though, the worry was completely unfounded, as the compiler can't handle the
+huge amount of nested functions this ends up generating. This result is, unfortunately,
+consistent for the following experiments. As such, I'll only show Supposition.jl.
+
+Supposition.jl not only delivers a result, but does so in record time:
+
+```julia-repl
+julia> intgen = Data.Vectors(Data.Integers{Int}(); min_size=1000, max_size=1000);
+
+julia> @time @check db=false isempty(intgen);
+┌ Error: Property doesn't hold!
+│   Description = "isempty"
+│   Example = ([-9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808  …  -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808],)
+└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
+Test Summary: | Fail  Total
+isempty       |    1      1
+  0.404841 seconds (555.13 k allocations: 657.688 MiB, 5.12% gc time, 4.09% compilation time: 2% of which was recompilation)
+```
+
+### Floats
+
+Supposition.jl:
+
+```julia-repl
+julia> floatgen = Data.Vectors(Data.Floats{Float64}(); min_size=1000, max_size=1000);
+
+julia> @time @check db=false isempty(floatgen);
+┌ Error: Property doesn't hold!
+│   Description = "isempty"
+│   Example = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0  …  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],)
+└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
+Test Summary: | Fail  Total
+isempty       |    1      1
+  0.394480 seconds (535.17 k allocations: 656.722 MiB, 5.65% gc time, 1.20% compilation time: 5% of which was recompilation)
+```
+
+### Strings
+
+Supposition.jl:
+
+```julia-repl
+julia> strgen = Data.Text(Data.Characters(); min_len=1000, max_len=1000);
+
+julia> @time @check db=false isempty(strgen);
+┌ Error: Property doesn't hold!
+│   Description = "isempty"
+│   Example = ("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",)
+└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
+Test Summary: | Fail  Total
+isempty       |    1      1
+  0.564029 seconds (548.62 k allocations: 592.570 MiB, 3.27% gc time, 0.77% compilation time: 4% of which was recompilation)
+```
+
+### Map
+
+Supposition.jl:
+
+```julia-repl
+julia> mapgen = Data.Vectors(map(x -> 2x, Data.Integers{Int}()); min_size=1000, max_size=1000);
+
+julia> @time @check db=false isempty(mapgen);
+┌ Error: Property doesn't hold!
+│   Description = "isempty"
+│   Example = ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0  …  0, 0, 0, 0, 0, 0, 0, 0, 0, 0],)
+└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
+Test Summary: | Fail  Total
+isempty       |    1      1
+  0.408549 seconds (557.02 k allocations: 657.772 MiB, 5.49% gc time, 4.99% compilation time: <1% of which was recompilation)
+```
+
+### Filter
+
+Supposition.jl:
+
+```julia-repl
+julia> oddgen = Data.Vectors(filter(isodd, map(x -> 2x+1, Data.Integers{Int}())); min_size=1000, max_size=1000);
+
+julia> @time @check db=false isempty(oddgen);
+┌ Error: Property doesn't hold!
+│   Description = "isempty"
+│   Example = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1  …  1, 1, 1, 1, 1, 1, 1, 1, 1, 1],)
+└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
+Test Summary: | Fail  Total
+isempty       |    1      1
+  0.412517 seconds (562.41 k allocations: 658.063 MiB, 5.59% gc time, 4.44% compilation time: 2% of which was recompilation)
+```
+
 ## Conclusion
 
-If you've read down to here, I think I don't even have to write it out - Supposition.jl is _fast_!
+If you've read down to here, I don't think I even have to write it out - Supposition.jl is _fast_!
 I feel pretty confident saying that it's unlikely to be the bottleneck of a testsuite. All of that
-without even explicitly looking for places to optimize the package yet.
+without even explicitly looking for places to optimize the package yet. Of course, this doesn't even touch cranking up the
+number of samples Supposition.jl tries, or any form of memoization on the property
+you could quite easily add. So there is potential for going faster in the future.
 
-So go and incorporate fuzzing into your testsuite ;)
+Go and incorporate fuzzing into your testsuite ;)
