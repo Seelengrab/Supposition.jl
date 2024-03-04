@@ -2,9 +2,9 @@
 
 This page contains a collection of PBT tutorials and other useful resources
 for learning PBT techniques. Most, if not all, should be directly translatable to
-Supposition.jl in one form or another. If you find a new tutorial or ressource
+Supposition.jl in one form or another. If you find a new tutorial or resource
 that helped you test your code with Supposition.jl in some manner, please don't
-hesitate to open a PR adding the ressource here!
+hesitate to open a PR adding the resource here!
 
  * [The purpose of Hypothesis](https://hypothesis.readthedocs.io/en/latest/manifesto.html) by David R. MacIver
    * > [...], the larger purpose of Hypothesis is to drag the world kicking and screaming into a new and terrifying age of high quality software.
