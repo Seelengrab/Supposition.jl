@@ -21,6 +21,9 @@ Supposition.jl features the following capabilities:
 
 Please check out the [documentation](https://seelengrab.github.io/Supposition.jl/stable) for more information!
 
+If you have specific usage questions, ideas for new features or want to show off
+your fuzzing skills, please share it on the [Discussions Tab](https://github.com/Seelengrab/Supposition.jl/discussions)!
+
 Here's a small usage example:
 
 ```julia
