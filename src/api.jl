@@ -459,4 +459,4 @@ Produces a value from the given `Possibility`, recording the required choices in
     is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
     functions only intended to be called from one of those places.
 """
-produce!(p::Data.Possibility) = Data.produce!(CURRENT_TESTCASE[], p)
+Data.produce!(p::Data.Possibility) = Data.produce!(CURRENT_TESTCASE[], p)

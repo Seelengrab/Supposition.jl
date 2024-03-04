@@ -1,6 +1,6 @@
 module Supposition
 
-export TestCase, TestState, forced_choice!, choice!, weighted!, assume!, target!, reject, example
+export assume!, target!, reject, example
 export Data, @composed, @check
 
 using Base
@@ -24,6 +24,9 @@ include("shrink.jl")
 include("api.jl")
 include("history.jl")
 include("testset.jl")
+
+using .Data: produce!
+export produce!
 
 """
     DEFAULT_CONFIG

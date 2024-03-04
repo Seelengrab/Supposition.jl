@@ -1,5 +1,6 @@
 using Supposition
-using Supposition: Data, test_function, shrink_remove, shrink_redistribute, NoRecordDB, Attempt, DEFAULT_CONFIG
+using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
+        NoRecordDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!
 using Test
 using Aqua
 using Random
@@ -591,12 +592,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
         @testset "inner produce" begin
             gen = @composed function inner(i=Data.Integers{UInt8}())
-                j = Data.produce!(Data.Integers(zero(i), i))
+                j = produce!(Data.Integers(zero(i), i))
                 i,j
             end
             @test example(gen) isa Tuple{UInt8,UInt8}
             @check function in_check(t=gen)
-                i = Data.produce!(Data.Integers(minmax(t...)...))
+                i = produce!(Data.Integers(minmax(t...)...))
                 t isa Tuple{UInt8,UInt8} && i isa UInt8
             end
         end
