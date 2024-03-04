@@ -64,17 +64,17 @@ end
 function default_directory_db end
 
 """
-    CheckConfig
+    CheckConfig(;options...)
 
 A struct holding the initial configuration for an invocation of `@check`.
 
-Fields:
+Options:
 
- * `rng`: The initial RNG object given to `@check`
- * `max_examples`: The maximum number of examples allowed to be drawn with this config. `-1` means infinite drawing (careful!).
- * `record`: Whether the result should be recorded in the parent testset, if there is one
- * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`
- * `broken`: Whether the invocation is expected to fail
+ * `rng`: The initial RNG object given to `@check`. Defaults to a copyable `Random.AbstractRNG`.
+ * `max_examples`: The maximum number of examples allowed to be drawn with this config. `-1` means infinite drawing (careful!). Defaults to `10_000`.
+ * `record`: Whether the result should be recorded in the parent testset, if there is one. Defaults to `true`.
+ * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`. Defaults to `false`.
+ * `broken`: Whether the invocation is expected to fail. Defaults to `false`.
  * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
 
 !!! warn "Buffer Size"
