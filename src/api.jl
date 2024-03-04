@@ -25,7 +25,7 @@ function example(pos::Data.Possibility; tries=100_000, generation::Int=rand(1:50
         tc.max_size = typemax(UInt)
         try
             @with CURRENT_TESTCASE => tc begin
-                return Data.produce(pos, tc)
+                return Data.produce!(tc, pos)
             end
         catch e
             e isa TestException && continue
@@ -73,7 +73,7 @@ end
 
 @noinline function fail_typecheck(@nospecialize(x), var::Symbol)
     argtype = x isa Type ? Type{x} : typeof(x)
-    throw(ArgumentError("Can't `produce` from objects of type `$argtype` for argument `$var`, `@check` requires arguments of type `Possibility`!"))
+    throw(ArgumentError("Can't `produce!` from objects of type `$argtype` for argument `$var`, `@check` requires arguments of type `Possibility`!"))
 end
 
 function kw_to_produce(tc::Symbol, kwargs)
@@ -85,7 +85,7 @@ function kw_to_produce(tc::Symbol, kwargs)
         obj = gensym(name)
         argtypecheck = :($obj = $call; $obj isa $Data.Possibility || $fail_typecheck($obj, $(QuoteNode(name))))
         push!(res.args, argtypecheck)
-        ass = :($name = $Data.produce($obj, $tc))
+        ass = :($name = $Data.produce!($tc, $obj))
         push!(res.args, ass)
         push!(rettup.args, :($name = $name))
     end
@@ -242,7 +242,7 @@ function check_call(e::Expr, tsargs)
 
     args = Expr(:tuple)
     for e in kwargs
-        push!(args.args, :($Data.produce($e, $tc)))
+        push!(args.args, :($Data.produce!($tc, $e)))
     end
 
     pushfirst!(tsargs, :(record_base = string($namestr, $argtypes(Base.promote_op($gen_input, $TestCase)))))
@@ -250,7 +250,7 @@ function check_call(e::Expr, tsargs)
 
     esc(quote
         function $gen_input($tc::$TestCase)
-            rng_seed = $Data.produce(Data.Integers{UInt64}(), $tc)
+            rng_seed = $Data.produce!($tc, Data.Integers{UInt64}())
             $Random.seed!(rng_seed)
             $args
         end
@@ -323,7 +323,7 @@ function kw_to_let(tc, kwargs)
 
     for e in kwargs
         name, call = e.args
-        ass = :($name = $Data.produce($call, $tc))
+        ass = :($name = $Data.produce!($tc, $call))
         push!(head.args, ass)
         push!(body.args, name)
     end
@@ -344,7 +344,7 @@ around instead.
 """
 struct Composed{S,T} <: Data.Possibility{T}
     function Composed{S}() where S
-        prodtype = Base.promote_op(Data.produce, Composed{S}, TestCase)
+        prodtype = Base.promote_op(Data.produce!, TestCase, Composed{S})
         new{S, prodtype}()
     end
 end
@@ -395,7 +395,7 @@ macro composed(e::Expr)
     return esc(quote
         $structfunc
 
-        function $Data.produce(::$Composed{$prodname}, $tc::$TestCase)
+        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname})
             $name($strategy_let...)
         end
 
@@ -404,11 +404,19 @@ macro composed(e::Expr)
 end
 
 """
-    target!(score::Float64)
+    target!(score)
 
 Update the currently running testcase to track the given score as its target.
 
 `score` must be `convert`ible to a `Float64`.
+
+!!! warning "Multiple Updates"
+    This score can only be set once! Repeated calls will be ignored.
+
+!!! warning "Callability"
+    This can only be called while a testcase is currently being examined or an example for a `Possibility`
+    is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
+    functions only intended to be called from one of those places.
 """
 function target!(score::Float64)
     # CURRENT_TESTCASE is a ScopedValue that's being managed by the testing framework
@@ -420,6 +428,11 @@ target!(score) = target!(convert(Float64, score))
     assume!(precondition::Bool)
 
 If this precondition is not met, abort the test and mark the currently running testcase as invalid.
+
+!!! warning "Callability"
+    This can only be called while a testcase is currently being examined or an example for a `Possibility`
+    is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
+    functions only intended to be called from one of those places.
 """
 assume!(precondition::Bool) = precondition || reject!()
 
@@ -428,5 +441,22 @@ assume!(precondition::Bool) = precondition || reject!()
 
 Reject the current testcase as invalid, meaning the generated example should not be considered as producing a
 valid counterexample.
+
+!!! warning "Callability"
+    This can only be called while a testcase is currently being examined or an example for a `Possibility`
+    is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
+    functions only intended to be called from one of those places.
 """
 reject!() = reject(CURRENT_TESTCASE[])
+
+"""
+    produce!(p::Possibility{T}) -> T
+
+Produces a value from the given `Possibility`, recording the required choices in the currently active `TestCase`.
+
+!!! warning "Callability"
+    This can only be called while a testcase is currently being examined or an example for a `Possibility`
+    is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
+    functions only intended to be called from one of those places.
+"""
+produce!(p::Data.Possibility) = Data.produce!(CURRENT_TESTCASE[], p)

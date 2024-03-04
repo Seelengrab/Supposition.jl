@@ -12,7 +12,7 @@ import RequiredInterfaces
 const RI = RequiredInterfaces
 
 function sum_greater_1000(tc::TestCase)
-    ls = Data.produce(Data.Vectors(Data.Integers(0, 10_000); min_size=UInt(0), max_size=UInt(1_000)), tc)
+    ls = Data.produce!(tc, Data.Vectors(Data.Integers(0, 10_000); min_size=UInt(0), max_size=UInt(1_000)))
     sum(ls) > 1_000
 end
 
@@ -122,13 +122,13 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "finds small list even with bad lists" begin
         struct BadList <: Data.Possibility{Vector{Int64}} end
-        function produce(::BadList, tc::TestCase)
+        function produce!(tc::TestCase, ::BadList)
             n = choice!(tc, 10)
             [ choice!(tc, 10_000) for _ in 1:n ]
         end
 
         function bl_sum_greater_1000(tc::TestCase)
-            ls = produce(BadList(), tc)
+            ls = produce!(tc, BadList())
             sum(ls) > 1000
         end
 
@@ -245,7 +245,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "mapped possibility" begin
         function map_pos(tc::TestCase)
-            n = Data.produce(map(n -> 2n, Data.Integers(0, 5)), tc)
+            n = Data.produce!(tc, map(n -> 2n, Data.Integers(0, 5)))
             isodd(n)
         end
 
@@ -257,7 +257,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "selected possibility" begin
         function sel_pos(tc::TestCase)
-            n = Data.produce(Data.satisfying(iseven, Data.Integers(0,5)), tc)
+            n = Data.produce!(tc, Data.satisfying(iseven, Data.Integers(0,5)))
             return isodd(n)
         end
 
@@ -269,9 +269,9 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "bound possibility" begin
         function bound_pos(tc::TestCase)
-            t = Data.produce(Data.bind(Data.Integers(0, 5)) do m
+            t = Data.produce!(tc, Data.bind(Data.Integers(0, 5)) do m
                 Data.pairs(Data.just(m), Data.Integers(m, m+10))
-            end, tc)
+            end)
             last(t) < first(t) || (first(t)+10) < last(t)
         end
 
@@ -283,7 +283,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "cannot witness nothing" begin
         function witness_nothing(tc::TestCase)
-            Data.produce(nothing, tc)
+            Data.produce!(tc, nothing)
             return false
         end
 
@@ -295,7 +295,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "can draw mixture" begin
         function draw_mix(tc::TestCase)
-            m = Data.produce(Data.OneOf(Data.Integers(-5, 0), Data.Integers(2,5)), tc)
+            m = Data.produce!(tc, Data.OneOf(Data.Integers(-5, 0), Data.Integers(2,5)))
             return (-5 > m) || (m > 5) || (m == 1)
         end
 
@@ -392,12 +392,13 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "Can find the smallest even Integer" begin
         @testset for T in integer_types
             gen = Data.Integers{T}()
-            findEven(tc) = iseven(Data.produce(gen, tc))
+            findEven(tc) = iseven(Data.produce!(tc, gen))
 
             conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
             ts = TestState(conf, findEven)
             Supposition.run(ts)
-            obj = Data.produce(gen, Supposition.for_choices(@something(ts.result), copy(conf.rng)))
+            tc = Supposition.for_choices(@something(ts.result), copy(conf.rng))
+            obj = Data.produce!(tc, gen)
             @test obj == typemin(T)
         end
     end
@@ -508,7 +509,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         @testset "Wrong usage" begin
-            int_err = ArgumentError("Can't `produce` from objects of type `Type{$Int}` for argument `i`, `@check` requires arguments of type `Possibility`!")
+            int_err = ArgumentError("Can't `produce!` from objects of type `Type{$Int}` for argument `i`, `@check` requires arguments of type `Possibility`!")
             err = try
                 @check record=false function foo(i=Int)
                     i isa Int
@@ -520,7 +521,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test err.res isa Test.Error
             @test err.res.value == string(int_err)
 
-            one_err = ArgumentError("Can't `produce` from objects of type `$Int` for argument `i`, `@check` requires arguments of type `Possibility`!")
+            one_err = ArgumentError("Can't `produce!` from objects of type `$Int` for argument `i`, `@check` requires arguments of type `Possibility`!")
             err = try
                 @check record=false function foo(i=1)
                     i isa Int

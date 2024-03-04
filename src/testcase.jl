@@ -94,6 +94,11 @@ function reject(::TestCase)
     throw(Invalid())
 end
 
+"""
+    assume!(::TestCase, precondition::Bool)
+
+Reject this `TestCase` if `precondition` is `false`.
+"""
 function assume!(::TestCase, precondition::Bool)
     if !precondition
         throw(Invalid())
@@ -102,6 +107,14 @@ function assume!(::TestCase, precondition::Bool)
     end
 end
 
+"""
+    target!(tc::TestCase, score::Float64)
+
+Update `tc` to use `score` as the score this `TestCase` achieves during optimization.
+
+!!! warning "Multiple Updates"
+    This score can only be set once! Repeated calls will be ignored.
+"""
 function target!(tc::TestCase, score::Float64)
     if !isnothing(tc.targeting_score)
         @warn "`target!` called twice on test case object. Overwriting score." OldScore=@something(tc.targeting_score) NewScore=score
