@@ -11,11 +11,11 @@ even_complex = @composed function complex_even(a=intgen, b=intgen)
     a + b*im
 end
 example(even_complex, 5)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Complex{Int64}}:
- -8112427281783752002 - 1482688273421986460im
-  3173323203445035302 + 4327674725670613798im
-  1431389991302083908 - 124654606806062174im
- -4269249330630382422 - 67477301440596346im
-  8368962473983295610 - 7218329734444288578im</code></pre><p>In essence, <code>@composed</code> takes a function that is given some generators, and ultimately returns a generator that runs the function on those given generators. As a full-fledged <code>Possibility</code>, you can of course do everything you&#39;d expect to do with other <code>Possibility</code> objects from Supposition.jl, including using them as input to other <code>@composed</code>! This makes them a powerful tool for composing custom generators.</p><pre><code class="language-julia hljs">@check function all_complex_even(c=even_complex)
+  2937875574829533916 + 4281882448195153394im
+ -7470079283541696112 - 7701930199080578526im
+  6444319170306650128 + 3643561272254002506im
+  3832734851487660742 - 6756292881075536980im
+ -3439147619292319410 + 4343859491809180570im</code></pre><p>In essence, <code>@composed</code> takes a function that is given some generators, and ultimately returns a generator that runs the function on those given generators. As a full-fledged <code>Possibility</code>, you can of course do everything you&#39;d expect to do with other <code>Possibility</code> objects from Supposition.jl, including using them as input to other <code>@composed</code>! This makes them a powerful tool for composing custom generators.</p><pre><code class="language-julia hljs">@check function all_complex_even(c=even_complex)
     iseven(real(c)) &amp;&amp; iseven(imag(c))
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Test Summary:    | Pass  Total  Time
 all_complex_even |    1      1  0.0s</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>@composed</code> is a <em>best effort</em> and may be wider than expected. E.g. if the input generators are non-<code>const</code> globals, it can easily happen that type inference falls back to <code>Any</code>. The same goes for other type instabilities and the usual best-practices surrounding type stability.</p></div></div><p>In addition, <code>@composed</code> defines the function given to it as well as a regular function, which means that you can call &amp; reuse it however you like:</p><pre><code class="language-julia hljs">complex_even(1.0,2.0)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.0 + 2.0im</code></pre><h2 id="Filtering,-mapping,-and-other-combinators"><a class="docs-heading-anchor" href="#Filtering,-mapping,-and-other-combinators">Filtering, mapping, and other combinators</a><a id="Filtering,-mapping,-and-other-combinators-1"></a><a class="docs-heading-anchor-permalink" href="#Filtering,-mapping,-and-other-combinators" title="Permalink"></a></h2><h3 id="filter"><a class="docs-heading-anchor" href="#filter"><code>filter</code></a><a id="filter-1"></a><a class="docs-heading-anchor-permalink" href="#filter" title="Permalink"></a></h3><p>Of course, manually marking, mapping or filtering inside of <code>@composed</code> is sometimes a bit too much. For these cases, all <code>Possibility</code> support <code>filter</code> and <code>map</code>, returning a new <a href="../api.html#Supposition.Data.Satisfying"><code>Data.Satisfying</code></a> or <a href="../api.html#Supposition.Data.Map"><code>Data.Map</code></a> <code>Possibility</code> respectively:</p><pre><code class="language-julia hljs">using Supposition
@@ -25,30 +25,30 @@ intgen = Data.Integers{UInt8}()
 f = filter(iseven, intgen)
 
 example(f, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{UInt8}:
- 0xba
- 0x7e
- 0xe8
+ 0x82
+ 0x10
+ 0xb8
+ 0x98
+ 0x16
+ 0x74
+ 0xae
  0xf0
- 0xd8
- 0xc2
- 0x52
- 0xfe
- 0x80
- 0xfa</code></pre><p>Note that filtering is, in almost all cases, strictly worse than constructing the desired objects directly. For example, if the filtering predicate rejects too many examples from the input space, it can easily happen that no suitable examples can be found:</p><pre><code class="language-julia hljs">g = filter(&gt;(typemax(UInt8)), intgen)
-example(g, 10)</code></pre><p>It is best to only filter when you&#39;re certain that the part of the state space you&#39;re filtering out is not substantial.</p><h3 id="map"><a class="docs-heading-anchor" href="#map"><code>map</code></a><a id="map-1"></a><a class="docs-heading-anchor-permalink" href="#map" title="Permalink"></a></h3><p>In order to make it easier to directly construct conforming instances, you can use <code>map</code>, transforming the output of one <code>Possibility</code> into a different object:</p><pre><code class="language-julia hljs">using Supposition
+ 0xa0
+ 0x7c</code></pre><p>Note that filtering is, in almost all cases, strictly worse than constructing the desired objects directly. For example, if the filtering predicate rejects too many examples from the input space, it can easily happen that no suitable examples can be found:</p><pre><code class="language-julia hljs">g = filter(&gt;(typemax(UInt8)), intgen)
+example(g, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ERROR: Tried sampling 100000 times, without getting a result. Perhaps you&#39;re filtering out too many examples?</code></pre><p>It is best to only filter when you&#39;re certain that the part of the state space you&#39;re filtering out is not substantial.</p><h3 id="map"><a class="docs-heading-anchor" href="#map"><code>map</code></a><a id="map-1"></a><a class="docs-heading-anchor-permalink" href="#map" title="Permalink"></a></h3><p>In order to make it easier to directly construct conforming instances, you can use <code>map</code>, transforming the output of one <code>Possibility</code> into a different object:</p><pre><code class="language-julia hljs">using Supposition
 
 intgen = Data.Integers{UInt8}()
 makeeven(x) = (x÷0x2)*0x2
 m = map(makeeven, intgen)
 
 example(m, 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{UInt8}:
- 0x62
+ 0xac
+ 0x42
+ 0x4a
  0x0c
- 0x50
- 0xa0
- 0xe6
- 0x16
- 0x1c
- 0xf0
- 0xa2
- 0xd0</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>map</code> is a <em>best effort</em> and may be wider than expected. Ensure your function <code>f</code> is easily inferrable to have good chances for <code>map</code>ping it to be inferable as well.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="basic.html">« Basic Usage</a><a class="docs-footer-nextpage" href="recursive.html">Recursive Generation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Monday 4 March 2024 13:35">Monday 4 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 0xb2
+ 0x10
+ 0xa4
+ 0xb8
+ 0xaa
+ 0x48</code></pre><div class="admonition is-warning"><header class="admonition-header">Type stability</header><div class="admonition-body"><p>The inferred type of objects created by a generator from <code>map</code> is a <em>best effort</em> and may be wider than expected. Ensure your function <code>f</code> is easily inferrable to have good chances for <code>map</code>ping it to be inferable as well.</p></div></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="basic.html">« Basic Usage</a><a class="docs-footer-nextpage" href="recursive.html">Recursive Generation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Monday 4 March 2024 17:59">Monday 4 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
