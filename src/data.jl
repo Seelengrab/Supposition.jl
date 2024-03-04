@@ -705,7 +705,7 @@ A `Possibility` for generating `Dict` objects. The keys are drawn from `keys`,
     the number of objects placed into the resulting `Dict`, respectively.
 
 ```julia-repl
-julia> dicts = Data.Dicts(Data.Integers{UInt8}(), Data.Integers{Int8}(); max_size=3);`
+julia> dicts = Data.Dicts(Data.Integers{UInt8}(), Data.Integers{Int8}(); max_size=3);
 
 julia> example(dicts)
 Dict{UInt8, Int8} with 2 entries:
