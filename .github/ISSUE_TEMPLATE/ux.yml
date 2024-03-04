@@ -1,7 +1,7 @@
-name: Bug Report
-description: File a bug report
-title: "[Bug]: "
-labels: ["bug"]
+name: UX Problem
+description: Report a problem with the user experience
+title: "[UX]: "
+labels: ["UX"]
 body:
   - type: markdown
     attributes:
@@ -20,17 +20,17 @@ body:
         [...]
         ````
   
-        and encountered the following error/wrong/unexpected result:
+        and encountered the following bad UX:
   
         [...]
     validations:
       required: true
   - type: textarea
-    id: expectation
+    id: suggestion
     attributes:
-      label: What did you expect to happen?
-      description: Please describe what you expected to happen.
-      placeholder: I expected the function to return `foobar`.
+      label: How could this be communicated better?
+      description: Please provide a suggestion on how the (un-)desirable result can be communicated better.
+      placeholder: It would be easier to read the result, if it were formatted like [...] or had more space around [...].
     validations:
       required: true
   - type: textarea
