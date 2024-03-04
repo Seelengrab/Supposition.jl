@@ -38,7 +38,7 @@ function builddocs(clear=false)
                 "Targeted Operation" => "Examples/target.md",
                 "Stateful Testing" => "Examples/stateful.md",
             ],
-            "PBT Ressources" => "ressources.md",
+            "PBT Resources" => "resources.md",
             "FAQ" => "faq.md",
             "Userfacing API" => "interfaces.md",
             "Benchmarks" => "benchmarks.md",

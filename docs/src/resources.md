@@ -1,6 +1,6 @@
-# PBT Ressources
+# PBT Resources
 
-This page contains a collection of PBT tutorials and other useful ressources
+This page contains a collection of PBT tutorials and other useful resources
 for learning PBT techniques. Most, if not all, should be directly translatable to
 Supposition.jl in one form or another. If you find a new tutorial or ressource
 that helped you test your code with Supposition.jl in some manner, please don't
