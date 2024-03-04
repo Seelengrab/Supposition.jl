@@ -37,7 +37,7 @@ the hood, modify the currently running testcase.
 ```@docs
 Supposition.target!(::Float64)
 Supposition.assume!(::Bool)
-Supposition.produce!
+Supposition.produce!(::Data.Possibility)
 Supposition.reject!
 Supposition.DEFAULT_CONFIG
 ```

@@ -77,7 +77,7 @@ Options:
  * `broken`: Whether the invocation is expected to fail. Defaults to `false`.
  * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
 
-!!! warn "Buffer Size"
+!!! warning "Buffer Size"
     At any one point, there may be more than one active buffer being worked on.
     You can try to increase this value when you encounter a lot of `Overrun`.
     Do not set this too large, or you're very likely to run out of memory; the default

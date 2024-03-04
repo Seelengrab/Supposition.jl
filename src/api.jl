@@ -3,12 +3,14 @@ using Test: Test, @testset, @test
 using Logging: @debug
 
 """
-    example(gen::Possibility; tries=100_000)
+    example(pos::Possibility; tries=100_000, generation::Int)
 
 Generate an example for the given `Possibility`.
 
-`example` tries to have `gen` produce an example `tries` times
-and throws an error if `gen` doesn't produce one in that timeframe.
+`example` tries to have `pos` produce an example `tries` times
+and throws an error if `pos` doesn't produce one in that timeframe.
+`generation` indicates how "late" in a usual run of `@check` the example
+might have been generated.
 
 Usage:
 
@@ -37,9 +39,11 @@ function example(pos::Data.Possibility; tries=100_000, generation::Int=rand(1:50
 end
 
 """
-    example(gen::Possibility, n::Integer)
+    example(gen::Possibility, n::Integer; tries=100_000)
 
-Generate `n` examples for the given `Possibility`.
+Generate `n` examples for the given `Possibility`. Each example
+is given `tries` attempts to generate. If any fail, the entire process
+is aborted.
 
 ```julia-repl
 julia> using Supposition, Supposition.Data

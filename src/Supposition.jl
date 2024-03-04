@@ -31,7 +31,7 @@ export produce!
 """
     DEFAULT_CONFIG
 
-A `ScopedValue` holding the `CheckConfig` that will be used by default & as a fallback.
+A `ScopedValue` holding the [`CheckConfig`](@ref) that will be used by default & as a fallback.
 
 Currently uses these values:
 
@@ -42,7 +42,7 @@ Currently uses these values:
  * `broken`: `false`
  * `buffer_size`: `100_000`
 
-`@check` will use a _new_ instance of `Random.Xoshiro` by itself.
+[`@check`](@ref) will use a _new_ instance of `Random.Xoshiro` by itself.
 """
 const DEFAULT_CONFIG = ScopedValue{CheckConfig}(CheckConfig(;
     rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)),
