@@ -811,12 +811,19 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         @testset "Partially overwrite given Config" begin
-            cntr = Ref(0)
-            @check config=conf max_examples=100 function passConfFailTestFailTest(i=intgen)
-                cntr[] += 1
+            res = @check config=conf max_examples=100 function passConfFailTestFailTest(i=intgen)
                 true
             end
-            @test cntr[] == 100
+            @test @something(res.final_state).calls == 100
+        end
+
+        @testset "Buffer Size" begin
+            vecgen = Data.Vectors(Data.Integers{UInt8}(); min_size=10)
+            res = @check buffer_size=1 record=false function passConfFailTestFailTest(v=vecgen)
+                isempty(v)
+            end
+            # all of these must have been rejected as an Overrun, so no call should ever take place
+            @test iszero(@something(res.final_state).valid_test_cases)
         end
     end
 

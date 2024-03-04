@@ -262,13 +262,6 @@ function target!(ts::TestState)
 end
 
 """
-    BUFFER_SIZE
-
-The default maximum buffer size to use for a test case.
-"""
-const BUFFER_SIZE = Ref((100 * 1024) % UInt)
-
-"""
     generate(ts::TestState)
 
 Try to generate an example that falsifies the property given to `ts`.
@@ -288,7 +281,7 @@ function generate!(ts::TestState)
             (isnothing(ts.best_scoring) || # no score
              (ts.valid_test_cases <= ts.config.max_examples÷2))
         # +1, since we this test case is for the *next* call
-        tc = TestCase(UInt64[], ts.rng, ts.calls+1, ts.config.max_examples, BUFFER_SIZE[])
+        tc = TestCase(UInt64[], ts.rng, ts.calls+1, ts.config.max_examples, ts.config.buffer_size*8)
         test_function(ts, tc)
     end
 end

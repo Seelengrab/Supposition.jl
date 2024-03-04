@@ -75,6 +75,15 @@ Fields:
  * `record`: Whether the result should be recorded in the parent testset, if there is one
  * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`
  * `broken`: Whether the invocation is expected to fail
+ * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
+
+!!! warn "Buffer Size"
+    At any one point, there may be more than one active buffer being worked on.
+    You can try to increase this value when you encounter a lot of `Overrun`.
+    Do not set this too large, or you're very likely to run out of memory; the default
+    results in ~800kB worth of choices being possible, which should be plenty for most fuzzing
+    tasks. It's generally unlikely that failures only occur with very large values here, and not with
+    smaller ones.
 """
 struct CheckConfig
     rng::Random.AbstractRNG
@@ -83,8 +92,9 @@ struct CheckConfig
     verbose::Bool
     broken::Bool
     db::ExampleDB
+    buffer_size::UInt
     function CheckConfig(; rng::Random.AbstractRNG, max_examples::Int, record=true,
-                            verbose=false, broken=false, db::Union{Bool,ExampleDB}=true, kws...)
+                            verbose=false, broken=false, db::Union{Bool,ExampleDB}=true, buffer_size=100_000, kws...)
         !isempty(kws) && @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=keys(kws)
         database::ExampleDB = if db isa Bool
             if db
@@ -100,7 +110,8 @@ struct CheckConfig
             record,
             verbose,
             broken,
-            database)
+            database,
+            buffer_size)
     end
 end
 
