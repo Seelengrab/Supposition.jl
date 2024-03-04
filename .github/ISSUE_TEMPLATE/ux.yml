@@ -1,5 +1,5 @@
 name: UX Problem
-description: Report a problem with the user experience
+description: Report a problem with the user experience when using Supposition.jl
 title: "[UX]: "
 labels: ["UX"]
 body:

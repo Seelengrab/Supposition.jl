@@ -1,0 +1,31 @@
+name: Documentation Related
+description: Report a problem with the user experience when using Supposition.jl
+title: "[Doc]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you have a usage question, please search or post to the [Discussions tab](https://github.com/Seelengrab/Supposition.jl/discussions).
+        We use the GitHub issue tracker for bug reports, UX problems and feature development only.
+  - type: textarea
+    id: doc-location
+    attributes:
+      label: Which part of the documentation is this related to?
+      description: Please give a direct link or quote (both if easily possible) to the section in the documentation this is about.
+      placeholder: |
+        In this section (<URL>) of the doc:
+
+        <...>
+
+        it's unclear/badly worded/lacks background/etc about...
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: How could this be communicated better?
+      description: Please provide a suggestion on how the (un-)desirable result can be communicated better.
+      placeholder: I think having a section introducing concept X by itself... It would be good/easier to understand if...
+    validations:
+      required: true
