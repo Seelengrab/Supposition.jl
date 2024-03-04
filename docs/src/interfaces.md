@@ -42,6 +42,38 @@ Supposition.reject!
 Supposition.DEFAULT_CONFIG
 ```
 
+## Available `Possibility`
+
+The `Data` module contains most everyday objects you're going to use when writing property
+based tests with Supposition.jl. For example, the basic generators for integers, strings,
+floating point values etc. are defined here. Everything listed in this section is considered
+supported under semver.
+
+```@index
+Modules = [Data]
+Order = [:function, :type]
+```
+
+### Functions
+
+```@autodocs
+Modules = [Data]
+Order = [:function]
+Filter = t -> begin
+    t != Supposition.Data.produce!
+end
+```
+
+### Types
+
+```@autodocs
+Modules = [Data]
+Order = [:type]
+Filter = t -> begin
+    t != Supposition.Data.Possibility
+end
+```
+
 ## Type-based hooks
 
 These are hooks for users to provide custom implementations of certain parts

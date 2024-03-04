@@ -1,10 +1,16 @@
 # Documentation Reference
 
+This section contains a complete reference of everything Supposition.jl contains,
+on one page. This is not a devdocs section, but a _reference_, for quick lookups
+of what something does, without having to hunt for the exact definition in the
+source code. A proper devdocs section with a high level introduction will
+be added at a later date.
+
 !!! warning "Stability"
     The entries written on this page are automatically generated and DO NOT represent
     the currently supported API surface. Feel free to use anything you can find here,
     but be aware that just because it's listed here, does not mean it's covered under
-    semver.
+    semver (though it may be - check [Userfacing API](@ref) if you're unsure).
 
 ## Data reference
 
@@ -20,12 +26,12 @@ Order = [:function, :type]
 
 ### Functions
 
-```@autodocs
+```@autodocs; canonical=false
 Modules = [Data]
 Order = [:function]
 ```
 
-```@autodocs
+```@autodocs; canonical=false
 Modules = [Data]
 Order = [:type]
 Filter = t -> begin
