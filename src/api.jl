@@ -19,9 +19,21 @@ julia> example(Data.Integers(0, 10))
 7
 ```
 """
-function example(gen::Data.Possibility; tries=100_000)
-    res = example(gen, 500; tries)
-    rand(res)
+function example(pos::Data.Possibility; tries=100_000, generation::Int=rand(1:500))
+    for _ in 1:tries
+        tc = for_choices(UInt[], Random.default_rng(), convert(UInt, generation), 10_000)
+        tc.max_size = typemax(UInt)
+        try
+            @with CURRENT_TESTCASE => tc begin
+                return Data.produce(pos, tc)
+            end
+        catch e
+            e isa TestException && continue
+            rethrow()
+        end
+    end
+
+    error("Tried sampling $tries times, without getting a result. Perhaps you're filtering out too many examples?")
 end
 
 """
@@ -50,27 +62,11 @@ julia> example(is, 10)
 """
 function example(pos::Data.Possibility{T}, n::Integer; tries=100_000) where {T}
     res = Vector{T}(undef, n)
-    gen = 0
+    gens = Random.shuffle(1:n)
 
     for idx in eachindex(res)
-        gen += 1
-        for i in 1:tries
-            tc = for_choices(UInt[], Random.default_rng(), convert(UInt, gen), lastindex(res))
-            tc.max_size = typemax(UInt)
-            try
-                res[idx] = @with CURRENT_TESTCASE => tc begin
-                    Data.produce(pos, tc)
-                end
-                break
-            catch e
-                e isa TestException && continue
-                rethrow()
-            end
-            i == tries && error("Tried sampling $tries times, without getting a result. Perhaps you're filtering out too many examples?")
-        end
+        res[idx] = example(pos; tries, generation=gens[idx])
     end
-
-    Random.shuffle!(res)
 
     res
 end
