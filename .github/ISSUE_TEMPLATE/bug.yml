@@ -34,7 +34,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: version
+    id: julia-version
     attributes:
       label: Version
       description: What version of julia are you running?
@@ -43,7 +43,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: version
+    id: package-environment
     attributes:
       label: Version
       description: What version of Supposition.jl are you using?
