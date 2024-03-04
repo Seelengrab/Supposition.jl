@@ -26,7 +26,7 @@ function builddocs(clear=false)
             prettyurls = get(ENV, "CI", nothing) == true,
             size_threshold_ignore = ["Examples/stateful.md","Examples/docalignment.md"]
         ),
-        remotes=nothing,
+        repo=Remotes.GitHub("Seelengrab", "Supposition.jl"),
         pages = [
             "Main Page" => "index.md",
             "Introduction to PBT" => "intro.md",
@@ -40,7 +40,7 @@ function builddocs(clear=false)
             ],
             "PBT Ressources" => "ressources.md",
             "FAQ" => "faq.md",
-            "Interfaces" => "interfaces.md",
+            "Userfacing API" => "interfaces.md",
             "Benchmarks" => "benchmarks.md",
             "API Reference" => "api.md"
         ]
