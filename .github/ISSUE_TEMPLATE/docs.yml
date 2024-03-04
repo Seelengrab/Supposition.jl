@@ -1,5 +1,5 @@
 name: Documentation Related
-description: Report a problem with the user experience when using Supposition.jl
+description: Report a problem with the documentation of Supposition.jl
 title: "[Doc]: "
 labels: ["documentation"]
 body:
