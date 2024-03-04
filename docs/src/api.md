@@ -37,12 +37,12 @@ end
 
 ```@index
 Modules = [Supposition]
-Order = [:macro, :function, :type]
+Order = [:macro, :function, :type, :constant]
 ```
 
-```@autodocs
+```@autodocs; canonical=false
 Modules = [Supposition]
-Order = [:macro, :function, :type]
+Order = [:macro, :function, :type, :constant]
 Filter = t -> begin
     t != Supposition.ExampleDB
 end
