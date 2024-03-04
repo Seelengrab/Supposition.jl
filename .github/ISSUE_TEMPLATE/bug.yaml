@@ -1,0 +1,53 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you have a question please search or post to the [Discussions tab](https://github.com/Seelengrab/Supposition.jl/discussions).
+        We use the GitHub issue tracker for bug reports and feature development only.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Please describe the steps you took and provide any code executed to reproduce the bug, as well as any error messages that were printed.
+      placeholder: |
+        I executed this function:
+        
+        ```julia
+        [...]
+        ````
+  
+        and encountered the following error/wrong/unexpected result:
+  
+        [...]
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: What did you expect to happen?
+      description: Please describe what you expected to happen.
+      placeholder: I expected the function to return `foobar`.
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: What version of julia are you running?
+      placeholder: In the environment the bug occurred, please run `using InteractiveUtils; versioninfo()` and paste the output here.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: What version of Supposition.jl are you using?
+      placeholder: In the environment the bug occurred, please run `import Pkg; Pkg.status()` and paste the output here.
+      render: shell
+    validations:
+      required: true
