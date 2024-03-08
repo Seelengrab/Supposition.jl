@@ -32,3 +32,8 @@ hesitate to open a PR adding the resource here!
    * This is an absolutely delightful listen! A nice definition of what property based testing is, as well as a lot of discussion
      on how to start out with property based testing and continue with the approach onto more difficult pastures.
      Don't let yourself be intimidated by the length - take your time with this one, it's well worth it!
+ * [The Magic of Property Testing](https://www.youtube.com/watch?v=4bpc8NpNHRc) by Kris Jenkins from Developer Voices
+   * This is a followup to "Automate Your Way to Better Code", showcasing an example of property based testing in PureScript.
+     The fuzzing framework used here is a port of QuickCheck, but the general flow should be translatable to Supposition.jl.
+     One feature being showcased (generation of objects through reflection) is not yet available in Supposition.jl; see [this discussion](https://github.com/Seelengrab/Supposition.jl/discussions/21)
+     for the state of things. Nevertheless, even without that, the generation capabilities of random data in Supposition.jl are just as powerful.
