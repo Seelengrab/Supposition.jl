@@ -105,8 +105,12 @@ function test_function(ts::TestState, tc::TestCase)
             old_frame = first(old_trace)
             frame = first(trace)
             # if the error isn't the same, it can't possibly be better
-            if !(typeof(err) == typeof(old_err) && frame == old_frame)
-                @warn "Encountered an error, but it was different from the previously seen one - Ignoring!" Error=err Location=frame
+            if typeof(err) != typeof(old_err) || frame != old_frame
+                cache_entry = (typeof(err), frame)
+                if !(cache_entry in ts.error_cache)
+                    @warn "Encountered an error, but it was different from the previously seen one - Ignoring!" Error=err Location=frame
+                    push!(ts.error_cache, cache_entry)
+                end
                 return (false, false)
             end
             was_more_interesting = true

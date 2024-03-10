@@ -140,6 +140,7 @@ Base.copy(attempt::Attempt) = Attempt(copy(attempt.choices), attempt.generation,
  * `result`: The choice sequence leading to a non-throwing counterexample
  * `best_scoring`: The best scoring result that was encountered during targeting
  * `target_err`: The error this test has previously encountered and the smallest choice sequence leading to it
+ * `error_cache`: A cache of errors encountered during shrinking that were not of the same type as the first found one, or are from a different location
  * `test_is_trivial`: Whether `is_interesting` is trivial, i.e. led to no choices being required
  * `previous_example`: The previously recorded attempt (if any).
 """
@@ -152,6 +153,7 @@ mutable struct TestState
     result::Option{Attempt}
     best_scoring::Option{Tuple{Float64, Attempt}}
     target_err::Option{Tuple{Exception, Vector{StackFrame}, Int, Attempt}}
+    error_cache::Vector{Tuple{Type, StackFrame}}
     test_is_trivial::Bool
     previous_example::Option{Attempt}
     function TestState(conf::CheckConfig, test_function, previous_example::Option{Attempt}=nothing)
@@ -162,6 +164,7 @@ mutable struct TestState
             (e isa MethodError && e.f == copy && only(e.args) == conf.rng) || rethrow()
             rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Random.Xoshiro` and pass that instead."))
         end
+        error_cache = Tuple{Type,StackFrame}[]
         new(
             conf,              # pass the given arguments through
             test_function,
@@ -171,6 +174,7 @@ mutable struct TestState
             nothing,          # no result so far
             nothing,          # no target score so far
             nothing,          # no error thrown so far
+            error_cache,      # for display purposes only
             false,            # test is presumed nontrivial
             previous_example) # the choice sequence for the previous failure
     end
