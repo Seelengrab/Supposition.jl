@@ -112,7 +112,7 @@ function test_function(ts::TestState, tc::TestCase)
             was_more_interesting = true
             len = find_user_stack_depth(trace)
 
-            was_better |= len < old_len || (len == old_len && tc.choices < old_attempt.choices)
+            was_better |= len < old_len || (len == old_len && tc.choices < old_attempt.choices) || (applicable(err_less, err, old_err) && err_less(err, old_err))
             if was_better
                 ts.target_err = Some((err, trace, len, Attempt(copy(tc.choices), tc.generation, tc.max_generation)))
             end

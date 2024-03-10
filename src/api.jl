@@ -464,3 +464,55 @@ Produces a value from the given `Possibility`, recording the required choices in
     functions only intended to be called from one of those places.
 """
 Data.produce!(p::Data.Possibility) = Data.produce!(CURRENT_TESTCASE[], p)
+
+"""
+    err_less(e1::E, e2::E) where E
+
+A comparison function for exceptions, used when encountering an error in a property. Returns `true`
+if `e1` is considered to be "easier" or "simpler" than `e2`. Only definable when both `e1` and `e2`
+have the same type.
+
+This is optional to implement, but may be beneficial for shrinking counterexamples leading
+to an error with rich metadata, in which case `err_less` will be used to compare errors of the same type
+from different counterexamples. In particular, this function will likely be helpful for errors with metadata
+that is far removed from the input that caused the error itself, but would nevertheless be helpful when
+investigating the failure.
+
+!!! note "Coincidental Errors"
+    There may also be situations where defining `err_less` won't help to find a smaller
+    counterexample if the cause of the error is unrelated to the choices taken during generation.
+    For instance, this is the case when there is no network connection and a `Sockets.DNSError`
+    is thrown during the test, or there is a network connection but the host your program
+    is trying to connect to does not have an entry in DNS.
+"""
+function err_less end
+
+"""
+    MESSAGE_BASED_ERROR
+
+A `Union` of some some in Base that are known to contain only the field `:msg`.
+
+If you're using one of these errors and require specialized shrinking on them,
+define a custom exception type and throw that instead of overriding `err_less`.
+The definition of `err_less` for these types is written for the most generality,
+not perfect accuracy.
+
+!!! warning "Unstable"
+    This heavily relies on internals of Base, and may break & change in future versions.
+    THIS IS NOT SUPPORTED API.
+"""
+const MESSAGE_BASED_ERROR = Union{ArgumentError, AssertionError, OverflowError, ErrorException}
+err_less(e1::MESSAGE_BASED_ERROR, e2::MESSAGE_BASED_ERROR) = e1.msg < e2.msg
+
+# There's a constructor that leaves things undefined..
+function err_less(e1::BoundsError, e2::BoundsError)
+    have_arrs = isdefined(e1, :a) && isdefined(e2, :a)
+    have_idxs = isdefined(e1, :i) && isdefined(e2, :i)
+    arr_less, arr_eq = if have_arrs && applicable(isless, e1.a, e2.a)
+       isless(e1.a, e2.a), isequal(e1.a, e2.a)
+    else
+       false, false
+    end
+    idx_less = have_idxs && applicable(isless, e1.i, e2.i) && isless(e1.i, e2.i)
+    arr_less || (arr_eq && idx_less)
+end
