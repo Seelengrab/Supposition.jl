@@ -39,3 +39,28 @@ Here's a small (incomplete) list:
    shrink just as well as the values that were put in while preserving the invariants they were
    generated under.
 
+## What feature X of PropCheck.jl corresponds to feature Y of Supposition.jl?
+
+The following is a short overview/feature comparison between PropCheck.jl and Supposition.jl. It may not be a perfect match for all functionality -
+be sure to check the documentation of each respective feature to learn about their minute differences!
+
+| Feature                            | PropCheck.jl                                                        | Supposition.jl                                                                                                                   |
+|------------------------------------|---------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| Checking Interface                 | `check(<prop>, <AbstractIntegrated>)`                                 | `@check prop(<Data.Possibility>)`  or  `@check function prop(arg=<Data.Possibility>, ...)    # ...use args... end`             |
+| `map`                              | `map(<func>, <AbstractIntegrated>)`                                   | `map(<func>, <Data.Possibility>)`                                                                                              |
+| `filter`                           | `filter(<pred>, <AbstractIntegrated>)`                                | `filter(<pred>, <Data.Possibility>)`                                                                                           |
+| composition through combination    | `interleave(integ::AbstractIntegrated...)`                            | `@composed function comp(a=<Data.Possibility>, ...)    # ...use args... end`                                                   |
+| Vectors                            | `PropCheck.vector(len::AbstractIntegrated, objs::AbstractIntegrated)` | `Data.Vectors(objs::Data.Possibility; min_size=0, max_size=...)                                                                |
+| Tuples                             | `PropCheck.tuple(len::AbstractIntegrated, objs::AbstractIntegrated)`  | Currently unsupported, but could be added in a PR                                                                              |
+| Integers                           | `PropCheck.inegint`/`PropCheck.iposint`                               | `Data.Integers(min, max)`                                                                                                      |
+| Floating point                     | `PropCheck.ifloat(T)`/`PropCheck.ifloatinf(T)`/`PropCheck.ifloatnan(T)`/`PropCheck.ifloatinfnan(T)` | `Data.Floats{T}(; infs=<Bool>, nans=<Bool>)`                                                     |
+| Strings                            | `PropCheck.str(len::AbstractIntegrated, alphabet::AbstractIntegrated)` | `Data.Text(::Possibility{Char}; min_len=0, max_len=...)`                                                                      |
+| Stateful generation                | `IntegratedOnce`                                                      | Unsupported due to deterministic replaying of finite generators being tricky                                                   |
+|                                    | `IntegratedFiniteIterator`                                            | Unsupported due to deterministic replaying of finite generators being tricky                                                   |
+|                                    | `IntegratedLengthBounded`                                             | Unsupported due to deterministic replaying of finite generators being tricky                                                   |
+|                                    | `IntegratedChain`                                                     | Unsupported due to deterministic replaying of finite generators being tricky                                                   |
+|                                    | `PropCheck.iunique`                                                   | Unsupported due to deterministic replaying of finite generators being tricky                                                   |
+| Generation of constant data        | `PropCheck.iconst(x)`                                                 | `Data.Just(x)`                                                                                                                 |
+| Generation from Collections        | `IntegratedRange(x)`/`PropCheck.isample`                              | `Data.SampledFrom(x)`                                                                                                          |
+| Generation of shrinkable constants | `IntegratedVal(x)`                                                    | Unsupported until custom shrinking functions are added, see [#25](https://github.com/Seelengrab/Supposition.jl/discussions/25) |
+| Type-based generation              | `PropCheck.itype`                                                     | Unsupported for now, see [#21](https://github.com/Seelengrab/Supposition.jl/discussions/21) for more information (it's coming though! And smarter than PropCheck.jl too ;) ). |
