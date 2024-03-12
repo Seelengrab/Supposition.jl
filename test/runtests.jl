@@ -371,19 +371,43 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
     end
 
-    @testset "Can find errors" begin
-        sr = @check record=false broken=true db=NoRecordDB() function baba(i=Data.Integers{Int8}())
-            i < -5 || error()
+    @testset "Error shrinking" begin
+        @testset "Can find errors" begin
+            sr = @check record=false broken=true db=NoRecordDB() function baba(i=Data.Integers{Int8}())
+                i < -5 || error()
+            end
+            @test !isnothing(sr.result)
+            res = @something(sr.result)
+            @test res isa Supposition.Error
+            @test res.example == (i = -5,)
+            @test res.exception == ErrorException("")
+            # This odd check is because of version differences pre-1.11
+            @test 2 <= length(res.trace) <= 4
+            @test res.trace[1].func == :error
+            @test res.trace[2].func == :baba
         end
-        @test !isnothing(sr.result)
-        res = @something(sr.result)
-        @test res isa Supposition.Error
-        @test res.example == (i = -5,)
-        @test res.exception == ErrorException("")
-        # This odd check is because of version differences pre-1.11
-        @test 2 <= length(res.trace) <= 4
-        @test res.trace[1].func == :error
-        @test res.trace[2].func == :baba
+
+        @testset "Only log distinct errors once" begin
+            checked_inputs = UInt8[]
+            logs, sr = Test.collect_test_logs() do
+                @check db=false record=false function doubleError(i=Data.Integers{UInt8}())
+                    push!(checked_inputs, i)
+                    i > 10 && error("input was >")
+                    error("input was <=")
+                end
+            end
+            @test length(logs) in (1,2)
+            final_error, _ = @something(@something(sr.final_state).target_err)
+            leq_10 = any(<=(10), checked_inputs)
+            gt_10 = any(>(10), checked_inputs)
+            warnings = filter!(logs) do record
+                record.level == Logging.Warn
+            end
+            @test leq_10 && gt_10 != isempty(warnings)
+            @test all(warnings) do record
+                record.kwargs[:Error] != final_error
+            end
+        end
     end
 
     integer_types = (

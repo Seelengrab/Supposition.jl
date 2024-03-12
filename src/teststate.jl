@@ -102,10 +102,10 @@ function test_function(ts::TestState, tc::TestCase)
             isnothing(threw) && return (false, false)
             err, trace = @something threw
             old_err, old_trace, old_len, old_attempt = @something ts.target_err
-            old_frame = first(old_trace)
-            frame = first(trace)
+            old_frame = find_user_error_frame(old_err, old_trace)
+            frame = find_user_error_frame(err, trace)
             # if the error isn't the same, it can't possibly be better
-            if typeof(err) != typeof(old_err) || frame != old_frame
+            if !(typeof(err) == typeof(old_err) && frame == old_frame)
                 cache_entry = (typeof(err), frame)
                 if !(cache_entry in ts.error_cache)
                     @warn "Encountered an error, but it was different from the previously seen one - Ignoring!" Error=err Location=frame
@@ -123,6 +123,41 @@ function test_function(ts::TestState, tc::TestCase)
         end
 
         return (was_more_interesting, was_better)
+    end
+end
+
+"""
+    find_user_error_frame(err, trace)
+
+Try to heuristically guess where an error was actually coming from.
+
+For example, `ErrorException` is (generally) thrown from the `error`
+function, which would always report the same location if we'd naively
+take the first frame of the trace. This tries to be a bit smarter (but
+still fairly conservative) and return something other than the first
+frame for a small number of known error-throwing functions.
+"""
+function find_user_error_frame end
+
+find_user_error_frame(err, trace::Vector{StackFrame}) = first(trace)
+
+function find_user_error_frame(err::ErrorException, trace::Vector{StackFrame})
+    top_frame = first(trace)
+    error_func_methods = methods(error)
+    err_exc_lines = ( getproperty(em, :line) for em in error_func_methods )
+
+    len_ok = length(trace) >= 2
+    frame_is_error = top_frame.func == :error
+    line_is_error = top_frame.line in err_exc_lines
+    # we can special case the file here since this is only one error
+    # NOTE: This can break in future versions, if the error function moves!
+    file_is_error = top_frame.file === Symbol("./error.jl")
+    if (len_ok & frame_is_error & line_is_error & file_is_error)
+        # if there are more frames in the trace AND the top frame is just the `error` function,
+        # return the frame that called `error` instead of `error` itself
+        return @inbounds trace[2]
+    else
+        return top_frame
     end
 end
 
