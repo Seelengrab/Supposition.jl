@@ -529,9 +529,11 @@ new `Possibility` when given a `Possibility`, called to recursively
 expand a tree starting from `base`. The returned `Possibility` is fed
 back into `extend` again, expanding the recursion by one layer.
 
-`max_layers` designates the maximum number of times `extend` will be used
-to wrap `base` in new layers. This must be at least `1`, so that at least
-the base case can always be generated.
+`max_layers` designates the maximum layers `Recursive` should
+keep track of. This must be at least `1`, so that at least
+the base case can always be generated. Note that this implies `extend`
+will be used at most `max_layers-1` times, since the base case of
+the recursion will not be wrapped.
 
 Equivalent to calling `recursive(extend, base)`.
 
