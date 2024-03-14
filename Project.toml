@@ -1,7 +1,7 @@
 name = "Supposition"
 uuid = "5a0628fe-1738-4658-9b6d-0b7605a9755b"
 authors = ["Sukera <Seelengrab@users.noreply.github.com> and contributors"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
