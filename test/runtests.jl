@@ -9,6 +9,7 @@ using Statistics: mean
 using InteractiveUtils: subtypes
 using ScopedValues: @with
 using .Threads: @spawn
+import Pkg
 import RequiredInterfaces
 const RI = RequiredInterfaces
 
@@ -633,6 +634,18 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         # *always* find a counterexample!
         rand_target = rand(Int32)
         expected_failure(i::Int64) = i < rand_target
+
+        @testset "UnsetDB" begin
+            current_project = dirname(Pkg.project().path)
+            current_dir = pwd()
+            Pkg.activate(;temp=true)
+            tmp_dir = dirname(Pkg.project().path)
+            cd(tmp_dir)
+            @check record=false broken=true expected_failure(Data.Integers{Int64}())
+            @test ispath(joinpath(tmp_dir, "test", "SuppositionDB"))
+            cd(current_dir)
+            Pkg.activate(current_project)
+        end
 
         @testset "NoRecordDB" begin
             nrdb = Supposition.NoRecordDB()

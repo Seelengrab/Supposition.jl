@@ -40,6 +40,7 @@ Currently uses these values:
  * `record`: `true`
  * `verbose`: `false`
  * `broken`: `false`
+ * `db`: `UnsetDB()`
  * `buffer_size`: `100_000`
 
 [`@check`](@ref) will use a _new_ instance of `Random.Xoshiro` by itself.
@@ -50,6 +51,7 @@ const DEFAULT_CONFIG = ScopedValue{CheckConfig}(CheckConfig(;
     record=true,
     verbose=false,
     broken=false,
+    db=UnsetDB(),
     buffer_size=100_00
 ))
 

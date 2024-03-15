@@ -75,6 +75,7 @@ Options:
  * `record`: Whether the result should be recorded in the parent testset, if there is one. Defaults to `true`.
  * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`. Defaults to `false`.
  * `broken`: Whether the invocation is expected to fail. Defaults to `false`.
+ * `db`: An `ExampleDB` for recording failure cases for later replaying. Defaults to `default_directory_db()`.
  * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
 
 !!! warning "Buffer Size"
@@ -203,7 +204,12 @@ mutable struct SuppositionReport <: AbstractTestSet
     function SuppositionReport(func::String; description::String="",
                                 record_base::String="", rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)), config=DEFAULT_CONFIG[], kws...)
         desc = isempty(description) ? func : description
-        conf = merge(config; rng, kws...)
+        db = if config.db isa UnsetDB && !haskey(kws, :db)
+            default_directory_db()
+        else
+            config.db
+        end
+        conf = merge(config; rng, db, kws...)
         new(desc, record_base, nothing, nothing, time(), nothing, conf)
     end
 end

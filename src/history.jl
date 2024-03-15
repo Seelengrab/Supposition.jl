@@ -1,6 +1,22 @@
 import Pkg
 
 """
+    UnsetDB
+
+An `ExampleDB` that is only used by the default `CheckConfig`, to mark as
+"no config has been set". If this is the database given in a config
+to `@check` and no other explicit database has been given,
+`@check` will choose the `default_directory_db()` instead.
+
+Cannot be used during testing.
+"""
+struct UnsetDB <: ExampleDB end
+
+records(::UnsetDB) = ()
+record!(::UnsetDB, _, _) = nothing
+retrieve(::UnsetDB, _) = nothing
+
+"""
     NoRecordDB <: ExambleDB
 
 An `ExampleDB` that doesn't record anything, and won't retrieve anything.
@@ -28,6 +44,7 @@ end
 records(ddb::DirectoryDB) = filter!(!isdir, readdir(ddb.basepath; join=true))
 
 function record!(ddb::DirectoryDB, name, choices)
+    !ispath(ddb.basepath) && mkpath(ddb.basepath)
     storage_path = joinpath(ddb.basepath, name)
     serialize(storage_path, choices)
     ddb
