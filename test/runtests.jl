@@ -1,6 +1,6 @@
 using Supposition
 using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
-        NoRecordDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!
+        NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!
 using Test
 using Aqua
 using Random
@@ -636,15 +636,40 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         expected_failure(i::Int64) = i < rand_target
 
         @testset "UnsetDB" begin
-            current_project = dirname(Pkg.project().path)
-            current_dir = pwd()
-            Pkg.activate(;temp=true)
-            tmp_dir = dirname(Pkg.project().path)
-            cd(tmp_dir)
-            @check record=false broken=true expected_failure(Data.Integers{Int64}())
-            @test ispath(joinpath(tmp_dir, "test", "SuppositionDB"))
-            cd(current_dir)
-            Pkg.activate(current_project)
+            @testset "DirectoryDB as fallback" begin
+                current_project = dirname(Pkg.project().path)
+                current_dir = pwd()
+                Pkg.activate(;temp=true)
+                tmp_dir = dirname(Pkg.project().path)
+                cd(tmp_dir)
+                sr = @check record=false broken=true expected_failure(Data.Integers{Int64}())
+                @test ispath(joinpath(tmp_dir, "test", "SuppositionDB"))
+                @test sr.config.db isa Supposition.DirectoryDB
+                cd(current_dir)
+                Pkg.activate(current_project)
+            end
+            @testset "Can't record to UnsetDB" begin
+                retr_err = ArgumentError("Can't `retrieve` from an UnsetDB! Did you mean to use a `DirectoryDB`?")
+                res_err = try
+                     @check record=false broken=true db=UnsetDB() expected_failure(Data.Integers{Int64}())
+                catch e
+                    e
+                end
+                @test res_err isa Supposition.InvalidInvocation
+                @test res_err.res isa Test.Error
+                @test res_err.res.value == string(retr_err)
+                record_err = ArgumentError("Can't `record!` to an UnsetDB! Did you mean to use a `NoRecordDB`?")
+                res_err = try
+                     @check record=false broken=true function illegalModify(i=Data.Integers{Int8}())
+                        sr = Test.get_testset()
+                        sr.config = Supposition.merge(sr.config; db=UnsetDB())
+                        false
+                    end
+                catch e
+                    e
+                end
+                @test res_err == record_err
+            end
         end
 
         @testset "NoRecordDB" begin

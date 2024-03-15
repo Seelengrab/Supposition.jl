@@ -13,8 +13,8 @@ Cannot be used during testing.
 struct UnsetDB <: ExampleDB end
 
 records(::UnsetDB) = ()
-record!(::UnsetDB, _, _) = nothing
-retrieve(::UnsetDB, _) = nothing
+record!(::UnsetDB, _, _) = throw(ArgumentError("Can't `record!` to an UnsetDB! Did you mean to use a `NoRecordDB`?"))
+retrieve(::UnsetDB, _) = throw(ArgumentError("Can't `retrieve` from an UnsetDB! Did you mean to use a `DirectoryDB`?"))
 
 """
     NoRecordDB <: ExambleDB
