@@ -64,3 +64,21 @@ be sure to check the documentation of each respective feature to learn about the
 | Generation from Collections        | `IntegratedRange(x)`/`PropCheck.isample`                              | `Data.SampledFrom(x)`                                                                                                          |
 | Generation of shrinkable constants | `IntegratedVal(x)`                                                    | Unsupported until custom shrinking functions are added, see [#25](https://github.com/Seelengrab/Supposition.jl/discussions/25) |
 | Type-based generation              | `PropCheck.itype`                                                     | Unsupported for now, see [#21](https://github.com/Seelengrab/Supposition.jl/discussions/21) for more information (it's coming though! And smarter than PropCheck.jl too ;) ). |
+
+## Can I use Supposition.jl to test an MIT/proprietary/other licensed project?
+
+Yes!
+
+Supposition.jl is licensed under the [EUPLv1.2](https://joinup.ec.europa.eu/collection/eupl), which means that modifications
+to Supposition.jl also need to be licensed under the EUPLv1.2 (and various other obligations).
+However, simply _using_ Supposition.jl in a testsuite of any project has no
+influence on the license of that project (or even the testsuite), because the EUPLv1.2 [is not a "viral"
+copyleft license](https://joinup.ec.europa.eu/collection/eupl/news/eupl-and-proprietary-commer). There is no risk of having to license your MIT/proprietary/other
+licensed project under the EUPLv1.2, because under European law (which the EUPLv1.2 defaults
+to, even if you're outside of the EU as either licensor or licensee) linking computer
+programs for the purposes of interoperability is [exempt from copyright](https://joinup.ec.europa.eu/collection/eupl/news/why-viral-licensing-ghost),
+which is the cause of "virality" in other licenses.
+
+For more information about using Supposition.jl in a commercial setting, see [EUPL and Proprietary / Commercial use](https://joinup.ec.europa.eu/collection/eupl/news/eupl-and-proprietary-commer), written by [Patrice-Emmanuel Schmitz](https://joinup.ec.europa.eu/user/9079),
+who has written [extensive analysis](https://www.jolts.world/index.php/jolts/article/view/91/164) of the EUPL under EU law.
+For more information about copyright in the EU in general, see [Directive 2009/24/EC](https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX:32009L0024).
