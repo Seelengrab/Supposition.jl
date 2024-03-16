@@ -81,4 +81,5 @@ which is the cause of "virality" in other licenses.
 
 For more information about using Supposition.jl in a commercial setting, see [EUPL and Proprietary / Commercial use](https://joinup.ec.europa.eu/collection/eupl/news/eupl-and-proprietary-commer), written by [Patrice-Emmanuel Schmitz](https://joinup.ec.europa.eu/user/9079),
 who has written [extensive analysis](https://www.jolts.world/index.php/jolts/article/view/91/164) of the EUPL under EU law.
+For more information about the EUPL in general see [European Union Public Licence Guidelines](https://op.europa.eu/en/publication-detail/-/publication/c15c9e93-27e1-11ec-bd8e-01aa75ed71a1).
 For more information about copyright in the EU in general, see [Directive 2009/24/EC](https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX:32009L0024).
