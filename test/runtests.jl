@@ -28,7 +28,9 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         Aqua.test_all(Supposition; ambiguities = false, stale_deps=false)
         # stdlib woes?
         ignore = VERSION >= v"1.11" ? [:ScopedValues] : Symbol[]
-        Aqua.test_stale_deps(Supposition; ignore)
+        @testset "Stale dependencies" begin
+            Aqua.test_stale_deps(Supposition; ignore)
+        end
     end
     @testset "Interfaces" begin
         possibility_subtypes = filter(!=(Supposition.Composed), subtypes(Data.Possibility))
@@ -466,6 +468,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "@check API" begin
+        # These tests are for accepted syntax, not functionality, so only one example is fine
+        API_conf = Supposition.merge(DEFAULT_CONFIG[]; verbose=verb, max_examples=1)
         @testset "regular use" begin
             Supposition.@check verbose=verb function singlearg(i=Data.Integers(0x0, 0xff))
                 i isa Integer
@@ -476,20 +480,20 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         @testset "interdependent generation" begin
-            Supposition.@check verbose=verb function depend(a=Data.Integers(0x0, 0xff), b=Data.Integers(a, 0xff))
+            Supposition.@check config=API_conf function depend(a=Data.Integers(0x0, 0xff), b=Data.Integers(a, 0xff))
                 a <= b
             end
         end
 
         @testset "Custom RNG" begin
-            Supposition.@check verbose=verb rng=Xoshiro(1) function foo(i=Data.Integers(0x0, 0xff))
+            Supposition.@check config=API_conf rng=Xoshiro(1) function foo(i=Data.Integers(0x0, 0xff))
                 i isa Integer
             end
         end
 
         @testset "Calling function outside Supposition" begin
             double(x) = 2x
-            Supposition.@check verbose=verb function doubleprop(i=Data.Integers(0x0, 0xff))
+            Supposition.@check config=API_conf function doubleprop(i=Data.Integers(0x0, 0xff))
                 iseven(double(i))
             end
         end
@@ -575,7 +579,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 @test example(gen) isa Tuple{UInt8, UInt8}
             end
 
-            @testset "Can call defined function" begin
+            @testset "Can call function defined through `@composed`" begin
                 @test uint8tup(1,2) === (1,2)
             end
         end
