@@ -471,11 +471,28 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         # These tests are for accepted syntax, not functionality, so only one example is fine
         API_conf = Supposition.merge(DEFAULT_CONFIG[]; verbose=verb, max_examples=1)
         @testset "regular use" begin
-            Supposition.@check verbose=verb function singlearg(i=Data.Integers(0x0, 0xff))
-                i isa Integer
-            end
-            Supposition.@check verbose=verb function twoarg(i=Data.Integers(0x0, 0xff), f=Data.Floats{Float16}())
-                i isa Integer && f isa AbstractFloat
+            @with DEFAULT_CONFIG => API_conf begin
+                @check function singlearg(i=Data.Integers(0x0, 0xff))
+                    i isa Integer
+                end
+                @check function twoarg(i=Data.Integers(0x0, 0xff), f=Data.Floats{Float16}())
+                    i isa Integer && f isa AbstractFloat
+                end
+
+                preexisting = Data.Integers{Int8}()
+                @testset "Single Arg, No Comma" begin
+                    @check (a=Data.Integers{Int8}()) -> a isa Int8
+                end
+                @testset "Single Arg, With Comma" begin
+                    @check (a=Data.Integers{Int8}(),) -> a isa Int8
+                end
+                @testset "Multi-Arg" begin
+                    @check (a=Data.Integers{Int8}(),b=preexisting) -> a isa Int8 && b isa Int8
+                end
+                @testset "Named Anonymous" begin
+                    @check named_prop(a=Data.Integers{Int8}(),b=preexisting) -> a isa Integer && b isa Integer
+                    @check named_prop(Data.Integers{Int8}(),preexisting)
+                end
             end
         end
 
@@ -581,6 +598,57 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
             @testset "Can call function defined through `@composed`" begin
                 @test uint8tup(1,2) === (1,2)
+            end
+
+            @testset "Can use anonymous function" begin
+                preexisting = Data.Integers{Int8}()
+
+                @testset "Single Argument, No comma" begin
+                    one_arg_no_comma = @composed (a=Data.Integers{Int8}()) -> a isa Int8
+                    @test one_arg_no_comma isa Supposition.Composed
+                    @test Data.postype(one_arg_no_comma) === Bool
+                    @test example(one_arg_no_comma) isa Bool
+                    one_arg_no_comma = @composed (a=preexisting) -> a isa Int8
+                    @test one_arg_no_comma isa Supposition.Composed
+                    @test Data.postype(one_arg_no_comma) === Bool
+                    @test example(one_arg_no_comma) isa Bool
+                end
+
+                @testset "Single Argument, With comma" begin
+                    one_arg_with_comma = @composed (a=Data.Integers{Int8}(),) -> a isa Int8
+                    @test one_arg_with_comma isa Supposition.Composed
+                    @test Data.postype(one_arg_with_comma) === Bool
+                    one_arg_with_comma = @composed (a=preexisting,) -> a isa Int8
+                    @test one_arg_with_comma isa Supposition.Composed
+                    @test Data.postype(one_arg_with_comma) === Bool
+                    @test example(one_arg_with_comma) isa Bool
+                end
+
+                @testset "Multiple Arguments" begin
+                    multi_arg = @composed (a=Data.Integers{Int8}(),b=preexisting) -> a isa Int8 && b isa Int8
+                    @test multi_arg isa Supposition.Composed
+                    @test Data.postype(multi_arg) === Bool
+                    @test example(multi_arg) isa Bool
+                end
+
+                @testset "Named anon" begin
+                    named = @composed named_anon(a=Data.Integers{Int8}(),b=preexisting) -> a isa Int8 && b isa Int8
+                    @test named isa Supposition.Composed{:named_anon, Bool}
+                    @test Data.postype(named) === Bool
+                    @test example(named) isa Bool
+                    @test named_anon(Int8(1), Int8(2))
+                end
+            end
+
+            @testset "Can compose through existing function" begin
+                foo(a,b) = a+b
+                preexisting = Data.Integers{Int8}()
+                existing = @composed foo(Data.Integers{Int8}(), preexisting)
+                @test existing isa Supposition.Composed{:foo, Int8}
+                @test Data.postype(existing) === Int8
+                @test example(existing) isa Int8
+                # can still call the existing function
+                @test foo(1,2) === 3
             end
         end
 

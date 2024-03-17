@@ -160,17 +160,42 @@ julia> Supposition.@check rng=Xoshiro(1234) function foo(a = Data.Text(Data.Char
     Be aware that you _cannot_ pass a hardware RNG to `@check` directly. If you want to randomize
     based on hardware entropy, seed a copyable RNG like `Xoshiro` from your hardware RNG and pass
     that to `@check` instead. The RNG needs to be copyable for reproducibility.
+
+## Additional Syntax
+
+In addition to passing a whole `function` like above, the following syntax are also supported:
+
+```julia
+text = Data.Text(Data.AsciiCharacters(); max_len=10)
+
+# If no name is needed, use an anonymous function
+@check (a = text) -> a*a
+@check (a = text,) -> "foo: "*a
+@check (a = text, num = Data.Integers(0,10)) -> a^num
+
+# ..or give the anonymous function a name too - works with all three of the above
+@check build_sentence(a = text, num = Data.Floats{Float16}()) -> "The \$a is \$num!"
+build_sentence("foo", 0.5) # returns "The foo is 0.5!"
+```
+
+!!! warning "Replayability"
+    While you can pass an anonymous function to `@check`, be aware
+    that doing so may hinder replayability of found test cases when surrounding
+    invocations of `@check` are moved. Only named functions are resistant to this.
 """
 macro check(args...)
     isempty(args) && throw(ArgumentError("No arguments supplied to `@check`! Please refer to the documentation for usage information."))
     func = last(args)
     kw_args = collect(args[begin:end-1])
-    args = similar(kw_args, Any)
-    args .= kw_args
+    opts = similar(kw_args, Any)
+    opts .= kw_args
     if isexpr(func, :function, 2)
-        check_func(func, args)
+        check_func(func, opts)
     elseif isexpr(func, :call)
-        check_call(func, args)
+        check_call(func, opts)
+    elseif isexpr(func, Symbol("->"))
+        func = anon_to_func(func)
+        check_func(func, opts)
     else
         throw(ArgumentError("Given expression is not a function call or definition!"))
     end
@@ -374,8 +399,71 @@ julia> gen = Supposition.@composed function foo(a = text, num=Data.Integers(0, 1
 julia> example(gen)
 " 8:  giR2YL\\rl"
 ```
+
+In addition to passing a whole `function` like above, the following syntax are also supported:
+
+```julia
+# If no name is needed, use an anonymous function
+double_up =  @composed (a = text) -> a*a
+prepend_foo = @composed (a = text,) -> "foo: "*a
+expo_str = @composed (a = text, num = Data.Integers(0,10)) -> a^num
+
+# ..or give the anonymous function a name too - works with all three of the above
+sentence = @composed build_sentence(a = text, num = Data.Floats{Float16}()) -> "The \$a is \$num!"
+build_sentence("foo", 0.5) # returns "The foo is 0.5!"
+
+# or compose a new generator out of an existing function
+my_func(str, number) = number * "? " * str
+ask_number = @composed my_func(text, num)
+```
 """
 macro composed(e::Expr)
+    isfunc = isexpr(e, :function, 2)
+    isanon = isexpr(e, Symbol("->"), 2)
+    iscall = isexpr(e, :call)
+    (isfunc | isanon | iscall) || throw(ArgumentError("Given expression is not a call or an (anonymous) function definition!"))
+
+    if isanon
+        func = anon_to_func(e)
+        composed_from_func(func)
+    elseif isfunc
+        composed_from_func(e)
+    else # call
+        composed_from_call(e)
+    end
+end
+
+function anon_to_func(e::Expr)
+    body = e.args[2]
+    input = e.args[1]
+
+    funcname, input_args = if isexpr(input, :call)
+        input.args[1], input.args[2:end]
+    else
+        name = gensym("SuppositionAnon")
+        name, input
+    end
+
+    homogenous = if isexpr(input_args, Symbol("=")) || isexpr(input_args, :kw)
+        Expr(:tuple, input_args)
+    elseif isexpr(input_args, :tuple)
+        input_args
+    else
+        hom = Expr(:tuple)
+        hom.args = input_args
+        hom
+    end
+
+    args = map(homogenous.args) do expr
+        Expr(:kw, expr.args...)
+    end
+
+    nargs = Expr(:call, funcname, args...)
+
+    return Expr(:function, nargs, body)
+end
+
+function composed_from_func(e::Expr)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
@@ -401,6 +489,28 @@ macro composed(e::Expr)
 
         function $Data.produce!($tc::$TestCase, ::$Composed{$prodname})
             $name($strategy_let...)
+        end
+
+        $Composed{$prodname}()
+    end)
+end
+
+function composed_from_call(e::Expr)
+    isexpr(e, :call) || throw(ArgumentError("Given expression is not a function call!"))
+    any(kw -> isexpr(kw, :kw), e.args) && throw(ArgumentError("Can't pass a generator using keyword syntax to `@composed` when reusing a function!"))
+    func, kwargs... = e.args
+    prodname = QuoteNode(func)
+
+    tc = gensym()
+    
+    args = Expr(:tuple)
+    for e in kwargs
+        push!(args.args, :($Data.produce!($tc, $e)))
+    end
+
+    return esc(quote
+        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname})
+            $func($args...)
         end
 
         $Composed{$prodname}()
