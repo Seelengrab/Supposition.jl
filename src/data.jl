@@ -21,6 +21,8 @@ These currently include:
  * [`OneOf`](@ref), for choosing one of a number of given `Possibility` to produce from
  * [`Bind`](@ref), for binding a function that produces `Possibility` to the output of another `Possibility`
  * [`Recursive`](@ref), for creating recursive data structures using a basecase `Possibility` and a function that layers more `Possibility` around it
+ * [`WeightedNumbers`](@ref), for sampling the numbers from `1:n` by giving `n` weights
+ * [`WeightedSample`](@ref), for sampling a collection while biasing that sampling by a per-element weight
 
 as well as these utility functions:
 
@@ -483,6 +485,8 @@ in this way, if either `a` or `b` is already a `OneOf`, the resulting `OneOf`
 acts as if it had been given the original `Possibility` objects in the first place.
 That is, `OneOf(a, b) | c` acts like `OneOf(a, b, c)`.
 
+See also [`WeightedNumbers`](@ref) and [`WeightedSample`](@ref).
+
 ```julia-repl
 julia> of = Data.OneOf(Data.Integers{Int8}(), Data.Integers{UInt8}());
 
@@ -758,6 +762,12 @@ A `Possibility` for sampling uniformly from `collection`.
     The source objects from the collection given to this `SampledFrom`
     is not copied when `produce!` is called. Be careful with mutable data!
 
+!!! tip "Sampling from `String`"
+    To sample from a `String`, you can `collect` the string first
+    to get a `Vector{Char}`. This is necessary because `String`s
+    use the variable-length UTF-8 encoding, which isn't arbitrarily indexable
+    in constant time.
+
 ```julia-repl
 julia> using Supposition
 
@@ -858,6 +868,168 @@ function produce!(tc::TestCase, f::Floats{T}) where {T}
     !f.infs && isinf(res) && reject(tc)
     !f.nans && isnan(res) && reject(tc)
     return res
+end
+
+####
+# Weighted dice
+#
+# Implementation based on https://www.keithschwarz.com/darts-dice-coins/
+####
+
+"""
+    WeightedNumbers(weights::Vector{Float64}) <: Possibility{Int}
+
+Sample the numbers from `1:length(weights)`, each with a weight of `weights[i]`.
+
+The weights may be any number > 0.0.
+
+See also [`OneOf`](@ref).
+
+```julia-repl
+julia> using Supposition
+
+julia> bn = Data.WeightedNumbers([1.0, 1.0, 3.0]);
+
+julia> example(Data.Vectors(bn; min_size=3, max_size=15), 5)
+5-element Vector{Vector{Int64}}:
+ [3, 2, 3, 3, 2, 3, 3]
+ [1, 1, 1, 2, 1, 3, 1, 3]
+ [2, 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3]
+ [3, 3, 2, 3, 3]
+ [1, 3, 3, 3, 2, 2]
+```
+"""
+struct WeightedNumbers <: Possibility{Int}
+    table::Vector{Tuple{Int,Int,Float64}}
+    function WeightedNumbers(weights::Vector{Float64})
+        n = length(weights)
+        iszero(n) && throw(ArgumentError("Weights must not be empty!"))
+        any(<=(0.0), weights) && throw(ArgumentError("All weights must be `>= 0.0`!"))
+        total = sum(weights)
+        probabilities = weights ./ total
+
+        table = UInt64[ (-1 % UInt64) for _ in 1:n, _ in 1:3 ]
+        table[:, 1] .= UInt64.(1:n)
+
+        small = Vector{UInt64}()
+        large = Vector{UInt64}()
+        sizehint!(small, n)
+        sizehint!(large, n)
+
+        scaled_probabilities = Vector{Float64}(undef, n)
+        for (i,pi) in enumerate(probabilities)
+            scaled = pi*n
+            scaled_probabilities[i] = scaled
+            if scaled < 1.0
+                push!(small, i % UInt64)
+            else
+                push!(large, i % UInt64)
+            end
+        end
+
+        while !isempty(small) && !isempty(large)
+            lo = pop!(small)
+            hi = pop!(large)
+            @assert lo != hi
+            @assert scaled_probabilities[hi] >= 1.0
+            @assert table[lo, 2] == -1 % UInt64
+            table[lo, 2] = hi
+            table[lo, 3] = reinterpret(UInt64, scaled_probabilities[lo])
+            scaled_probabilities[hi] = (scaled_probabilities[hi] + scaled_probabilities[lo]) - 1.0
+
+            if scaled_probabilities[hi] < 1.0
+                push!(small, hi)
+            else
+                push!(large, hi)
+            end
+        end
+
+        while !isempty(large)
+            g = pop!(large)
+            table[g, 3] = reinterpret(UInt64, 0.0)
+        end
+
+        while !isempty(small)
+            l = pop!(small)
+            table[l, 3] = reinterpret(UInt64, 0.0)
+        end
+
+        res = Vector{Tuple{Int,Int,Float64}}(undef, n)
+        for (ubase, ualternate, uchance) in eachrow(table)
+            base = ubase % Int64
+            alternate = ualternate % Int64
+            alternate_chance = reinterpret(Float64, uchance)
+            if alternate == -1
+                res[base] = (base, base, reinterpret(Float64, alternate_chance))
+            elseif alternate < base
+                res[base] = (alternate, base, 1.0 - alternate_chance)
+            else
+                res[base] = (base, alternate, alternate_chance)
+            end
+        end
+
+        new(res)
+    end
+end
+
+function Data.produce!(tc::TestCase, bn::WeightedNumbers)
+    idx = choice!(tc, length(bn.table)-1)+1
+    base, alternate, alternate_chance = @inbounds bn.table[idx]
+    use_base = weighted!(tc, alternate_chance)
+    use_base ? base : alternate
+end
+
+"""
+    WeightedSample{T}(colllection, weights::Vector{Float64}) <: Possibility{T}
+
+Draw an element from the indexable `collection`, biasing the 
+drawing process by assigning each index `i` of `col` the weight at
+`weights[i]`.
+
+`length` of `col` and `weights` must be equal and `eachindex(col)` must
+be indexable.
+
+See also [`OneOf`](@ref).
+
+!!! tip "Sampling from `String`"
+    To sample from a `String`, you can `collect` the string first
+    to get a `Vector{Char}`. This is necessary because `String`s
+    use the variable-length UTF-8 encoding, which isn't arbitrarily indexable
+    in constant time.
+
+```
+julia> bs = Data.WeightedSample(["foo", "bar", "baz"], [3.0, 1.0, 1.0]);
+
+julia> example(bs, 10)
+10-element Vector{String}:
+ "foo"
+ "foo"
+ "bar"
+ "baz"
+ "baz"
+ "foo"
+ "bar"
+ "foo"
+ "foo"
+ "bar"
+```
+"""
+struct WeightedSample{T,C} <: Possibility{T}
+    idx::WeightedNumbers
+    col::C
+    function WeightedSample(col, weights::Vector{Float64})
+        len_col = length(eachindex(col))
+        len_weights = length(weights)
+        len_weights == len_col || throw(ArgumentError("Length mismatch - need $len_col weights, but $len_weights given!"))
+        bn = WeightedNumbers(weights)
+        new{eltype(col),typeof(col)}(bn, col)
+    end
+end
+
+function produce!(tc::TestCase, bs::WeightedSample)
+    idx = produce!(bs.idx)
+    indices = eachindex(bs.col)
+    bs.col[indices[idx]]
 end
 
 end # data module

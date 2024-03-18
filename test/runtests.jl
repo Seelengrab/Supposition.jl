@@ -981,4 +981,23 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             n <= length(d) <= m
         end
     end
+
+    @testset "Weighted Numbers" begin
+        datgen = map(Data.Vectors(Data.Integers(1, 10_000); min_size=1, max_size=100)) do v
+            v ./ sum(v)
+        end
+        @check max_examples=1000 function correctly_biased(weights=datgen,n=Data.Integers(1_000,10_000))
+            data = example(Data.WeightedNumbers(weights), n)
+            counts = zeros(length(weights))
+            for d in data
+                counts[d] += 1.0
+            end
+            sw = sum(weights)
+            all(zip(counts, weights)) do (c,w)
+                # We're giving +-5% leeway, and comparing the
+                # big numbers prevents troubles through roundoff
+                isapprox(c, (w/sw)*n; atol=0.05*length(data))
+            end
+        end
+    end
 end
