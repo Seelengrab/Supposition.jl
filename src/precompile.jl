@@ -5,6 +5,7 @@ using PrecompileTools
     works(i::Int8) = i isa Int8
     breaks(i::Int8) = i isa Int
     errors(_) = error()
+    double(x) = 2x
 
     @compile_workload begin
         intgen = Data.Integers{Int8}()
@@ -17,11 +18,15 @@ using PrecompileTools
             ig = Data.Integers{T}()
             example(Data.Vectors(ig))
             example(ig)
+            example(filter(iseven, ig))
+            example(map(double, ig))
         end
         for T in (Float16, Float32, Float64)
             ig = Data.Floats{T}()
             example(Data.Vectors(ig))
             example(ig)
+            example(filter(iseven, ig))
+            example(map(double, ig))
         end
         example(Data.Text(Data.AsciiCharacters()))
         example(Data.Text(Data.Characters()))
