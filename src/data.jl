@@ -20,7 +20,6 @@ These currently include:
  * [`Map`](@ref), for mapping a function over the values a `Possibility` produces
  * [`OneOf`](@ref), for choosing one of a number of given `Possibility` to produce from
  * [`Bind`](@ref), for binding a function that produces `Possibility` to the output of another `Possibility`
- * [`Bind`](@ref), for binding a function that produces `Possibility` to the output of another `Possibility`
  * [`Recursive`](@ref), for creating recursive data structures using a basecase `Possibility` and a function that layers more `Possibility` around it
 
 as well as these utility functions:
