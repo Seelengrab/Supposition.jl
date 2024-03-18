@@ -973,8 +973,7 @@ struct WeightedNumbers <: Possibility{Int}
 end
 
 function Data.produce!(tc::TestCase, bn::WeightedNumbers)
-    idx = choice!(tc, length(bn.table)-1)+1
-    base, alternate, alternate_chance = @inbounds bn.table[idx]
+    base, alternate, alternate_chance = choice!(tc, bn.table)
     use_base = weighted!(tc, alternate_chance)
     use_base ? base : alternate
 end
