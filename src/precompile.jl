@@ -10,9 +10,9 @@ using PrecompileTools
     @compile_workload begin
         intgen = Data.Integers{Int8}()
         redirect_stdout(devnull) do
-            @check record=false verbose=false works(intgen)
-            @check record=false broken=true breaks(intgen)
-            @check record=false broken=true errors(intgen)
+            @check db=false record=false verbose=false works(intgen)
+            @check db=false record=false broken=true breaks(intgen)
+            @check db=false record=false broken=true errors(intgen)
         end
         for T in (Int8, UInt8, Int16, UInt16, Int32, UInt32, Int64, UInt64)
             ig = Data.Integers{T}()
