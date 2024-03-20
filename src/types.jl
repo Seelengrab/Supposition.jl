@@ -18,8 +18,10 @@ struct Attempt
     choices::Vector{UInt64}
     generation::UInt
     max_generation::Int
+    events::Vector{Pair{AbstractString,Any}}
 end
-Base.copy(attempt::Attempt) = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+Attempt(choices::Vector{UInt64}, gen, max_gen) = Attempt(choices, gen, max_gen, Pair{AbstractString,Any}[])
+Base.copy(attempt::Attempt) = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation, attempt.events)
 
 """
     TestCase
@@ -44,7 +46,7 @@ mutable struct TestCase{RNG <: Random.AbstractRNG}
 end
 
 TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation, max_generation, max_size) =
-     TestCase(prefix, rng, convert(UInt, max_size), nothing, Attempt(UInt64[], convert(UInt, generation), convert(Int, max_generation)))
+     TestCase(prefix, rng, convert(UInt, max_size), nothing, Attempt(UInt64[], convert(UInt, generation), convert(Int, max_generation), Pair{AbstractString,Any}[]))
 
 """
     ExampleDB

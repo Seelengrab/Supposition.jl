@@ -325,21 +325,21 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                 if $got_err
                     # This is an unexpected error, report as `Error`
                     $exc, $trace, $len = $res
-                    $err = $Error($obj, $exc, $trace[begin:$len-2])
+                    $err = $Error($obj, $attempt.events, $exc, $trace[begin:$len-2])
                     $Test.record($report, $err)
                 elseif $got_res # res
                     # This is an unexpected failure, report as `Fail`
-                    $fail = $Fail($obj, $nothing)
+                    $fail = $Fail($obj, $attempt.events, $nothing)
                     $Test.record($report, $fail)
                 elseif $got_score
                     # This means we didn't actually get a result, so report as `Pass`
                     # Also mark this, so we can display this correctly during `finish`
                     $score = $first($res)
-                    $pass = $Pass($Some($obj), $Some($score))
+                    $pass = $Pass($Some($obj), $attempt.events, $Some($score))
                     $Test.record($report, $pass)
                 end
             else
-                $pass = $Supposition.Pass($nothing, $nothing)
+                $pass = $Supposition.Pass($nothing, Pair{AbstractString,Any}[], $nothing)
                 $Test.record($report, $pass)
             end
         end
@@ -574,6 +574,21 @@ Produces a value from the given `Possibility`, recording the required choices in
     functions only intended to be called from one of those places.
 """
 Data.produce!(p::Data.Possibility) = Data.produce!(CURRENT_TESTCASE[], p)
+
+"""
+    event!(obj)
+    event!(label::AbstractString, obj)
+
+Record `obj` as an event in the current testcase that occured while running
+your property. If no `label` is given, a default one will be chosen.
+"""
+function event! end
+
+event!(obj) = event!(CURRENT_TESTCASE[], obj)
+event!(tc::TestCase, obj) = event!(tc, "UNLABELED_EVENT_$(length(tc.attempt.events))", obj)
+event!(label::AbstractString, obj) = event!(CURRENT_TESTCASE[], label, obj)
+
+event!(tc::TestCase, label::AbstractString, obj) = push!(tc.attempt.events, label => obj)
 
 """
     err_less(e1::E, e2::E) where E

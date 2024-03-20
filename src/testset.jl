@@ -5,6 +5,7 @@ A result indicating that no counterexample was found.
 """
 struct Pass <: Result
     best::Option{Any}
+    events::Vector{Pair{AbstractString,Any}}
     score::Option{Float64}
 end
 
@@ -15,6 +16,7 @@ A result indicating that a counterexample was found.
 """
 struct Fail <: Result
     example
+    events::Vector{Pair{AbstractString,Any}}
     score::Option{Float64}
 end
 
@@ -25,6 +27,7 @@ A result indicating that an error was encountered while generating or shrinking.
 """
 struct Error <: Result
     example
+    events::Vector{Pair{AbstractString,Any}}
     exception::Exception
     trace
 end
@@ -252,7 +255,23 @@ function Test.finish(sr::SuppositionReport)
     sr
 end
 
-print_results(sr::SuppositionReport) = print_results(sr, @something(sr.result))
+function print_events(events::Vector)
+    !isempty(events) && println("Events occured: ", length(events))
+    foreach(events) do (label, obj)
+        println(' '^4, label)
+        println(' '^8, repr(obj))
+    end
+end
+
+function print_results(sr::SuppositionReport)
+    res = @something(sr.result)
+    # only print when it's a failure/error/something with a score
+    if !(res isa Pass) || !isnothing(res.score)
+        print_events(res.events)
+    end
+
+    print_results(sr, res)
+end
 
 function print_results(sr::SuppositionReport, p::Pass)
     if isnothing(p.best)

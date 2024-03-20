@@ -16,7 +16,7 @@ The package features:
 """
 module Supposition
 
-export assume!, target!, reject, example
+export assume!, target!, event!, reject, example
 export Data, @composed, @check
 
 using Base

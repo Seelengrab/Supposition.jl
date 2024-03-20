@@ -11,7 +11,8 @@ function for_choices(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation
         nothing,
         Attempt(UInt64[],
                 generation,
-                max_generation)
+                max_generation,
+                Pair{AbstractString,Any}[])
     )
 end
 for_choices(prefix::Vector{UInt64}; rng::Random.AbstractRNG=Random.default_rng(), generation=1, max_generation=-1) =
