@@ -7,11 +7,12 @@ function for_choices(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation
     return TestCase(
         prefix,
         rng,
-        generation,
-        max_generation,
         convert(UInt, length(prefix)),
-        UInt64[],
-        nothing)
+        nothing,
+        Attempt(UInt64[],
+                generation,
+                max_generation)
+    )
 end
 for_choices(prefix::Vector{UInt64}; rng::Random.AbstractRNG=Random.default_rng(), generation=1, max_generation=-1) =
     for_choices(prefix, rng, convert(UInt, generation), max_generation)
@@ -25,10 +26,10 @@ Insert a definite choice in the choice sequence.
 Note that all integrity checks happen here!
 """
 function forced_choice!(tc::TestCase, n::UInt64)
-    if length(tc.choices) >= tc.max_size
+    if length(tc.attempt.choices) >= tc.max_size
         throw(Overrun())
     else
-        push!(tc.choices, n)
+        push!(tc.attempt.choices, n)
         return n
     end
 end
@@ -39,8 +40,8 @@ end
 Return `true` with probability `p`, `false` otherwise.
 """
 function weighted!(tc::TestCase, p::Float64)
-    if length(tc.choices) < length(tc.prefix)
-        preordained = tc.prefix[length(tc.choices)+1]
+    if length(tc.attempt.choices) < length(tc.prefix)
+        preordained = tc.prefix[length(tc.attempt.choices)+1]
         if preordained > 1
             throw(Invalid())
         else
@@ -61,8 +62,8 @@ Force a number of choices to occur, taking from the existing prefix first.
 If the prefix is exhausted, draw from `[zero(n), n]` instead.
 """
 function choice!(tc::TestCase, n::UInt)
-    if length(tc.choices) < length(tc.prefix)
-        preordained = tc.prefix[length(tc.choices)+1]
+    if length(tc.attempt.choices) < length(tc.prefix)
+        preordained = tc.prefix[length(tc.attempt.choices)+1]
         if preordained > n
             throw(Invalid())
         else

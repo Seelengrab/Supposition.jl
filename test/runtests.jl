@@ -45,7 +45,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test first(test_function(ts, tc))
         @test @something(ts.result).choices == []
 
-        ts.result = Some(Attempt([1,2,3,4],1,10_000))
+        ts.result = Some(Attempt(UInt[1,2,3,4],1,10_000))
         tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test first(test_function(ts, tc))
         @test @something(ts.result).choices == []
@@ -63,7 +63,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test !first(test_function(ts, tc))
         @test isnothing(ts.result) && isnothing(ts.target_err)
 
-        ts.result = Some(Attempt([1,2,3,4],1,10_000))
+        ts.result = Some(Attempt(UInt[1,2,3,4],1,10_000))
         test_function(ts, TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000))
         @test @something(ts.result).choices == UInt[1,2,3,4]
     end

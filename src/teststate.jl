@@ -51,15 +51,16 @@ function test_function(ts::TestState, tc::TestCase)
     !(interesting isa Bool) && return (false, false)
 
     if !interesting
-        ts.test_is_trivial = isempty(tc.choices)
+        ts.test_is_trivial = isempty(tc.attempt.choices)
         ts.valid_test_cases += 1
 
         # check for target improvement
         was_better = false
         if !isnothing(tc.targeting_score)
             score = @something tc.targeting_score
-            if first(@something ts.best_scoring Some((typemin(score),UInt[]))) < score
-                ts.best_scoring = Some((score, Attempt(copy(tc.choices), tc.generation, tc.max_generation)))
+            old_score, _ = @something ts.best_scoring Some((typemin(score),nothing))
+            if old_score < score
+                ts.best_scoring = Some((score, copy(tc.attempt)))
                 was_better = true
             end
         end
@@ -67,15 +68,15 @@ function test_function(ts::TestState, tc::TestCase)
         return (false, was_better)
 
     else
-        ts.test_is_trivial = isempty(tc.choices)
+        ts.test_is_trivial = isempty(tc.attempt.choices)
         ts.valid_test_cases += 1
 
         # Check for interestingness
         was_more_interesting = false
         if isnothing(threw) && (isnothing(ts.result) ||
-                length((@something ts.result).choices) > length(tc.choices) ||
-                (@something(ts.result).choices) > tc.choices)
-            ts.result = Some(Attempt(copy(tc.choices), tc.generation, tc.max_generation))
+                length((@something ts.result).choices) > length(tc.attempt.choices) ||
+                (@something(ts.result).choices) > tc.attempt.choices)
+            ts.result = Some(copy(tc.attempt))
             was_more_interesting = true
         end
 
@@ -83,8 +84,9 @@ function test_function(ts::TestState, tc::TestCase)
         was_better = false
         if !isnothing(tc.targeting_score)
             score = @something tc.targeting_score
-            if first(@something ts.best_scoring Some((typemin(score), UInt[]))) < score
-                ts.best_scoring = Some((score, Attempt(copy(tc.choices), tc.generation, tc.max_generation)))
+            old_score, attempt = @something ts.best_scoring Some((typemin(score), (;choices=UInt[])))
+            if old_score < score || (old_score == score && attempt.choices > tc.attempt.choices)
+                ts.best_scoring = Some((score, copy(tc.attempt)))
                 was_better = true
             end
         end
@@ -94,7 +96,7 @@ function test_function(ts::TestState, tc::TestCase)
             if !isnothing(threw)
                 err, trace = @something threw
                 len = find_user_stack_depth(trace)
-                ts.target_err = Some((err, trace, len, Attempt(copy(tc.choices), tc.generation, tc.max_generation)))
+                ts.target_err = Some((err, trace, len, copy(tc.attempt)))
                 return (true, true)
             end
         else # we already had an error - did we hit the same one?
@@ -116,9 +118,9 @@ function test_function(ts::TestState, tc::TestCase)
             was_more_interesting = true
             len = find_user_stack_depth(trace)
 
-            was_better |= len < old_len || (len == old_len && tc.choices < old_attempt.choices) || (applicable(err_less, err, old_err) && err_less(err, old_err))
+            was_better |= len < old_len || (len == old_len && tc.attempt.choices < old_attempt.choices) || (applicable(err_less, err, old_err) && err_less(err, old_err))
             if was_better
-                ts.target_err = Some((err, trace, len, Attempt(copy(tc.choices), tc.generation, tc.max_generation)))
+                ts.target_err = Some((err, trace, len, copy(tc.attempt)))
             end
         end
 

@@ -225,9 +225,9 @@ function Test.finish(sr::SuppositionReport)
     expect_broken = sr.config.broken
 
     if sr.config.verbose
-        print_results(sr, res)
+        print_results(sr)
     elseif !expect_broken && !(res isa Pass)
-        print_results(sr, res)
+        print_results(sr)
     elseif expect_broken && res isa Pass
         print_fix_broken(sr)
     end
@@ -235,11 +235,7 @@ function Test.finish(sr::SuppositionReport)
     # this is a failure, so record the result in the db
     if !(res isa Pass)
         ts = @something sr.final_state
-        attempt::Attempt = @something if res isa Error
-            err_choices(ts)
-        elseif res isa Fail
-            ts.result
-        else
+        attempt::Attempt = @something err_choices(ts) ts.result begin
             @warn "Unexpected result!" Res=res
             nothing
         end

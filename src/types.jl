@@ -14,6 +14,13 @@ A utility alias for `Union{Some{T}, Nothing}`.
 """
 const Option{T} = Union{Some{T}, Nothing}
 
+struct Attempt
+    choices::Vector{UInt64}
+    generation::UInt
+    max_generation::Int
+end
+Base.copy(attempt::Attempt) = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
+
 """
     TestCase
 
@@ -31,15 +38,13 @@ A struct representing a single (ongoing) test case.
 mutable struct TestCase{RNG <: Random.AbstractRNG}
     prefix::Vector{UInt64}
     const rng::RNG
-    const generation::UInt
-    const max_generation::Int
     max_size::UInt
-    choices::Vector{UInt64} # should this be a BitVector instead? could make shrinking slower, but save on memory
     targeting_score::Option{Float64}
+    attempt::Attempt
 end
 
 TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation, max_generation, max_size) =
-     TestCase(prefix, rng, convert(UInt, generation), convert(Int, max_generation), convert(UInt, max_size), UInt64[], nothing)
+     TestCase(prefix, rng, convert(UInt, max_size), nothing, Attempt(UInt64[], convert(UInt, generation), convert(Int, max_generation)))
 
 """
     ExampleDB
@@ -122,13 +127,6 @@ function merge(cc::CheckConfig; kws...)
     cfg = ( k => get(kws, k, getproperty(cc, k)) for k in propertynames(cc) )
     CheckConfig(;cfg...)
 end
-
-struct Attempt
-    choices::Vector{UInt64}
-    generation::UInt
-    max_generation::Int
-end
-Base.copy(attempt::Attempt) = Attempt(copy(attempt.choices), attempt.generation, attempt.max_generation)
 
 """
     TestState

@@ -330,13 +330,13 @@ function produce!(tc::TestCase, v::Vectors{T}) where T
     # if we don't we get Invalids even when we shouldn't
     max_offset = choice!(tc, v.max_size - v.min_size)
 
-    if tc.generation == tc.max_generation
+    if tc.attempt.generation == tc.attempt.max_generation
         # if we're on the last try (should that exist)
         # guarantee that we're able to draw the maximum permissible size
         average_offset = (v.max_size÷2 + v.min_size÷2) - v.min_size
     else
         # otherwise, get an average according to a beta distribution
-        raw_step = smootherstep(0.0, float(max(tc.max_generation÷2, 5_000)), tc.generation)
+        raw_step = smootherstep(0.0, float(max(tc.attempt.max_generation÷2, 5_000)), tc.attempt.generation)
         beta_param = lerp(0.5, 5.0, raw_step)
         average_offset = floor(UInt, max_offset*(beta_param/(beta_param+1.0)))
     end
