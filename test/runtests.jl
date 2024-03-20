@@ -547,6 +547,51 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
         end
 
+        @testset "event!" begin
+            @testset "With Failure" begin
+                sr = @check db=false record=false broken=true function isf16(f=Data.Floats{Float16}())
+                    event!("Number is", f)
+                    !(f isa Float16)
+                end
+                res = @something sr.result
+                events = res.events
+                @test res.example.f == only(events)[2]
+                @test only(events)[1] == "Number is"
+            end
+
+            @testset "With Error" begin
+                sr = @check db=false record=false broken=true function isi16(f=Data.Integers{Int16}())
+                    event!(f)
+                    f isa String || error("")
+                end
+                res = @something sr.result
+                events = res.events
+                @test res.example.f == only(events)[2]
+            end
+
+            @testset "With Pass" begin
+                sr = @check db=false record=false max_examples=10 function isi16(f=Data.Integers{Int16}())
+                    event!("Though shalt not record!")
+                    true
+                end
+                res = @something sr.result
+                @test isempty(res.events)
+            end
+
+            @testset "With Score" begin
+                sr = @check db=false record=false function isi16(f=Data.Integers{Int16}())
+                    event!("Though shalt not record!")
+                    target!(-f)
+                    true
+                end
+                res = @something sr.result
+                @test !isempty(res.events)
+                @test only(res.events)[2] == "Though shalt not record!"
+                @test @something(res.best).f == typemin(Int16)+1
+                @test @something(res.score) == typemax(Int16)
+            end
+        end
+
         @testset "targeting score" begin
             high = 0xaaaaaaaaaaaaaaaa # a reckless disregard for gravity
             @check verbose=verb function target_test(i=Data.Integers(zero(UInt),high))
