@@ -37,6 +37,7 @@ function builddocs(clear=false)
                 "Alignment of Documentation" => "Examples/docalignment.md",
                 "Targeted Operation" => "Examples/target.md",
                 "Stateful Testing" => "Examples/stateful.md",
+                "Events & Oracle testing" => "Examples/events.md",
             ],
             "PBT Resources" => "resources.md",
             "FAQ" => "faq.md",
