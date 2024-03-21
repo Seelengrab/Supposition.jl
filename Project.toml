@@ -1,7 +1,7 @@
 name = "Supposition"
 uuid = "5a0628fe-1738-4658-9b6d-0b7605a9755b"
 authors = ["Sukera <Seelengrab@users.noreply.github.com> and contributors"]
-version = "0.2.1"
+version = "0.3.0"
 
 [deps]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
