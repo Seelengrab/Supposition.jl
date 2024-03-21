@@ -39,6 +39,7 @@ Supposition.target!(::Float64)
 Supposition.assume!(::Bool)
 Supposition.produce!(::Data.Possibility)
 Supposition.reject!
+Supposition.event!
 Supposition.err_less
 Supposition.DEFAULT_CONFIG
 ```

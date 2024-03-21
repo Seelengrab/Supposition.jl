@@ -37,7 +37,7 @@ as well as these utility functions:
 module Data
 
 using Supposition
-using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!
+using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject
 using RequiredInterfaces: @required
 
 """

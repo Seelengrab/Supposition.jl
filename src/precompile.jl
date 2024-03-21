@@ -16,7 +16,7 @@ using PrecompileTools
         i isa Int
     end
     rejects(i::Int8) = begin
-        reject()
+        reject!()
         i isa Int
     end
     errors(_) = error()
