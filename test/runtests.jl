@@ -884,6 +884,20 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @check broken=true db=db max_examples=1 record=false randFail(intgen, Data.just(data_rng_6), Data.just(default_rng_6))
         @test data_rng_5[] == data_rng_6[]
         @test default_rng_5[] == default_rng_6[]
+
+        @testset "Ensure checking function also regenerates from RNG correctly" begin
+            vec = Data.Vectors(Data.Integers{UInt8}();min_size=5,max_size=5);
+            rngvec = map(vec) do v
+               v .= rand(UInt8, length(v))
+            end
+
+            sr = @check db=false record=false broken=true function third_is_not_five(v=rngvec)
+                event!("ACTUAL DATA", v)
+                v[3] != 5
+            end
+            @test @something(sr.result).example.v[3] == 5
+            @test @something(sr.result).example[1] == @something(sr.result).events[1][2]
+        end
     end
 
     @testset "Reporting behavior" begin
