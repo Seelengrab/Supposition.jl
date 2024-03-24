@@ -15,7 +15,7 @@ end
 A result indicating that a counterexample was found.
 """
 struct Fail <: Result
-    example
+    example::NamedTuple
     events::Vector{Pair{AbstractString,Any}}
     score::Option{Float64}
 end
@@ -26,7 +26,7 @@ end
 A result indicating that an error was encountered while generating or shrinking.
 """
 struct Error <: Result
-    example
+    example::NamedTuple
     events::Vector{Pair{AbstractString,Any}}
     exception::Exception
     trace
@@ -284,14 +284,14 @@ function print_results(sr::SuppositionReport, p::Pass)
 end
 
 function print_results(sr::SuppositionReport, e::Error)
-    @error "Property errored!" Description=sr.description Example=e.example exception=(e.exception, e.trace)
+    @error "Property errored!" Description=sr.description e.example... exception=(e.exception, e.trace)
 end
 
 function print_results(sr::SuppositionReport, f::Fail)
     if isnothing(f.score)
-        @error "Property doesn't hold!" Description=sr.description Example=f.example
+        @error "Property doesn't hold!" Description=sr.description f.example...
     else
-        @error "Property doesn't hold!" Description=sr.description Example=f.example Score=f.score
+        @error "Property doesn't hold!" Description=sr.description f.example... Score=f.score
     end
 end
 

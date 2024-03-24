@@ -271,9 +271,11 @@ function check_call(e::Expr, tsargs)
     gen_input = gensym(Symbol(name, :__geninput))
     run_input = gensym(Symbol(name, :__run))
 
-    args = Expr(:tuple)
-    for e in kwargs
-        push!(args.args, :($Data.produce!($tc, $e)))
+    params = Expr(:parameters)
+    args = Expr(:tuple, params)
+    for (i,e) in enumerate(kwargs)
+        argname = Symbol("arg_", i)
+        push!(params.args, Expr(:kw, argname, :($Data.produce!($tc, $e))))
     end
 
     pushfirst!(tsargs, :(record_base = string($namestr, $argtypes(Base.promote_op($gen_input, $TestCase)))))
