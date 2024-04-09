@@ -604,13 +604,19 @@ produce!(tc::TestCase, r::Recursive) = produce!(tc, r.inner)
 ## Possibility of Characters
 
 """
-    Characters(;valid::Bool = false) <: Possibility{Char}
+    Characters(;valid::Bool = false, malformed=true) <: Possibility{Char}
 
 A `Possibility` of producing arbitrary `Char` instances.
 
 !!! warning "Unicode"
     This will `produce!` ANY possible `Char` by default, not just valid unicode codepoints!
     To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
+    To produce well-formed (but not necessarily valid) unicode codepoints, pass `malformed=false`.
+
+Keyword arguments:
+
+ * `malformed`: Whether produced `Char` are allowed to be malformed. This only has an effect when `valid=false`.
+ * `valid`: Whether the produced `Char` must be valid, i.e. not malformed and not have Unicode category `Invalid`.
 
 ```julia-repl
 julia> using Supposition
@@ -628,7 +634,8 @@ julia> example(chars, 5)
 """
 struct Characters <: Possibility{Char}
     valid::Bool
-    Characters(; valid=false) = new(valid)
+    malformed::Bool
+    Characters(; valid=false, malformed=true) = new(valid, malformed)
 end
 
 function produce!(tc::TestCase, c::Characters)
@@ -636,6 +643,8 @@ function produce!(tc::TestCase, c::Characters)
     if c.valid
         sample = SampledFrom(typemin(Char):'\U0010ffff')
         s = filter(isvalid, sample)
+    elseif c.malformed
+        s = SampledFrom(typemin(Char):typemax(Char))
     else
         s = SampledFrom(typemin(Char):"\xf7\xbf\xbf\xbf"[1])
     end
