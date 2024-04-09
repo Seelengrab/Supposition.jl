@@ -604,12 +604,12 @@ produce!(tc::TestCase, r::Recursive) = produce!(tc, r.inner)
 ## Possibility of Characters
 
 """
-    Characters(;valid::Bool = false, malformed=true) <: Possibility{Char}
+    Characters(;valid::Bool = false, malformed = true) <: Possibility{Char}
 
 A `Possibility` of producing arbitrary `Char` instances.
 
 !!! warning "Unicode"
-    This will `produce!` ANY possible `Char` by default, not just valid unicode codepoints!
+    This will `produce!` ANY possible `Char` by default, not just valid or well-formed unicode codepoints!
     To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
     To produce well-formed (but not necessarily valid) unicode codepoints, pass `malformed=false`.
 
@@ -644,7 +644,9 @@ function produce!(tc::TestCase, c::Characters)
         sample = SampledFrom(typemin(Char):'\U0010ffff')
         s = filter(isvalid, sample)
     elseif c.malformed
-        s = SampledFrom(typemin(Char):typemax(Char))
+        s = map(Data.Integers{UInt32}()) do i
+            reinterpret(Char, i)
+        end
     else
         s = SampledFrom(typemin(Char):"\xf7\xbf\xbf\xbf"[1])
     end
