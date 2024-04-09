@@ -604,14 +604,13 @@ produce!(tc::TestCase, r::Recursive) = produce!(tc, r.inner)
 ## Possibility of Characters
 
 """
-    Characters(;valid::Bool = false, malformed = true) <: Possibility{Char}
+    Characters(;valid::Bool = false) <: Possibility{Char}
 
-A `Possibility` of producing arbitrary `Char` instances.
+A `Possibility` of producing arbitrary well-formed `Char` instances.
 
 !!! warning "Unicode"
-    This will `produce!` ANY possible `Char` by default, not just valid or well-formed unicode codepoints!
+    This will `produce!` ANY well-formed `Char` by default, not just valid unicode codepoints!
     To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
-    To produce well-formed (but not necessarily valid) unicode codepoints, pass `malformed=false`.
 
 Keyword arguments:
 
@@ -634,11 +633,56 @@ julia> example(chars, 5)
 """
 struct Characters <: Possibility{Char}
     valid::Bool
-    malformed::Bool
-    Characters(; valid=false, malformed=true) = new(valid, malformed)
+    Characters(; valid=false) = new(valid)
 end
 
 function produce!(tc::TestCase, c::Characters)
+    # Ref. https://github.com/JuliaLang/julia/issues/44741#issuecomment-1079083216
+    if c.valid
+        sample = SampledFrom(typemin(Char):'\U0010ffff')
+        s = filter(isvalid, sample)
+    else
+        s = SampledFrom(typemin(Char):"\xf7\xbf\xbf\xbf"[1])
+    end
+    produce!(tc, s)
+end
+
+"""
+    UnicodeChars(;valid::Bool = false, malformed = true) <: Possibility{Char}
+
+A `Possibility` of producing arbitrary `Char` instances.
+
+!!! warning "Unicode"
+    This will `produce!` ANY `Char` by default, not just valid or well-formed unicode codepoints!
+    To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
+    To produce well-formed unicode codepoints, pass `malformed=false` as a keyword argument.
+
+Keyword arguments:
+
+ * `malformed`: Whether produced `Char` are allowed to be malformed. This only has an effect when `valid=false`.
+ * `valid`: Whether the produced `Char` must be valid, i.e. not malformed and not have Unicode category `Invalid`.
+
+```julia-repl
+julia> using Supposition
+
+julia> chars = Data.UnicodeChars()
+
+julia> example(chars, 5)
+5-element Vector{Char}:
+ '\\xd2\\x5a\\x96\\x07': Malformed UTF-8 (category Ma: Malformed, bad data)
+ '\\x44\\x45\\xc5\\x64': Malformed UTF-8 (category Ma: Malformed, bad data)
+ '\\x04': Unicode U+0004 (category Cc: Other, control)
+ '\\x2b\\xe0\\x6a\\x89': Malformed UTF-8 (category Ma: Malformed, bad data)
+ '\\xf5\\x9b\\x63\\x05': Malformed UTF-8 (category Ma: Malformed, bad data)
+```
+"""
+struct UnicodeChars <: Possibility{Char}
+    valid::Bool
+    malformed::Bool
+    UnicodeChars(; valid=false, malformed=true) = new(valid, malformed)
+end
+
+function produce!(tc::TestCase, c::UnicodeChars)
     # Ref. https://github.com/JuliaLang/julia/issues/44741#issuecomment-1079083216
     if c.valid
         sample = SampledFrom(typemin(Char):'\U0010ffff')
