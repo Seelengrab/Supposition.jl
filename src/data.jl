@@ -13,7 +13,8 @@ These currently include:
  * [`Vectors`](@ref), for producing `Vector`s out of `Possibility`
  * [`Dicts`](@ref), for producing `Dict`s out of a `Possibility` for keys and one for values
  * [`AsciiCharacters`](@ref), for producing `Char`s that are `isascii`
- * [`Characters`](@ref), for producing all possible `Char`s, including all of Unicode
+ * [`Characters`](@ref), for producing all well-formed `Char`s, including invalid Unicode
+ * [`UnicodeChars`](@ref), for producing ALL `Char`s, including invalid and malformed Unicode
  * [`Text`](@ref), for producing `String`s from `Possibility{Char}`
  * [`SampledFrom`](@ref), for producing a value from a given collection
  * [`Satisfying`](@ref), for filtering the values a `Possibility` produces through a predicate
