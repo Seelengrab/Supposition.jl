@@ -193,7 +193,7 @@ macro check(args...)
         check_func(func, opts)
     elseif isexpr(func, :call)
         check_call(func, opts)
-    elseif isexpr(func, Symbol("->"))
+    elseif isexpr(func, Symbol("->")) | isexpr(func, Symbol("="), 2)
         func = anon_to_func(func)
         check_func(func, opts)
     else
@@ -421,7 +421,7 @@ ask_number = @composed my_func(text, num)
 """
 macro composed(e::Expr)
     isfunc = isexpr(e, :function, 2)
-    isanon = isexpr(e, Symbol("->"), 2)
+    isanon = isexpr(e, Symbol("->"), 2) | isexpr(e, Symbol("="), 2)
     iscall = isexpr(e, :call)
     (isfunc | isanon | iscall) || throw(ArgumentError("Given expression is not a call or an (anonymous) function definition!"))
 

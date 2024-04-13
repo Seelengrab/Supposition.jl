@@ -482,16 +482,21 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 preexisting = Data.Integers{Int8}()
                 @testset "Single Arg, No Comma" begin
                     @check (a=Data.Integers{Int8}()) -> a isa Int8
+                    @check (a=Data.Integers{Int16}()) = a isa Int16
                 end
                 @testset "Single Arg, With Comma" begin
                     @check (a=Data.Integers{Int8}(),) -> a isa Int8
+                    @check (a=Data.Integers{Int16}(),) = a isa Int16
                 end
                 @testset "Multi-Arg" begin
                     @check (a=Data.Integers{Int8}(),b=preexisting) -> a isa Int8 && b isa Int8
+                    @check (a=Data.Integers{Int16}(),b=preexisting) -> a isa Int16 && b isa Int8
                 end
                 @testset "Named Anonymous" begin
                     @check named_prop(a=Data.Integers{Int8}(),b=preexisting) -> a isa Integer && b isa Integer
                     @check named_prop(Data.Integers{Int8}(),preexisting)
+                    @check inlinedef(a=Data.Floats()) = a isa AbstractFloat
+                    @check inlinedef(Data.Floats{Float16}())
                 end
             end
         end
