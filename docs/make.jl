@@ -43,7 +43,8 @@ function builddocs(clear=false)
             "FAQ" => "faq.md",
             "Userfacing API" => "interfaces.md",
             "Benchmarks" => "benchmarks.md",
-            "API Reference" => "api.md"
+            "API Reference" => "api.md",
+            "Glossary" => "glossary.md"
         ]
     )
 end
