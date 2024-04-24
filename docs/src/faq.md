@@ -1,5 +1,28 @@
 # FAQ
 
+## [What exactly is "shrinking"?](@id faq_shrinking)
+
+At a very high level, "shrinking" refers to the (sometimes quite abstract) process of minimizing an input in some
+context-specific manner towards a "smaller" example. For instance, if we have a property that takes in a
+`Vector` and we have some `Vector` that makes the property fail, Supposition.jl will try to find a vector with fewer elements.
+Similarly, for `String`s Supposition.jl will try to find a string with fewer characters, as well as strings whose
+characters have smaller unicode codepoints. For a property that takes a number, Supposition.jl will try to find a smaller number,
+and so on for other types. The exact metric by which an example is considered to be smaller is highly dependent on how it's
+been generated, so it's hard to write that down generically.
+
+How this works internally so that different `Possibility` can be composed well while preserving shrinking behavior
+is a bit more complicated. Internally, Supposition.jl keeps track of all choices made while generating a value
+in a so called _choice sequence_, in the order they occured in. While shrinking, Supposition.jl tries to remove
+choices in that sequence and feeds that modified sequence back into the `Possibility` you're using to generate
+your input. If the `Possibility` you're using can use that modified choice sequence and don't reject it,
+they will produce a shrunk value. For example, by removing choices a `Data.Vectors` consumes fewer choices from the
+choice sequence, which will result in a `Vector` with fewer elements.
+
+How exactly the choices in the choice sequence are mapped to output elements is an implementation detail, specific
+to each `Possibility`. In this way, it's possible to define custom shrinking orders by defining custom `Possibility`
+subtypes. For example, you could write a `Possibility` for integers that tries to *grow* the integer numerically, instead of
+shrinking it towards zero.
+
 ## Why write a new package? What about PropCheck.jl?
 
 PropCheck.jl is based on the Haskell library Hedgehog, while Supposition.jl is based on Hypothesis.
