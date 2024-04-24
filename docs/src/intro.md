@@ -1,4 +1,4 @@
-# Introduction
+# [Introduction](@id pbt_intro)
 
 What follows is a short introduction to what Property Based Testing (PBT) is from my POV. This may not be exhaustive - if you want a more formal
 or deeper dive into this topic, I can greatly recommend [this](https://hypothesis.works/articles/what-is-property-based-testing/) article
@@ -22,7 +22,7 @@ Now that I have your attention, let's get started:
 ## What is Property Based Testing?
 
 Property Based Testing is the idea of checking the correctness of a function, algorithm or calculation against a number of desired properties that function
-should observe. Consider this function:
+should observe. Consider this example of a property, a function that returns a `Bool`:
 
 ```julia
 function foo(a::Int, b::Int)
@@ -32,6 +32,7 @@ function foo(a::Int, b::Int)
 end
 ```
 
+This is also called a [predicate function](https://stackoverflow.com/questions/3230944/what-does-predicate-mean-in-the-context-of-computer-science).
 From reading the source code as a user, we can see that
 
   1) `a` and `b` must be of type `Int`
@@ -71,8 +72,10 @@ advantage of being _much, much faster_ than checking all possible values. We tra
 values). If our sampling is good enough & representative of the actual data we'd usually expect, this can be a very good indicator for
 correctness on our input. The difficulty comes from the second point above - controlling the values we put in to a satisfying degree,
 as well as, once a failure is found, reducing it to something we humans can more easily use to pinpoint the uncovered bug, through a process
-called "shrinking". You can find the introductory explanations for how this works in the context of Supposition.jl in the [Basic Usage](@ref)
+called "shrinking". You can find the introductory explanations for how this is done in the context of Supposition.jl in the [Basic Usage](@ref)
 section of the examples.
+
+For more information about shrinking, see [What exactly is "shrinking"?](@ref faq_shrinking).
 
 ## Julia specific nuances
 
