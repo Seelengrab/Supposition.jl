@@ -28,8 +28,8 @@ Supposition.@composed
 ## API for controlling fuzzing
 
 These functions are intended for usage while testing, having various effects
-on the shrinking/fuzzing process. They are not intended to be part
-of a codebase permanently/in production.
+on either the shrinking or fuzzing process. They are not intended to be part
+of a codebase permanently or remain active while deployed in production.
 
 The trailing exclamation mark serves as a reminder that this will, under
 the hood, modify the currently running testcase.
