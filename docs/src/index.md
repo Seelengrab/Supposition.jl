@@ -1,7 +1,7 @@
 # Supposition.jl Documentation
 
 This is the documentation for *Supposition.jl*, a property based testing framework inspired by
-[Hypothesis]().
+[Hypothesis](https://hypothesis.readthedocs.io/en/latest/).
 
 It features choice-sequence based generation & shrinking of examples, which can smartly shrink
 initial failures to smaller example while preserving the invariants the original input was generated
