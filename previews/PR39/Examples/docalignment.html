@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Alignment of Documentation · Supposition.jl Documentation</title><meta name="title" content="Alignment of Documentation · Supposition.jl Documentation"/><meta property="og:title" content="Alignment of Documentation · Supposition.jl Documentation"/><meta property="twitter:title" content="Alignment of Documentation · Supposition.jl Documentation"/><meta name="description" content="Documentation for Supposition.jl Documentation."/><meta property="og:description" content="Documentation for Supposition.jl Documentation."/><meta property="twitter:description" content="Documentation for Supposition.jl Documentation."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">Supposition.jl Documentation</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Main Page</a></li><li><a class="tocitem" href="../intro.html">Introduction to PBT</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="basic.html">Basic Usage</a></li><li><a class="tocitem" href="composition.html">Composing Generators</a></li><li><a class="tocitem" href="recursive.html">Recursive Generation</a></li><li class="is-active"><a class="tocitem" href="docalignment.html">Alignment of Documentation</a><ul class="internal"><li><a class="tocitem" href="#Does-it-error?"><span>Does it error?</span></a></li><li><a class="tocitem" href="#Docstring-guarantees-of-single-functions"><span>Docstring guarantees of single functions</span></a></li><li><a class="tocitem" href="#Interactions-between-functions"><span>Interactions between functions</span></a></li></ul></li><li><a class="tocitem" href="target.html">Targeted Operation</a></li><li><a class="tocitem" href="stateful.html">Stateful Testing</a></li><li><a class="tocitem" href="events.html">Events &amp; Oracle testing</a></li></ul></li><li><a class="tocitem" href="../resources.html">PBT Resources</a></li><li><a class="tocitem" href="../faq.html">FAQ</a></li><li><a class="tocitem" href="../interfaces.html">Userfacing API</a></li><li><a class="tocitem" href="../benchmarks.html">Benchmarks</a></li><li><a class="tocitem" href="../api.html">API Reference</a></li><li><a class="tocitem" href="../glossary.html">Glossary</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href="docalignment.html">Alignment of Documentation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="docalignment.html">Alignment of Documentation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Seelengrab/Supposition.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Seelengrab/Supposition.jl/blob/main/docs/src/Examples/docalignment.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Aligning-Behavior-and-Documentation"><a class="docs-heading-anchor" href="#Aligning-Behavior-and-Documentation">Aligning Behavior &amp; Documentation</a><a id="Aligning-Behavior-and-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#Aligning-Behavior-and-Documentation" title="Permalink"></a></h1><p>When it comes to property based testing, the question &quot;but how/what should I start testing?&quot; quickly arises. After all, a documented &amp; tested code base should already have matching documentation &amp; implementation!</p><p>In reality, this is often not the case. Docstrings can bitrot when performance optimizations or bugfixes subtly change the semantics of a function, generic functions often can&#39;t easily write out all conditions a passed-in function must follow and large code bases are often so overwhelmingly full of possible invocations that the task to check for conformance with each and every single docstring can be much too daunting, to say the least.</p><p>There is a silver lining though - there are a number of simple checks a developer can use to directly &amp; measurably improve not only the docstring of a function, but code coverage of a testsuite.</p><h2 id="Does-it-error?"><a class="docs-heading-anchor" href="#Does-it-error?">Does it error?</a><a id="Does-it-error?-1"></a><a class="docs-heading-anchor-permalink" href="#Does-it-error?" title="Permalink"></a></h2><p>The simplest property one can test is very straightforward: On any given input, does the function error? In theory, this is something that any docstring should be able to precisely answer - under which conditions is the function expected to error? The use of Supposition.jl helps in confirming that the function <em>only</em> errors under those conditions.</p><p>Take for example this function and its associated docstring:</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+    sincosd(x)
+
+Simultaneously compute the sine and cosine of x, where x is in degrees.
+
+!!! compat &quot;Julia 1.3&quot;
+    This function requires at least Julia 1.3.
+&quot;&quot;&quot;
+sincosd</code></pre><p><code>sincosd</code> is a function from Base Julia - I don&#39;t mean to pick on it, but it serves as a good example (and I also have <a href="https://github.com/JuliaLang/julia/pull/50855">an open PR</a> to improve this very docstring!).</p><p>As written, we don&#39;t really know a whole lot about <code>sincosd</code>, other than that it computes both <code>sin</code> and <code>cosin</code> in some simultaneous fashion and interprets whatever we give it in degrees. In particular, there is no mention of what types and instances of those types are expected to work at all, and no indication of when or even if the function can throw an error. Nevertheless, it does:</p><pre><code class="language-julia-repl hljs">julia&gt; sincosd(Inf)
+ERROR: DomainError with Inf:
+`x` cannot be infinite.
+Stacktrace:
+ [1] sind(x::Float64)
+   @ Base.Math ./special/trig.jl:1185
+ [2] sincosd(x::Float64)
+   @ Base.Math ./special/trig.jl:1250
+ [3] top-level scope
+   @ REPL[3]:1
+
+julia&gt; sincosd(&quot;Inf&quot;)
+ERROR: MethodError: no method matching deg2rad(::String)
+
+Closest candidates are:
+  deg2rad(::AbstractFloat)
+   @ Base math.jl:346
+  deg2rad(::Real)
+   @ Base math.jl:348
+  deg2rad(::Number)
+   @ Base math.jl:350
+
+Stacktrace:
+  [...]</code></pre><p>So at the very least, due to its dependence on <code>deg2rad</code>, <code>sincosd</code> expects a &quot;number-like&quot; object, not a <code>String</code>. At the same time, not all &quot;number-like&quot; objects are accepted either. It may be obvious to a mathematician or to a developer who regularly uses <code>sin</code> that <code>Inf</code> can&#39;t possibly be a valid input, but that is not necessarily obvious to someone just starting out with using trigonometric functions. It may be entirely reasonable that <code>sin</code> returns <code>NaN</code> on an <code>Inf</code> input, to signal to a user that there is no number that can represent the result of that call! For a developer, that is a huge difference in error checking behavior - one case can be a quick <code>if isnan(sin(z))</code> check, while the other requires a costly <code>try</code>/<code>catch</code>. For this reason, it&#39;s very important to be accurate in documentation about what kinds of inputs are valid and clearly specify what happens when &amp; why things go wrong, and not just think of the &quot;happy path&quot;.</p><p>So an improved version of this docstring might look like so:</p><pre><code class="language-patch hljs">  &quot;&quot;&quot;
+      sincosd(x::Number)
+
+  Simultaneously compute the sine and cosine of x, where x is in degrees.
++
++ Throws a `DomainError` if `isinf(x)` is `true`.
+
+  !!! compat &quot;Julia 1.3&quot;
+      This function requires at least Julia 1.3.
+  &quot;&quot;&quot;
+  sincosd</code></pre><p>By adding the <code>::Number</code> type restriction to the argument <code>x</code>, we clearly communicate what kind of object we expect to work on <code>sincosd</code>. If other user-defined types have their own implementation of <code>sincosd</code>, they should have their own docstrings specifying the peculiarities of their implementation on their own types.</p><p>We&#39;ve checked some simple examples through knowing special values of <code>Float64</code>, but are there any other special values we should know about? Let&#39;s use Supposition.jl to define the simplest possible test that tries all kinds of different <code>Float64</code> inputs:</p><pre><code class="language-julia hljs">using Supposition
+
+@check function sincosd_float64(f=Data.Floats{Float64}())
+   try
+       return sincosd(f) isa Tuple{Float64, Float64}
+   catch e
+       e isa DomainError &amp;&amp; isinf(f) &amp;&amp; return true
+       rethrow()
+   end
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Test Summary:   | Pass  Total  Time
+sincosd_float64 |    1      1  0.1s</code></pre><p>We first define our data generator, in this case sampling from all possible <code>Float64</code> values (including all <code>NaN</code>s and <code>Inf</code>s!). For each value, we try to call <code>sincosd</code> and check whether it returns two <code>Float64</code> values. In case an error occurs, we can check whether the error is a <code>DomainError</code> and the input was an infinity. If so, the property holds; if not, we simply rethrow the error. Supposition.jl will take the thrown error as a signal that something has gone wrong, and try to shrink the input to the minimal example that reproduces the same error.</p><p>Looking at that test, there&#39;s another assumption that we should document: <code>sincosd</code> returns a tuple! The companion function <code>sincos</code> (differing from <code>sincosd</code> insofar as it takes its argument in radians, not degrees) does document this, so we should match that documentation here too:</p><pre><code class="language-patch hljs">  &quot;&quot;&quot;
+      sincosd(x::Number)
+
+- Simultaneously compute the sine and cosine of x, where x is in degrees.
++ Simultaneously compute the sine and cosine of x, where x is in degrees,
++ returning a tuple (sine, cosine).
+
+  Throws a `DomainError` if `isinf(x)` is `true`.
+
+  !!! compat &quot;Julia 1.3&quot;
+      This function requires at least Julia 1.3.
+  &quot;&quot;&quot;
+  sincosd</code></pre><p>This is especially important because of the order the sine and cosine are returned in. If this isn&#39;t documented, users can only assume which returned number is which trigonometric result, and without actually checking, they have no way to confirm that behavior, which we will get to in the next subchapter.</p><p>Now that we&#39;ve followed an example, let&#39;s reflect on what even simple &quot;does it error?&quot; style tests can do. At the end of this process, a developer should now have</p><ul><li>a clear understanding of when the tested function errors,</li><li>knowledge about the requirements a function has so that it can be called without error,  ready to be added to the documentation of the function,</li><li>ready-made tests that can be integrated into a testsuite running in CI,</li><li>potentially found &amp; fixed (or tracked on an issue tracker) a few bugs that were found during testing.</li></ul><p>all of which should help a user make an informed choice in how they use e.g. <code>sincosd</code>, as well as inform a developer about a deviation in expected behavior.</p><h2 id="Docstring-guarantees-of-single-functions"><a class="docs-heading-anchor" href="#Docstring-guarantees-of-single-functions">Docstring guarantees of single functions</a><a id="Docstring-guarantees-of-single-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Docstring-guarantees-of-single-functions" title="Permalink"></a></h2><p>The next level up from error checks is checking requirements &amp; guarantees on valid input, i.e. the input that is not expected to error but must nonetheless conform to some specification. Once we can generate such a valid input, we can check that the output of the function actually behaves as we expect it to.</p><p>Continuing on from the <code>sincosd</code> example from above, let&#39;s start out with a generator for all non-throwing <code>Float64</code>. Since there are just a few of these, we can <code>filter</code> them out easily, without having to worry about rejecting too many samples:</p><pre><code class="language-julia hljs">using Supposition
+
+non_throw_sincos = filter(!isinf, Data.Floats{Float64}())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Supposition.Data.Satisfying{Float64, Supposition.Data.Floats{Float64}, ComposedFunction{typeof(!), typeof(isinf)}}(Supposition.Data.Floats{Float64}(true, true), !isinf)</code></pre><p>Now let&#39;s think about what we&#39;d like <code>sin</code> and <code>cos</code> to obey. For starters, we could use some mathematical identities:</p><pre><code class="language-julia hljs">@check function pythagorean_identity(degrees=non_throw_sincos)
+  s, c = sincosd(degrees)
+  (s^2 + c^2) == one(s)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Error: Property doesn&#39;t hold!
+│   Description = &quot;pythagorean_identity&quot;
+│   Example = (degrees = NaN,)
+└ @ Supposition ~/work/Supposition.jl/Supposition.jl/src/testset.jl:292
+Test Summary:        | Fail  Total  Time
+pythagorean_identity |    1      1  0.0s</code></pre><p>Right away, we can find a very easy counterexample - <code>NaN</code>! Not to worry, we can simply amend the docstring to mention this too:</p><pre><code class="language-patch hljs">  &quot;&quot;&quot;
+      sincosd(x::Number)
+
+  Simultaneously compute the sine and cosine of x, where x is in degrees,
+  returning a tuple (sine, cosine).
+
+  Throws a `DomainError` if `isinf(x)` is `true`.
++
++ If `isnan(x)`, return a 2-tuple of `NaN` of type `typeof(x)`.
+
+  !!! compat &quot;Julia 1.3&quot;
+      This function requires at least Julia 1.3.
+  &quot;&quot;&quot;
+  sincosd</code></pre><p>and try again, this time with <code>NaN</code> values filtered out too:</p><pre><code class="language-julia hljs">pure_float = filter(Data.Floats{Float64}()) do f
+    !(isinf(f) || isnan(f))
+end
+@check pythagorean_identity(pure_float)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Test Summary:        | Pass  Total  Time
+pythagorean_identity |    1      1  0.1s</code></pre><p>The property holds! Very nice. What other properties do we have? Wikipedia <a href="https://en.wikipedia.org/wiki/List_of_trigonometric_identities">maintains a list</a>, so we just have to pick and choose some that are to our liking.</p><p>For example, there&#39;s these:</p><p class="math-container">\[sin(\alpha \pm \beta) = sin(\alpha)cos(\beta) \pm cos(\alpha)sin(\beta) \\
+cos(\alpha \pm \beta) = cos(\alpha)cos(\beta) \pm sin(\alpha)sin(\beta) \\
+sin(2\theta) = 2sin(\theta)cos(\theta) = (sin(\theta) + cos(\theta))^2 \\
+cos(2\theta) = cos^2(\theta) - sin^2(\theta) = 2cos^2(\theta)-1 = 1-2sin^2(\theta)\]</p><p>and lots more - there&#39;s just one problem: due to floating point addition not being associative, almost none of these are numerically stable:</p><pre><code class="language-julia hljs">using Test
+
+@testset &quot;offset identity&quot; begin
+    @check function sin_offset(a=pure_float, b=pure_float)
+        sin_a, cos_a = sincosd(a)
+        sin_b, cos_b = sincosd(b)
+        sind(a+b) == sin_a*cos_b + cos_a*sin_b
+    end
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Error: Property doesn&#39;t hold!
+│   Description = &quot;sin_offset&quot;
+│   Example = (a = 1.43e-322, b = -5.644667401231204e179)
+└ @ Supposition ~/work/Supposition.jl/Supposition.jl/src/testset.jl:292
+Test Summary:   |Time
+offset identity | None  0.1s</code></pre><p>We have to make do with a subset of all properties then, such as &quot;the output of <code>sincos</code> should <code>==</code> the outputs of <code>sin</code> and <code>cos</code> on their own&quot;, or properties that avoid addition &amp; subtraction.</p><pre><code class="language-julia hljs">@testset &quot;sincos properties&quot; begin
+@check function sincos_same(theta=pure_float)
+    s, c = sincosd(theta)
+    s == sind(theta) &amp;&amp; c == cosd(theta)
+end
+@check function twice_sin(theta=pure_float)
+    s, c = sincosd(theta)
+    twice_theta = 2*theta
+    assume!(!isinf(twice_theta))
+    isapprox(sind(twice_theta), 2*s*c)
+end
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Test Summary:     |Time
+sincos properties | None  0.1s</code></pre><p>These somewhat milder properties seem to pass, nice!</p><p>Note how we have to make use of <a href="../api.html#Supposition.assume!-Tuple{Bool}-api"><code>assume!</code></a> to not have <code>sin</code> error out with a <code>DomainError</code> too! This indicates that there are situations where <code>sincos</code> &amp; the longer form of <code>sin</code> is preferable to the real thing. I&#39;m unsure whether that should be noted in a docstring of <code>sincos</code> (this seems more appropriate for a computer numerics course), but it&#39;s a good example of how a developer can learn about the properties &amp; tradeoffs a function can have compared to its counterparts. Perhaps a warning like the following would be best:</p><pre><code class="language-patch hljs">  &quot;&quot;&quot;
+      sincosd(x::Number)
+
+  Simultaneously compute the sine and cosine of x, where x is in degrees,
+  returning a tuple (sine, cosine).
+
+  Throws a `DomainError` if `isinf(x)` is `true`.
+
+  If `isnan(x)`, return a 2-tuple of `NaN` of type `typeof(x)`.
++
++ !!! warning &quot;Numerical Stability&quot;
++     Due to floating point addition not being associative, not all
++     trigonometric identies can hold for all inputs. Choose carefully
++     and consider the operation you&#39;re doing when using trigonometric
++     identities to transform your code.
+
+  !!! compat &quot;Julia 1.3&quot;
+      This function requires at least Julia 1.3.
+  &quot;&quot;&quot;
+  sincosd</code></pre><p>We&#39;ve now not only documented the erroring behavior of <code>sincosd</code>, but also special values and their special behavior. In the process we&#39;ve also found that for this particular function, not everything we might expect actually can hold true in general - and documenting that has good chances to be a helpful improvement for anyone stumbling over trigonometric functions for the first time (in the long run, most developers are newbies; experts are rare!)</p><p>At the end of this process, a developer should now have</p><ul><li>a better understanding of the guarantees a function gives,</li><li>some behavioral tests of a function, ready to be integrated into a testsuite running in CI,</li><li>a clear understanding that care must be taken when talking about what a computer ought to compute &quot;correctly&quot;.</li></ul><p>Of course, there could be numerous other properties we&#39;d like to test. For example, we may want to confirm that the output of <code>sincos</code> is always a 2-Tuple, or that if the input was non-<code>NaN</code>, the output values are in the closed interval <code>[-1, 1]</code>, or that the output values are evenly distributed in that interval (up to a point - this is surprisingly difficult to do for large inputs!)</p><h2 id="Interactions-between-functions"><a class="docs-heading-anchor" href="#Interactions-between-functions">Interactions between functions</a><a id="Interactions-between-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Interactions-between-functions" title="Permalink"></a></h2><p>Once the general knowledge about single functions has been expanded and appropriately documented, it&#39;s time to ask the bigger question - how do these functions interact, and do they interact in a way that a developer would expect them to? Since this is more involved, I&#39;ve dedicated an entire section to this: <a href="stateful.html#Stateful-Testing">Stateful Testing</a>.</p><p>These three sections present a natural progression from writing your first test with Supposition.jl, over documenting guarantees of single functions to finally investigating interactions between functions and the effect they have on the datastructures of day-to-day use.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="recursive.html">« Recursive Generation</a><a class="docs-footer-nextpage" href="target.html">Targeted Operation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Wednesday 24 April 2024 15:52">Wednesday 24 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
