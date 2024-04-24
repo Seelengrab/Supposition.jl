@@ -8,7 +8,7 @@ frameworks.
 ### Generator
 
 A generator in the context of Supposition.jl is any object capable of producing objects
-by following the interface required by [`Possibility`](@ref).
+by following the interface required by [`Data.Possibility`](@ref).
 
 ### Choice Sequence
 
@@ -18,7 +18,7 @@ be made. For an `Int32`, it's 32 individual choices and so on for other number t
 For composite types, the recorded choices are an aggregate of the choices required for composition,
 as well as the choices of each individual object the composite type will be created out of.
 
-Some [`Possibility`](@ref), such as [`Data.Just`](@ref), don't require any choices to be made, since
+Some [`Data.Possibility`](@ref), such as [`Data.Just`](@ref), don't require any choices to be made, since
 they always produce the same value.
 
 As an example, generating a value from `Data.Integers(0x0, 0xf)` may lead to this choice sequence:
@@ -61,7 +61,7 @@ program, analysis of the output stream or detected segmentation faults.
 ### Structured Fuzzing
 
 Most programs operate on more than just random streams of bytes and require some structure to their input.
-In the context of Supposition.jl this means composing various [`Possibility`](@ref) into more complex
+In the context of Supposition.jl this means composing various [`Data.Possibility`](@ref) into more complex
 generators, which "stacks" the guarantees provided on the produced output. By producing more complex
 objects, the "stream of random bytes" effectively gains more structure, reducing the number of rejections
 due to trivially rejectable input.
