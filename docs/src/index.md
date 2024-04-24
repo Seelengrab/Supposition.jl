@@ -7,7 +7,26 @@ It features choice-sequence based generation & shrinking of examples, which can 
 initial failures to smaller example while preserving the invariants the original input was generated
 under. It's also easy to combine generators into new generators.
 
-Check out the Examples in the sidebar to get an introduction to property based testing and to learn how to write your own tests!
+Regular unit testing can be viewed as a sequence of
+
+ 1. First, set up some data
+ 2. Manipulate the data in some way
+ 3. Assert something about the result (e.g. equality with an expected output)
+
+while Supposition.jl treats this flow like
+
+ 1. Generate a random (valid) input
+ 2. Manipulate that input in some way
+ 3. Assert something about the result and/or check that some property holds
+
+This is often called property based testing (PBT). For more information about why you may want to
+test your library in this way, have a look at [the introduction to PBT](@ref pbt_intro).
+
+In addition to providing facilities for generating random input, Supposition.jl also tries
+to simplify any found inputs to make them easier to handle when debugging the failure.
+
+For specific useage example of Supposition.jl, give the `Examples` in the sidebar a look! They contain common
+PBT patterns that can often generalize.
 
 Here's also a sitemap for the rest of the documentation:
 
