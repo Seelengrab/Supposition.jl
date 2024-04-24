@@ -87,11 +87,22 @@ Generating a sequence of operations is simply generating a vector from all possi
 our property. We declare that for all sequences of operations we can do with a `Jug`, all invariants we expect
 must hold true.
 
+!!! tip "Invariants & Properties"
+    So far, we've only seen properties (i.e., predicate functions that return a `Bool`) that we'd
+    like to test with `@check`. Here, we use an [invariant](https://en.wikipedia.org/wiki/Invariant_(mathematics)),
+    which is a predicate function that must *always* be `true` for all inputs, no matter what we do with that
+    input. If we can ever find an input where the invariant isn't `true`, we have found a
+    counterexample for the overall property!
+
 Speaking of invariants, we need three of them that must be preserved at all times:
 
   1) The small jug must ALWAYS have a fill level between 0 and 3 (inclusive).
   2) The large jug must ALWAYS have a fill level between 0 and 5 (inclusive).
   3) The large just must NEVER have a fill level of exactly 4.
+
+The first two predicates are a result of the problem statement, which defines that we have two jugs of different
+sizes with some fill level. The upper bound is from either being large or small, and the lower bound of `0` is from
+not being able to have a negative fill level.
 
 The last invariant may look a bit odd, but remember that Supposition.jl is trying to find a _falsifying_ example.
 The first two invariants are sanity checks to make sure that our pouring functions are well behaved; the last
