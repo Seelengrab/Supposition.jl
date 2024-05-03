@@ -14,7 +14,7 @@ These currently include:
  * [`Dicts`](@ref), for producing `Dict`s out of a `Possibility` for keys and one for values
  * [`AsciiCharacters`](@ref), for producing `Char`s that are `isascii`
  * [`Characters`](@ref), for producing all well-formed `Char`s, including invalid Unicode
- * [`UnicodeChars`](@ref), for producing ALL `Char`s, including invalid and malformed Unicode
+ * [`UnicodeCharacters`](@ref), for producing ALL `Char`s, including invalid and malformed Unicode
  * [`Text`](@ref), for producing `String`s from `Possibility{Char}`
  * [`SampledFrom`](@ref), for producing a value from a given collection
  * [`Satisfying`](@ref), for filtering the values a `Possibility` produces through a predicate
@@ -648,7 +648,7 @@ function produce!(tc::TestCase, c::Characters)
 end
 
 """
-    UnicodeChars(;valid::Bool = false, malformed = true) <: Possibility{Char}
+    UnicodeCharacters(;valid::Bool = false, malformed = true) <: Possibility{Char}
 
 A `Possibility` of producing arbitrary `Char` instances.
 
@@ -665,7 +665,7 @@ Keyword arguments:
 ```julia-repl
 julia> using Supposition
 
-julia> chars = Data.UnicodeChars()
+julia> chars = Data.UnicodeCharacters()
 
 julia> example(chars, 5)
 5-element Vector{Char}:
@@ -676,13 +676,13 @@ julia> example(chars, 5)
  '\\xf5\\x9b\\x63\\x05': Malformed UTF-8 (category Ma: Malformed, bad data)
 ```
 """
-struct UnicodeChars <: Possibility{Char}
+struct UnicodeCharacters <: Possibility{Char}
     valid::Bool
     malformed::Bool
-    UnicodeChars(; valid=false, malformed=true) = new(valid, malformed)
+    UnicodeCharacters(; valid=false, malformed=true) = new(valid, malformed)
 end
 
-function produce!(tc::TestCase, c::UnicodeChars)
+function produce!(tc::TestCase, c::UnicodeCharacters)
     # Ref. https://github.com/JuliaLang/julia/issues/44741#issuecomment-1079083216
     if c.valid
         sample = SampledFrom(typemin(Char):'\U0010ffff')

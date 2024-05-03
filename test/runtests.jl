@@ -1069,6 +1069,6 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @check ascii_allascii(c=Data.AsciiCharacters()) -> isascii(c)
         @check chars_nonmalformed(c=Data.Characters()) -> !Base.ismalformed(c)
         # There isn't anything left to check for here
-        @check allascii(c=Data.UnicodeChars()) -> c isa Char
+        @check allascii(c=Data.UnicodeCharacters()) -> c isa Char
     end
 end
