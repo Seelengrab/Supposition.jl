@@ -332,14 +332,13 @@ Supposition.jl not only delivers a result, but does so in record time:
 ```julia-repl
 julia> intgen = Data.Vectors(Data.Integers{Int}(); min_size=1000, max_size=1000);
 
-julia> @time @check db=false isempty(intgen);
-┌ Error: Property doesn't hold!
-│   Description = "isempty"
-│   Example = ([-9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808  …  -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808, -9223372036854775808],)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
-Test Summary: | Fail  Total
-isempty       |    1      1
-  0.404841 seconds (555.13 k allocations: 657.688 MiB, 5.12% gc time, 4.09% compilation time: 2% of which was recompilation)
+julia> @time @check db=false isempty(intgen)
+  0.429625 seconds (567.42 k allocations: 657.697 MiB, 8.21% gc time, 1.27% compilation time: 5% of which was recompilation)
+Found counterexample
+  Context: isempty
+
+  Arguments:
+      arg_1::Vector{Int64} = [-9223372036854775808, -9223372036854775808, ...
 ```
 
 ### Floats
@@ -349,14 +348,13 @@ Supposition.jl:
 ```julia-repl
 julia> floatgen = Data.Vectors(Data.Floats{Float64}(); min_size=1000, max_size=1000);
 
-julia> @time @check db=false isempty(floatgen);
-┌ Error: Property doesn't hold!
-│   Description = "isempty"
-│   Example = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0  …  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
-Test Summary: | Fail  Total
-isempty       |    1      1
-  0.394480 seconds (535.17 k allocations: 656.722 MiB, 5.65% gc time, 1.20% compilation time: 5% of which was recompilation)
+julia> @time @check db=false isempty(floatgen)
+  0.442064 seconds (567.42 k allocations: 657.697 MiB, 7.51% gc time, 1.25% compilation time: 5% of which was recompilation)
+Found counterexample
+  Context: isempty
+
+  Arguments:
+      arg_1::Vector{Float64} = [0.0, 0.0, 0.0, 0.0, ...
 ```
 
 ### Strings
@@ -366,14 +364,13 @@ Supposition.jl:
 ```julia-repl
 julia> strgen = Data.Text(Data.Characters(); min_len=1000, max_len=1000);
 
-julia> @time @check db=false isempty(strgen);
-┌ Error: Property doesn't hold!
-│   Description = "isempty"
-│   Example = ("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
-Test Summary: | Fail  Total
-isempty       |    1      1
-  0.564029 seconds (548.62 k allocations: 592.570 MiB, 3.27% gc time, 0.77% compilation time: 4% of which was recompilation)
+julia> @time @check db=false isempty(strgen)
+  0.687378 seconds (647.30 k allocations: 596.830 MiB, 4.61% gc time, 7.56% compilation time: 8% of which was recompilation)
+Found counterexample
+  Context: isempty
+
+  Arguments:
+      arg_1::String = "\0\0\0\0\0\0\0\0\0...
 ```
 
 ### Map
@@ -383,14 +380,13 @@ Supposition.jl:
 ```julia-repl
 julia> mapgen = Data.Vectors(map(x -> 2x, Data.Integers{Int}()); min_size=1000, max_size=1000);
 
-julia> @time @check db=false isempty(mapgen);
-┌ Error: Property doesn't hold!
-│   Description = "isempty"
-│   Example = ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0  …  0, 0, 0, 0, 0, 0, 0, 0, 0, 0],)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
-Test Summary: | Fail  Total
-isempty       |    1      1
-  0.408549 seconds (557.02 k allocations: 657.772 MiB, 5.49% gc time, 4.99% compilation time: <1% of which was recompilation)
+julia> @time @check db=false isempty(mapgen)
+  0.427833 seconds (587.02 k allocations: 658.673 MiB, 7.52% gc time, 3.96% compilation time: 2% of which was recompilation)
+Found counterexample
+  Context: isempty
+
+  Arguments:
+      arg_1::Vector{Int64} = [0, 0, 0, 0, ...
 ```
 
 ### Filter
@@ -400,14 +396,13 @@ Supposition.jl:
 ```julia-repl
 julia> oddgen = Data.Vectors(filter(isodd, map(x -> 2x+1, Data.Integers{Int}())); min_size=1000, max_size=1000);
 
-julia> @time @check db=false isempty(oddgen);
-┌ Error: Property doesn't hold!
-│   Description = "isempty"
-│   Example = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1  …  1, 1, 1, 1, 1, 1, 1, 1, 1, 1],)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:280
-Test Summary: | Fail  Total
-isempty       |    1      1
-  0.412517 seconds (562.41 k allocations: 658.063 MiB, 5.59% gc time, 4.44% compilation time: 2% of which was recompilation)
+julia> @time @check db=false isempty(oddgen)
+  0.437623 seconds (591.93 k allocations: 658.920 MiB, 7.50% gc time, 4.13% compilation time: 2% of which was recompilation)
+Found counterexample
+  Context: isempty
+
+  Arguments:
+      arg_1::Vector{Int64} = [1, 1, 1, 1, 1, ...
 ```
 
 ## Conclusion
