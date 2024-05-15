@@ -40,6 +40,8 @@ module Data
 using Supposition
 using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject
 using RequiredInterfaces: @required
+using StyledStrings: @styled_str
+using Printf: format, @format_str
 
 """
     Possibility{T}
@@ -60,6 +62,8 @@ abstract type Possibility{T} end
 
 @required Possibility begin
     produce!(::TestCase, ::Possibility)
+    Base.show(::IO, ::Possibility)
+    Base.show(::IO, ::MIME"text/plain", ::Possibility)
 end
 
 """
@@ -132,6 +136,32 @@ struct Map{R, S <: Possibility, F} <: Possibility{R}
     Map(s::S, f::F) where {T, S <: Possibility{T}, F} = new{Base.promote_op(f, T), S, F}(s, f)
 end
 
+function Base.show(io::IO, m::Map)
+    print(io, Map, "(")
+    show(io, m.source)
+    print(io, ", ")
+    show(io, m.map)
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::Map)
+    obj = example(m.source)
+    res = m.map(obj)
+    func_str = string(m.map)
+    padding = textwidth(func_str)+1
+    print(io, styled"""
+    {code,underline:$Map}:
+
+        Map {code:$(m.map)}.
+
+        $(" "^padding)╭── {code:$(postype(m.source))} from {code:$(m.source)}
+        {code:$func_str(x) -> $(postype(m))}
+        $(" "^(padding+6))╰─ Result type
+
+    E.g. {code:$(m.map)($obj) == $res}""")
+end
+
 """
     map(f, pos::Possibility)
 
@@ -168,6 +198,28 @@ struct Satisfying{T, S <: Possibility{T}, P} <: Possibility{T}
     function Satisfying(s::S, pred::P) where {T, S <: Possibility{T}, P}
         new{T,S,P}(s, pred)
     end
+end
+
+function Base.show(io::IO, s::Satisfying)
+    print(io, Satisfying, "(")
+    show(io, s.source)
+    print(io, ", ")
+    show(io, s.predicate)
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", s::Satisfying)
+    obj = example(s.source)
+    fulfill_pred = s.predicate(obj)
+    isval = fulfill_pred ? styled"{green:✔}" : styled"{red:❌}"
+    pred_descr = fulfill_pred ? "fulfills the predicate" : "is rejected by the predicate"
+    print(io, styled"""
+    {code,underline:$Satisfying}:
+
+        Filter {code:$(s.source)} through the predicate {code:$(s.predicate)}.
+
+    E.g. {code:$obj} $pred_descr $isval""")
 end
 
 """
@@ -210,6 +262,23 @@ Equivalent to `bind(f, source)`.
 struct Bind{T, S <: Possibility{T}, M} <: Possibility{T}
     source::S
     map::M
+end
+
+function Base.show(io::IO, b::Bind)
+    print(io, Bind, "(")
+    show(io, b.source)
+    print(io, ", ")
+    show(io, b.map)
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", b::Bind)
+    print(io, styled"""
+    {code,underline:$Bind}:
+
+
+    """)
 end
 
 """
@@ -263,6 +332,43 @@ struct Integers{T<:Integer, U<:Unsigned} <: Possibility{T}
     Integers{T}() where T <: Integer = new{T, unsigned(T)}(typemin(T), typemax(unsigned(T)))
 end
 
+function Base.show(io::IO, i::Integers)
+    print(io, Integers)
+    if i.minimum == typemin(postype(i)) && i.range == typemax(i.range)
+        # this was created/is equivalent to sampling everything
+        print(io, "{", postype(i), "}()")
+    else
+        print(io, "(")
+        show(io, i.minimum)
+        print(io, ", ")
+        show(io, (i.minimum + i.range) % postype(i))
+        print(io, ")")
+    end
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", i::Integers)
+    postype_str = styled"{code:$(postype(i))}"
+
+    inner_str = if i.minimum == typemin(i.minimum) && i.range == typemax(i.range)
+        # this was created/is equivalent to sampling everything
+        styled"Produce an integer of type $postype_str"
+    else
+        lower = sprint(show, i.minimum % postype(i))
+        upper = sprint(show, (i.minimum + i.range) % postype(i))
+        styled"Produce an $postype_str from the closed interval {code:[$lower, $upper]}"
+    end
+
+    obj = styled"{code:$(sprint(show, example(i)))}"
+    print(io, styled"""
+    {code,underline:$Integers}:
+
+        $inner_str
+
+    E.g. $obj""")
+    nothing
+end
+
 const BITINT_TYPES = (UInt8, Int8, UInt16, Int16, UInt32, Int32, UInt64, Int64, UInt128, Int128, )
 
 """
@@ -270,7 +376,32 @@ const BITINT_TYPES = (UInt8, Int8, UInt16, Int16, UInt32, Int32, UInt64, Int64, 
 
 A `Possibility` for generating all possible bitintegers with fixed size.
 """
-BitIntegers() = OneOf((Integers{T}() for T in BITINT_TYPES)...)
+struct BitIntegers <: Possibility{Base.BitInteger} end
+
+produce!(tc::TestCase, ::BitIntegers) =
+    produce!(tc, OneOf((Integers{T}() for T in BITINT_TYPES)...))
+
+Base.show(io::IO, ::BitIntegers) = print(io, "$BitIntegers()")
+
+function Base.show(io::IO, ::MIME"text/plain", bi::BitIntegers)
+    print(io,  styled"""
+    {code,underline:$bi}:
+
+        Produce any bitinteger of one of these types:
+
+    """)
+
+    join(io, (styled"        ∘ {code:$T}" for T in BITINT_TYPES), '\n')
+
+    o = example(bi)
+    obj = styled"{code:$(sprint(show, o))}"
+    print(io, styled"""
+
+
+        I.e. all integer types from {code:Base} except for {code:BigInt}.
+
+    E.g. $obj, a {code:$(typeof(o))}""")
+end
 
 function produce!(tc::TestCase, i::Integers{T}) where T
     offset = choice!(tc, i.range % UInt) % T
@@ -321,6 +452,31 @@ struct Vectors{T, P <: Possibility{T}} <: Possibility{Vector{T}}
         high = UInt(max_size)
 
         new{T,typeof(elements)}(elements, low, high)
+    end
+end
+
+function Base.show(io::IO, v::Vectors)
+    print(io, Vectors, "(")
+    show(io, v.elements)
+    print(io, "; ")
+    print(io, "min_size=", string(v.min_size; base=10), ", ")
+    print(io, "max_size=", string(v.max_size; base=10), ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", v::Vectors)
+    lengths = styled"{code:[$(Int128(v.min_size)), $(Int128(v.max_size))]}"
+    print(io, styled"""
+    {code,underline:$Vectors}:
+
+        Produce a {code:Vector\{$(postype(v.elements))\}} with length in the interval $lengths.
+        The elements are produced by {code:$(v.elements)}.""")
+    obj = styled"""
+
+
+    Elements of the vector may look like {code:$(sprint(show, example(v.elements)))}"""
+    if length(obj) < 100
+        print(io, obj)
     end
 end
 
@@ -431,6 +587,28 @@ struct Pairs{T,S} <: Possibility{Pair{T,S}}
     second::Possibility{S}
 end
 
+function Base.show(io::IO, p::Pairs)
+    print(io, Pairs, "(")
+    show(io, p.first)
+    print(io, ", ")
+    show(io, p.second)
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", p::Pairs)
+    print(io, styled"""
+    {code,underline:$Pairs}:
+
+        Produce a {code:$(postype(p))}:
+
+        ╭─── From {code:$(sprint(show, p.first))}
+        {code:a => b}
+             ╰── From {code:$(sprint(show, p.second))}
+
+    E.g. {code:$(sprint(show, example(p)))}""")
+end
+
 pairs(a::Possibility, b::Possibility) = Pairs(a,b)
 produce!(tc::TestCase, p::Pairs) = produce!(tc, p.first) => produce!(tc, p.second)
 
@@ -459,6 +637,16 @@ julia> example(three, 3)
 """
 struct Just{T} <: Possibility{T}
     value::T
+end
+
+Base.show(io::IO, j::Just) = print(io, Just, "(", j.value, ")")
+
+function Base.show(io::IO, ::MIME"text/plain", j::Just)
+    print(io, styled"""
+    {code,underline:$Just}:
+
+        Produce the value {code:$(sprint(show, j.value))}
+    """)
 end
 
 just(t) = Just(t)
@@ -511,6 +699,28 @@ struct OneOf{X, N} <: Possibility{X}
         isempty(pos) && throw(ArgumentError("Need at least one `Possibility` to draw from!"))
         new{Union{postype.(pos)...}, length(pos)}(pos)
     end
+end
+
+function Base.show(io::IO, of::OneOf)
+    print(io, OneOf, "(")
+    for s in of.strats[1:end-1]
+        show(io, s)
+        print(io, ", ")
+    end
+    show(io, of.strats[end])
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", of::OneOf)
+    print(io, styled"""
+    {underline,code:$OneOf}:
+
+        Produces an element from one of the following with equal probability:
+
+    """)
+
+    join(io, (styled"        ∘ {code:$pos}" for pos in of.strats), '\n')
 end
 
 function produce!(tc::TestCase, @nospecialize(of::OneOf))
@@ -587,6 +797,21 @@ struct Recursive{T,F} <: Possibility{T}
     end
 end
 
+function Base.show(io::IO, r::Recursive)
+    print(io, Recursive, "(")
+    show(io, r.base)
+    print(io, ", ", r.extend, "; ")
+    print(io, "max_layers=", length(r.inner.strats), ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", r::Recursive)
+    print(io, styled"""
+    {code,underline:$Recursive}:
+
+        Wrap {code:$(r.base)} up to {code:$(length(r.inner.strats))} with {code:}
+    """)
+end
+
 """
     recursive(f, pos::Possibility; max_layers=5)
 
@@ -611,7 +836,7 @@ A `Possibility` of producing arbitrary well-formed `Char` instances.
 
 !!! warning "Unicode"
     This will `produce!` ANY well-formed `Char` by default, not just valid unicode codepoints!
-    To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
+    Notably, this includes overlong `Char`. To only produce valid unicode codepoints, pass `valid=true` as a keyword argument.
 
 Keyword arguments:
 
@@ -634,6 +859,21 @@ julia> example(chars, 5)
 struct Characters <: Possibility{Char}
     valid::Bool
     Characters(; valid=false) = new(valid)
+end
+
+Base.show(io::IO, c::Characters) = print(io, Characters, "(; valid=", c.valid, ")")
+
+function Base.show(io::IO, ::MIME"text/plain", c::Characters)
+    ex = example(c)
+    isval = isvalid(ex) ? styled"{green:✔}" : styled"{red:❌}"
+    obj = styled"{code:$(sprint(isvalid(ex) ? show : Base.show_invalid, ex))}"
+    valid_str = c.valid ? styled"{green:always}" : styled"{yellow:maybe}"
+    print(io, styled"""
+    {code,underline:$Characters}:
+
+        Produce well-formed {code:Char} which are {code:isvalid}: $valid_str
+
+    E.g. $obj; {code:isvalid}: $isval""")
 end
 
 function produce!(tc::TestCase, c::Characters)
@@ -682,6 +922,32 @@ struct UnicodeCharacters <: Possibility{Char}
     UnicodeCharacters(; valid=false, malformed=true) = new(valid, malformed)
 end
 
+function Base.show(io::IO, u::UnicodeCharacters)
+    print(io, Characters, "(; ")
+    print(io, "valid=", u.valid, ", ")
+    print(io, "malformed=", u.malformed, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", uc::UnicodeCharacters)
+    ex = example(uc)
+    affirm = styled"{green:✔}"
+    deny = styled"{red:❌}"
+    isval = isvalid(ex) ? affirm : deny
+    ismalf = Base.ismalformed(ex) ? affirm : deny
+    obj = styled"{code:$(sprint(isvalid(ex) ? show : Base.show_invalid, ex))}"
+    valid_str = uc.valid ? styled"{green:always}" : styled"{yellow:maybe}"
+    malf_str = (!uc.valid && uc.malformed) ? styled"{yellow:maybe}" : styled"{red:no}"
+    print(io, styled"""
+    {code,underline:$UnicodeCharacters}:
+
+        Produce {code:Char} which are
+            ∘ {code:$(Base.isvalid)}: $valid_str
+            ∘ {code:$(Base.ismalformed)}: $malf_str
+
+    E.g. $obj; {code:isvalid}: $isval, {code:ismalformed}: $ismalf""")
+end
+
 function produce!(tc::TestCase, c::UnicodeCharacters)
     # Ref. https://github.com/JuliaLang/julia/issues/44741#issuecomment-1079083216
     if c.valid
@@ -719,6 +985,19 @@ julia> example(ascii, 5)
 """
 struct AsciiCharacters <: Possibility{Char} end
 
+Base.show(io::IO, ::AsciiCharacters) = print(io, AsciiCharacters, "()")
+
+function Base.show(io::IO, ::MIME"text/plain", ac::AsciiCharacters)
+    obj = styled"{code:$(sprint(show, example(ac)))}"
+    print(io, styled"""
+    {code,underline:$AsciiCharacters}:
+
+        Produce {code:Char} for which {code:isascii} returns {code:true}.
+
+    E.g. $obj
+    """)
+end
+
 function produce!(tc::TestCase, ::AsciiCharacters)
     s = SampledFrom(Char(0x0):Char(0x7f))
     produce!(tc, s)
@@ -753,6 +1032,33 @@ struct Text <: Possibility{String}
     end
 end
 
+function Base.show(io::IO, t::Text)
+    print(io, Text, "(")
+    show(io, t.vectors.elements)
+    print(io, "; min_len=", t.vectors.min_size, ", max_len=", t.vectors.max_size, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", t::Text)
+    str = sprint(show, example(t); context=:limit=>true)
+    _, cols = displaysize(io)
+    # these magic numbers are the rest of the text in that line
+    available_space = (cols - 5 - 26 - 2)
+    if textwidth(str) > available_space
+        rem_len = textwidth(str) - available_space + 3
+        str = str[begin:div(rem_len, 2)] * " _ " * str[(div(rem_len, 2)+3):end]
+    end
+    lower = sprint(show, t.vectors.min_size % Int)
+    upper = sprint(show, (t.vectors.min_size + t.vectors.max_size) % Int)
+    print(io, styled"""
+    {code,underline:$Text}:
+
+        Produce a {code:String} with length in the interval {code:[$lower, $upper]}
+
+    E.g. {code:$str} (may be abbreviated here)
+    """)
+end
+
 produce!(tc::TestCase, s::Text) = join(produce!(tc, s.vectors))
 
 ## Dictionaries
@@ -782,6 +1088,20 @@ struct Dicts{K,V} <: Possibility{Dict{K,V}}
         min_size <= max_size || throw(ArgumentError("`min_size` must be `<= max_size`!"))
         new{K,V}(keys, values, min_size, max_size)
     end
+end
+
+function Base.show(io::IO, d::Dicts)
+    print(io, Dicts, "(")
+    show(io, d.keys)
+    print(io, ", ")
+    show(io, d.values)
+    print(io, "; min_size=", d.min_size, ", max_size=", d.max_size, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", d::Dicts)
+    print(io, styled"""
+    """)
 end
 
 function produce!(tc::TestCase, d::Dicts{K,V}) where {K,V}
@@ -841,6 +1161,25 @@ struct SampledFrom{T, C} <: Possibility{T}
     SampledFrom(col) = new{eltype(col), typeof(col)}(col)
 end
 
+function Base.show(io::IO, sf::SampledFrom)
+    print(io, SampledFrom, "(")
+    show(IOContext(io, :compact=>true), sf.collection)
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", sf::SampledFrom)
+    obj = example(sf)
+    print(io, styled"""
+    {code,underline:$SampledFrom}:
+
+        Sample, with equal probability, an element from
+        {code:$(sprint(show, sf.collection; context=:compact=>true))}
+
+    E.g. {code:$obj}
+    """)
+end
+
 function produce!(tc::TestCase, sf::SampledFrom)
     pos_indices = eachindex(sf.collection)
     idx = produce!(tc, Integers(firstindex(pos_indices), lastindex(pos_indices)))
@@ -868,6 +1207,19 @@ julia> example(bools, 4)
 ```
 """
 struct Booleans <: Possibility{Bool} end
+
+Base.show(io::IO, ::Booleans) = print(io, Booleans, "()")
+
+function Base.show(io::IO, ::MIME"text/plain", b::Booleans)
+    print(io, styled"""
+    {code,underline:$Booleans}:
+
+        Produce a {code:Bool} with a fair coin.
+        Both {code:true} and {code:false} have a probability of 50%.
+
+    E.g. {code:$(example(b))}
+    """)
+end
 
 produce!(tc::TestCase, ::Booleans) = weighted!(tc, 0.5)
 
@@ -907,15 +1259,33 @@ struct Floats{T <: Base.IEEEFloat} <: Possibility{T}
     end
 end
 
-"""
-    Floats(;nans=true, infs=true) <: Possibility{Union{Float64,Float32,Float16}}
+function Base.show(io::IO, f::Floats)
+    print(io, typeof(f), "(; ")
+    print(io, "nans=", f.nans, ", ")
+    print(io, "infs=", f.infs, ")")
+    nothing
+end
 
-A catch-all for generating instances of all three IEEE floating point types.
-"""
-Floats(;nans=true, infs=true) = OneOf(
-    Floats{Float16}(;nans,infs),
-    Floats{Float32}(;nans,infs),
-    Floats{Float64}(;nans,infs))
+function Base.show(io::IO, ::MIME"text/plain", f::Floats)
+    ex = example(f)
+    affirm = styled"{green:✔}"
+    deny = styled"{red:❌}"
+    inf = isinf(ex) ? affirm : deny
+    nan = isnan(ex) ? affirm : deny
+    obj = sprint(show, ex)
+    nan_str = f.nans ? styled"{yellow:maybe}" : styled"{red:never}"
+    inf_str = f.infs ? styled"{yellow:maybe}" : styled"{red:never}"
+
+    print(io, styled"""
+    {code,underline:$Floats}:
+
+        Produce a floating point value of type {code:$(postype(f))}, which is
+            * {code:isinf}: $inf_str
+            * {code:isnan}: $nan_str
+
+    E.g. {code:$obj}; {code:isinf}: $inf, {code:isnan}: $nan
+    """)
+end
 
 function produce!(tc::TestCase, f::Floats{T}) where {T}
     iT = Supposition.uint(T)
@@ -923,6 +1293,55 @@ function produce!(tc::TestCase, f::Floats{T}) where {T}
     !f.infs && isinf(res) && reject(tc)
     !f.nans && isnan(res) && reject(tc)
     return res
+end
+
+struct AllFloats <: Data.Possibility{Union{Float16, Float32, Float64}}
+    nans::Bool
+    infs::Bool
+end
+AllFloats(;nans=true, infs=true) = AllFloats(nans, infs)
+
+"""
+    Floats(;nans=true, infs=true) <: Possibility{Union{Float64,Float32,Float16}}
+
+A catch-all for generating instances of all three IEEE floating point types.
+"""
+Floats(;nans=true, infs=true) = AllFloats(nans, infs)
+
+function Base.show(io::IO, f::AllFloats)
+    print(io, Floats, "(; ")
+    print(io, "nans=", f.nans, ", ")
+    print(io, "infs=", f.infs, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", f::AllFloats)
+    ex = example(f)
+    affirm = styled"{green:✔}"
+    deny = styled"{red:❌}"
+    inf = isinf(ex) ? affirm : deny
+    nan = isnan(ex) ? affirm : deny
+    obj = sprint(show, ex)
+    nan_str = f.nans ? styled"{yellow:maybe}" : styled"{red:never}"
+    inf_str = f.infs ? styled"{yellow:maybe}" : styled"{red:never}"
+
+    print(io, styled"""
+    {code,underline:$AllFloats}:
+
+        Produce a floating point value of type {code:Float16}, {code:Float32} or {code:Float64}, which may be
+            * {code:isinf}: $inf_str
+            * {code:isnan}: $nan_str
+
+    E.g. {code:$obj}, a {code:$(typeof(ex))}; {code:isinf}: $inf, {code:isnan}: $nan
+    """)
+end
+
+function produce!(tc::TestCase, af::AllFloats)
+    of = OneOf(
+        Floats{Float16}(;af.nans,af.infs),
+        Floats{Float32}(;af.nans,af.infs),
+        Floats{Float64}(;af.nans,af.infs))
+    produce!(tc, of)
 end
 
 ####
@@ -1027,6 +1446,52 @@ struct WeightedNumbers <: Possibility{Int}
     end
 end
 
+function recover_weights(wn::WeightedNumbers)
+    probs = zeros(Float64, size(wn.table))
+    n = length(wn.table)
+    for l in wn.table
+        probs[l[1]] += l[3] / n
+        probs[l[2]] += (1.0 - l[3])/n
+    end
+    probs
+end
+
+function Base.show(io::IO, wn::WeightedNumbers)
+    print(io, WeightedNumbers, "(")
+    show(IOContext(io, :compact=>true), recover_weights(wn))
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", wn::WeightedNumbers)
+    weights = recover_weights(wn)
+    print(io, styled"""
+    {code,underline:$WeightedNumbers}:
+
+        Select the numbers from {code:1:$(length(weights))} with some probability.
+        The probabilities are chosen based on some given weights.
+
+    """)
+
+    # this format ends up printing like `xx.yy%`, regardless of the actual number.
+    # leading characters are padded with spaces
+    percent_format = format"%5.2f%%"
+    for (i,w) in enumerate(weights)
+        print(io, "        ∘ ")
+        format(io, percent_format, 100.0*w)
+        print(io, " : ", i, '\n')
+    end
+
+    obj = example(wn)
+
+    print(io, styled"""
+
+    E.g. {code:$obj}, selected with probability """)
+    format(io, percent_format, 100.0*weights[obj])
+
+    nothing
+end
+
 function Data.produce!(tc::TestCase, bn::WeightedNumbers)
     base, alternate, alternate_chance = choice!(tc, bn.table)
     use_base = weighted!(tc, alternate_chance)
@@ -1078,6 +1543,46 @@ struct WeightedSample{T,C} <: Possibility{T}
         bn = WeightedNumbers(weights)
         new{eltype(col),typeof(col)}(bn, col)
     end
+end
+
+function Base.show(io::IO, ws::WeightedSample)
+    print(io, WeightedSample, "(")
+    show(IOContext(io, :compact=>true), ws.col)
+    print(io, ", ")
+    show(IOContext(io, :compact=>true), recover_weights(ws.idx))
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", ws::WeightedSample)
+    weights = recover_weights(ws.idx)
+    print(io, styled"""
+    {code,underline:$WeightedSample}:
+
+        Select an object from the given collection with some probability.
+        The probabilities per element are chosen based on some given weights.
+
+    """)
+
+    # this format ends up printing like `xx.yy%`, regardless of the actual number.
+    # leading characters are padded with spaces
+    percent_format = format"%5.2f%%"
+    for (i,w) in enumerate(weights)
+        print(io, "        ∘ ")
+        format(io, percent_format, 100.0*w)
+        print(io, " : ", ws.col[eachindex(ws.col)[i]], '\n')
+    end
+
+    idx = example(ws.idx)
+    prob = weights[idx]
+    obj = sprint(show, ws.col[idx])
+
+    print(io, styled"""
+
+    E.g. {code:$obj}, selected with probability """)
+    format(io, percent_format, 100.0*prob)
+
+    nothing
 end
 
 function produce!(tc::TestCase, bs::WeightedSample)
