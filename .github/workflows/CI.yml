@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - 'feat/**'
+      - 'ux/**'
     tags: '*'
 
 permissions:
