@@ -30,6 +30,7 @@ using Serialization
 using RequiredInterfaces: @required
 
 using ScopedValues
+using StyledStrings
 
 include("types.jl")
 include("testcase.jl")
