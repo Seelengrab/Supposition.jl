@@ -278,7 +278,7 @@ function show_arguments(io, ::MIME"text/plain", res::Union{Fail,Error})
     """)
     for k in keys(res.example)
         v = res.example[k]
-        val = repr(v; context=:compact=>true)
+        val = repr(v)
         print(io, styled"      {code:$k::$(typeof(v)) = $val}")
         k != last(keys(res.example)) && println(io)
     end
@@ -292,7 +292,7 @@ function show_events(io, ::MIME"text/plain", res::Result)
     """)
     for idx in eachindex(res.events)
         label, obj = res.events[idx]
-        o = repr(obj; context=:compact=>true)
+        o = repr(obj)
         println(io, "    ", label)
         print(io, styled"        {code:$o}")
         idx != lastindex(res.events) && println(io)
