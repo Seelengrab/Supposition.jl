@@ -393,10 +393,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @testset "Only log distinct errors once" begin
             checked_inputs = UInt8[]
             logs, sr = Test.collect_test_logs() do
-                @check db=false record=false function doubleError(i=Data.Integers{UInt8}())
-                    push!(checked_inputs, i)
-                    i > 10 && error("input was >")
-                    error("input was <=")
+                redirect_stderr(devnull) do
+                    @check db=false record=false function doubleError(i=Data.Integers{UInt8}())
+                        push!(checked_inputs, i)
+                        i > 10 && error("input was >")
+                        error("input was <=")
+                    end
                 end
             end
             @test length(logs) in (1,2)
@@ -999,9 +1001,11 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @with DEFAULT_CONFIG => conf begin
             cntr = Ref(0)
             @testset "RecordNotOverwritten" begin
-                @check broken=true function This_Is_Known_Passing_Ignore_In_CI_As_Long_As_Its_Not_In_The_Final_Testset_Report(i=intgen)
-                    cntr[] += 1
-                    true
+                redirect_stderr(devnull) do
+                    @check broken=true function This_Is_Known_Passing_Ignore_In_CI_As_Long_As_Its_Not_In_The_Final_Testset_Report(i=intgen)
+                        cntr[] += 1
+                        true
+                    end
                 end
                 @check record=true function truthy(i=Data.Integers{Int8}())
                     true

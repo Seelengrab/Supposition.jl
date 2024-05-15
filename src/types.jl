@@ -189,6 +189,40 @@ An abstract type representing the ultimate result a `TestState` ended up at.
 abstract type Result end
 
 """
+    Pass
+
+A result indicating that no counterexample was found.
+"""
+struct Pass <: Result
+    best::Option{Any}
+    events::Vector{Pair{AbstractString,Any}}
+    score::Option{Float64}
+end
+
+"""
+    Fail
+
+A result indicating that a counterexample was found.
+"""
+struct Fail <: Result
+    example::NamedTuple
+    events::Vector{Pair{AbstractString,Any}}
+    score::Option{Float64}
+end
+
+"""
+    Error
+
+A result indicating that an error was encountered while generating or shrinking.
+"""
+struct Error <: Result
+    example::NamedTuple
+    events::Vector{Pair{AbstractString,Any}}
+    exception::Exception
+    trace
+end
+
+"""
     SuppositionReport <: AbstractTestSet
 
 An `AbstractTestSet`, for recording the final result of `@check` in the context of `@testset`
@@ -214,3 +248,140 @@ mutable struct SuppositionReport <: AbstractTestSet
     end
 end
 
+function Base.show(io::IO, m::MIME"text/plain", sr::SuppositionReport)
+    (;ispass,isfail,iserror,isbroken) = results(sr)
+    expect_broken = sr.config.broken
+    if expect_broken && isfail
+        # the test passed unexpectedly
+        show_fix_broken(io, m, sr)
+    elseif isfail
+        # the test failed unexpectedly
+        show_result(io, m, sr)
+    elseif iserror
+        # the test errored unexpectedly
+        show_error(io, m, sr)
+    elseif ispass
+        # the test passed
+        show_pass(io, m, sr)
+    elseif isbroken
+        # the test is expectedly broken
+        show_broken(io, m, sr)
+    end
+
+    get(io, :supposition_subtestset, false) && write(io, '\n')
+end
+
+function show_arguments(io, ::MIME"text/plain", res::Union{Fail,Error})
+    print(io, styled"""
+
+      {underline:Arguments:}
+    """)
+    for k in keys(res.example)
+        v = res.example[k]
+        val = repr(v; context=:compact=>true)
+        print(io, styled"      {code:$k::$(typeof(v)) = $val}")
+        k != last(keys(res.example)) && println(io)
+    end
+end
+
+function show_events(io, ::MIME"text/plain", res::Result)
+    print(io, styled"""
+
+
+      {underline:Events:}
+    """)
+    for idx in eachindex(res.events)
+        label, obj = res.events[idx]
+        o = repr(obj; context=:compact=>true)
+        println(io, "    ", label)
+        print(io, styled"        {code:$o}")
+        idx != lastindex(res.events) && println(io)
+    end
+end
+
+function show_result(io::IO, m::MIME"text/plain", sr::SuppositionReport)
+    res::Fail = @something sr.result
+
+    print(io, styled"""
+    {error,bold:Found counterexample}
+      {underline:Context:} $(sr.description)
+    """)
+
+    show_arguments(io, m, res)
+    !isempty(res.events) && show_events(io, m, res)
+end
+
+function show_error(io::IO, m::MIME"text/plain", sr::SuppositionReport)
+    res::Error = @something sr.result
+
+    print(io, styled"""
+    {error,bold:Encountered an error}
+      {underline:Context:} $(sr.description)
+    """)
+
+    show_arguments(io, m, res)
+    !isempty(res.events) && show_events(io, m, res)
+
+    buf = IOContext(IOBuffer(), :color=>true)
+    write(buf, "  ") # indentation for the message from `showerror`
+    Base.showerror(buf, res.exception)
+    Base.show_backtrace(buf, res.trace)
+    seekstart(buf.io)
+
+    print(io, styled"""
+
+
+      {underline:Exception:}
+        Message:
+    """)
+
+    write(io, "    ")
+    join(io, eachline(buf; keep=true), "    ")
+end
+
+function show_pass(io::IO, m::MIME"text/plain", sr::SuppositionReport)
+    res::Pass = @something sr.result
+
+    print(io, styled"""
+    {green,bold:Test passed}
+      {underline:Context:} $(sr.description)""")
+
+    if !isnothing(res.score)
+        score = @something res.score
+        print(io, styled"""
+
+
+          {underline:Score:} {code:$score}""")
+    end
+
+    !sr.config.verbose && return
+
+    !isempty(res.events) && show_events(io, m, res)
+end
+
+function show_fix_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
+    res::Pass = @something sr.result
+
+    print(io, styled"""
+    {red,bold:Test is marked broken, but passed}
+      {underline:Context:} $(sr.description)
+
+          Remove {code:broken=true} from {code:@check} invocation or passed-in {code:CheckConfig}.""")
+
+    !sr.config.verbose && return
+
+    !isempty(res.events) && show_events(io, m, res)
+end
+
+function show_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
+    res::Union{Error,Fail} = @something sr.result
+    cause = res isa Error ? "Error" : "Failure"
+
+    print(io, styled"""
+    {yellow,bold:Test is known broken (Result: $cause)}
+      {underline:Context:} $(sr.description)""")
+
+    !sr.config.verbose && return
+
+    !isempty(res.events) && show_events(io, m, res)
+end

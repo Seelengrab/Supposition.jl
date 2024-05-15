@@ -1,38 +1,4 @@
 """
-    Pass
-
-A result indicating that no counterexample was found.
-"""
-struct Pass <: Result
-    best::Option{Any}
-    events::Vector{Pair{AbstractString,Any}}
-    score::Option{Float64}
-end
-
-"""
-    Fail
-
-A result indicating that a counterexample was found.
-"""
-struct Fail <: Result
-    example::NamedTuple
-    events::Vector{Pair{AbstractString,Any}}
-    score::Option{Float64}
-end
-
-"""
-    Error
-
-A result indicating that an error was encountered while generating or shrinking.
-"""
-struct Error <: Result
-    example::NamedTuple
-    events::Vector{Pair{AbstractString,Any}}
-    exception::Exception
-    trace
-end
-
-"""
     num_testcases(sr::SuppositionReport)
 
 Returns the number of valid `TestCase`s that were attempted during this run.
@@ -227,14 +193,6 @@ function Test.finish(sr::SuppositionReport)
     res = @something(sr.result)
     expect_broken = sr.config.broken
 
-    if sr.config.verbose
-        print_results(sr)
-    elseif !expect_broken && !(res isa Pass)
-        print_results(sr)
-    elseif expect_broken && res isa Pass
-        print_fix_broken(sr)
-    end
-
     # this is a failure, so record the result in the db
     if !(res isa Pass)
         ts = @something sr.final_state
@@ -245,56 +203,20 @@ function Test.finish(sr::SuppositionReport)
         record!(sr.config.db, record_name(sr), attempt)
     end
 
+    # we can only record if there's a parent `@testset`
     if Test.get_testset_depth() != 0
         parent_ts = Test.get_testset()
         sr.config.record && Test.record(parent_ts, sr)
-        return sr
+
+        # we only need to explicitly `show` if we're not the outermost AbstractTestset
+        if sr.config.verbose || # always show the result
+           (!expect_broken && !(res isa Pass)) || # we expected it to pass, but it failed/errored
+           (expect_broken && res isa Pass)        # we expected it to fail, but it passed
+            io = IOContext(stderr, :supposition_subtestset=>true)
+            show(io, MIME"text/plain"(), sr)
+        end
     end
 
-    Test.print_test_results(sr)
+    # this will be returned from a top-level `@check`, which will invoke `show`
     sr
-end
-
-function print_events(events::Vector)
-    !isempty(events) && println("Events occured: ", length(events))
-    foreach(events) do (label, obj)
-        println(' '^4, label)
-        println(' '^8, repr(obj))
-    end
-end
-
-function print_results(sr::SuppositionReport)
-    res = @something(sr.result)
-    # only print when it's a failure/error/something with a score
-    if !(res isa Pass) || !isnothing(res.score)
-        print_events(res.events)
-    end
-
-    print_results(sr, res)
-end
-
-function print_results(sr::SuppositionReport, p::Pass)
-    if isnothing(p.best)
-        @info "Property passed!" Description=sr.description
-    else
-        best = @something(p.best)
-        score = @something(p.score)
-        @info "Property passed!" Description=sr.description Best=best Score=score
-    end
-end
-
-function print_results(sr::SuppositionReport, e::Error)
-    @error "Property errored!" Description=sr.description e.example... exception=(e.exception, e.trace)
-end
-
-function print_results(sr::SuppositionReport, f::Fail)
-    if isnothing(f.score)
-        @error "Property doesn't hold!" Description=sr.description f.example...
-    else
-        @error "Property doesn't hold!" Description=sr.description f.example... Score=f.score
-    end
-end
-
-function print_fix_broken(sr::SuppositionReport)
-    @warn "Property was marked as broken, but holds now! Mark as non-broken!" Description=sr.description
 end
