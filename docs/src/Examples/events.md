@@ -165,7 +165,6 @@ uint8gen = Data.Integers{UInt8}()
     tmux = tmux_8bit_oracle(r,g,b)
     jl == tmux
 end
-nothing # hide
 ```
 
 and indeed, we find a counterexample where our port doesn't match the original code for some reason.
@@ -195,15 +194,12 @@ record. We can also optionally give these events a label, though that's only use
     event!("Oracle", tmux)
     jl == tmux
 end
-nothing # hide
 ```
 
 The first argument in the 2-arg form of `event!` is any `AbstractString`, so even the (upcoming with Julia 1.11) `AnnotatedString`s
 from the `styled""` macro are an option, for fancy labelling. The recorded object can be arbitrary, but be aware that it will be kept
 alive for the entire duration of the testsuite, so it's better to record small objects. Only the events associated with the "most important"
 test case encountered during fuzzing will be kept alive; if a better one comes around, the existing events are deleted.
-
-The printing is currently quite ugly, but I do expect that to improve with [#23](https://github.com/Seelengrab/Supposition.jl/discussions/23) once StyledStrings.jl is released ;)
 
 ## When to use this
 

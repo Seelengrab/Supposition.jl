@@ -31,7 +31,6 @@ want to check the mathematical properties of addition, so let's start with commu
 Supposition.@check function commutative(a=intgen, b=intgen)
     add(a,b) == add(b,a)
 end
-nothing # hide
 ```
 
 [`@check`](@ref) takes a function definition where each argument is given a `Possibility`, runs those generators, feeds
@@ -47,7 +46,6 @@ Supposition.@check function failprop(x=intgen)
 end
 catch # hide
 end # hide
-nothing # hide
 ```
 
 Supposition.jl successfully found a counterexample and reduced it to a more minimal counterexample, in this
@@ -81,10 +79,15 @@ And check that they hold like so. Of course, we can also test the property impli
 ```@example example_add; output = false, filter = r"\d+\.\d+s"
 using Test
 
+show(stdout, MIME"text/plain"(), # hide
 Supposition.@check associative(Data.Just(add), intgen, intgen, intgen)
+); println(); show(stdout, MIME"text/plain"(), # hide
 Supposition.@check identity_add(Data.Just(add), intgen)
+); println(); show(stdout, MIME"text/plain"(), # hide
 Supposition.@check successor(intgen, intgen)
+); println(); show(stdout, MIME"text/plain"(), # hide
 Supposition.@check commutative(intgen, intgen)
+) # hide
 nothing # hide
 ```
 

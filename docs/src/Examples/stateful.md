@@ -129,7 +129,6 @@ try # hide
 end
 catch # hide
 end # hide
-nothing # hide
 ```
 
 This pattern is very extensible, and a good candidate for the next UX overhaul (getting a reported failure for the target we actually want to find is quite bad UX). Nevertheless, it already works right now!
@@ -215,7 +214,6 @@ try # hide
 end
 catch # hide
 end # hide
-nothing # hide
 ```
 
 And as expected, the minimal counterexample is `[0x0, 0x1, 0x0]`. We first `pop!` `0x0`, followed by `0x1` while it should be
@@ -309,7 +307,6 @@ try # hide
 end
 catch # hide
 end # hide
-nothing # hide
 ```
 
 Once again, we find our familiar example `UInt[0x0, 0x1, 0x0]`, though this time in the form of operations done on the heap:
@@ -360,7 +357,6 @@ function test_heap(ops) # hide
 end # hide
 
 @check test_heap(gen_fixed_ops)
-nothing # hide
 ```
 
 Now this is much more thorough testing!

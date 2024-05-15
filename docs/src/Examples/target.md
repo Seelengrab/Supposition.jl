@@ -19,9 +19,11 @@ rand_goal = rand()
 
 # The RNG is fixed for doc-building purposes - you can try to reproduce
 # this example with any RNG you'd like!
+show(stdout, MIME"text/plain"(), # hide
 @check rng=Xoshiro(1) function israndgoal(f=Data.Floats{Float64}())
     f != rand_goal
 end
+) # hide
 nothing # hide
 ```
 
@@ -32,7 +34,6 @@ amount, without having the test fail:
 
 ```@example singulartarget
 @check max_examples=1_000_000 rng=Xoshiro(1) israndgoal(Data.Floats{Float64}())
-nothing # hide
 ```
 
 Clearly, there needs to be something done so that we can hint to Supposition.jl
@@ -51,7 +52,6 @@ sr = @check rng=Xoshiro(1) function israndgoal(f=Data.Floats{Float64}())
     target!(-abs(rand_goal - f))
     f != rand_goal
 end
-nothing # hide
 ```
 
 which results in Supposition.jl finding the _sole_ counterexample in a comparatively
