@@ -1031,6 +1031,30 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
     end
 
+    @testset "show Report: $pos" for pos in (
+            Data.Integers{UInt8}(),
+            Data.Integers(0x1,0xfe),
+            Data.Floats{Float16}(),
+            Data.Floats(),
+            Data.Booleans(),
+            Data.Pairs(Data.Booleans(), Data.Booleans()),
+            Data.Vectors(Data.Booleans();max_size=1),
+            Data.Dicts(Data.Booleans(),Data.Booleans();max_size=1),
+            Data.AsciiCharacters(),
+            Data.Characters(),
+            Data.UnicodeCharacters(),
+            Data.Text(Data.AsciiCharacters();max_len=1),
+            Data.SampledFrom(0:10),
+            Data.filter(iseven, Data.Just(0:10)),
+            Data.map(sqrt, Data.Just(0:10)),
+            Data.Just(1),
+            Data.Floats() | Data.Booleans(),
+            Data.WeightedNumbers([.1, .2, .7]),
+            Data.WeightedSample(1:3, [.1, .2, .7]),
+            )
+        @test eval(Meta.parse(repr(pos))) == pos
+    end
+
     @testset "Utility" begin
         @testset for T in (Float16, Float32, Float64)
             @check function floatfunc(f=Data.Floats{T}())
