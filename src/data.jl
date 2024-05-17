@@ -19,6 +19,7 @@ These currently include:
  * [`SampledFrom`](@ref), for producing a value from a given collection
  * [`Satisfying`](@ref), for filtering the values a `Possibility` produces through a predicate
  * [`Map`](@ref), for mapping a function over the values a `Possibility` produces
+ * [`Just`](@ref), for producing a given fixed value
  * [`OneOf`](@ref), for choosing one of a number of given `Possibility` to produce from
  * [`Bind`](@ref), for binding a function that produces `Possibility` to the output of another `Possibility`
  * [`Recursive`](@ref), for creating recursive data structures using a basecase `Possibility` and a function that layers more `Possibility` around it
@@ -59,6 +60,7 @@ Fallback definitions:
   * `example(::Possibility{T}) -> T`
 """
 abstract type Possibility{T} end
+Base.:(==)(::Possibility, ::Possibility) = false
 
 @required Possibility begin
     produce!(::TestCase, ::Possibility)
@@ -136,6 +138,8 @@ struct Map{R, S <: Possibility, F} <: Possibility{R}
     Map(s::S, f::F) where {T, S <: Possibility{T}, F} = new{Base.promote_op(f, T), S, F}(s, f)
 end
 
+Base.:(==)(m1::Map, m2::Map) = m1.map == m2.map && m1.source == m2.source
+
 function Base.show(io::IO, m::Map)
     print(io, Map, "(")
     show(io, m.source)
@@ -200,6 +204,8 @@ struct Satisfying{T, S <: Possibility{T}, P} <: Possibility{T}
     end
 end
 
+Base.:(==)(s1::Satisfying, s2::Satisfying) = s1.predicate == s2.predicate && s1.source == s2.source
+
 function Base.show(io::IO, s::Satisfying)
     print(io, Satisfying, "(")
     show(io, s.source)
@@ -263,6 +269,8 @@ struct Bind{T, S <: Possibility{T}, M} <: Possibility{T}
     source::S
     map::M
 end
+
+Base.:(==)(b1::Bind, b2::Bind) = b1.map == b2.map && b1.source == b2.source
 
 function Base.show(io::IO, b::Bind)
     print(io, Bind, "(")
@@ -332,6 +340,8 @@ struct Integers{T<:Integer, U<:Unsigned} <: Possibility{T}
     Integers{T}() where T <: Integer = new{T, unsigned(T)}(typemin(T), typemax(unsigned(T)))
 end
 
+Base.:(==)(i1::Integers{T}, i2::Integers{T}) where T = i1.minimum == i2.minimum && i1.range == i2.range
+
 function Base.show(io::IO, i::Integers)
     print(io, Integers)
     if i.minimum == typemin(postype(i)) && i.range == typemax(i.range)
@@ -377,6 +387,8 @@ const BITINT_TYPES = (UInt8, Int8, UInt16, Int16, UInt32, Int32, UInt64, Int64, 
 A `Possibility` for generating all possible bitintegers with fixed size.
 """
 struct BitIntegers <: Possibility{Base.BitInteger} end
+
+Base.:(==)(::BitIntegers, ::BitIntegers) = true
 
 produce!(tc::TestCase, ::BitIntegers) =
     produce!(tc, OneOf((Integers{T}() for T in BITINT_TYPES)...))
@@ -454,6 +466,10 @@ struct Vectors{T, P <: Possibility{T}} <: Possibility{Vector{T}}
         new{T,typeof(elements)}(elements, low, high)
     end
 end
+
+Base.:(==)(v1::Vectors{T,P}, v2::Vectors{T,P}) where {T, P} = v1.min_size == v2.min_size &&
+                                                              v2.max_size == v2.max_size &&
+                                                              v1.elements == v2.elements
 
 function Base.show(io::IO, v::Vectors)
     print(io, Vectors, "(")
@@ -587,6 +603,8 @@ struct Pairs{T,S} <: Possibility{Pair{T,S}}
     second::Possibility{S}
 end
 
+Base.:(==)(p1::Pairs{T,S}, p2::Pairs{T,S}) where {T, S} = p1.first == p2.first && p1.second == p2.second
+
 function Base.show(io::IO, p::Pairs)
     print(io, Pairs, "(")
     show(io, p.first)
@@ -638,6 +656,8 @@ julia> example(three, 3)
 struct Just{T} <: Possibility{T}
     value::T
 end
+
+Base.:(==)(j1::Just{T}, j2::Just{T}) where T = j1.value == j2.value
 
 Base.show(io::IO, j::Just) = print(io, Just, "(", j.value, ")")
 
@@ -700,6 +720,8 @@ struct OneOf{X, N} <: Possibility{X}
         new{Union{postype.(pos)...}, length(pos)}(pos)
     end
 end
+
+Base.:(==)(of1::OneOf{X,N}, of2::OneOf{X,N}) where {X,N} = all(splat(==), zip(of1.strats, of2.strats))
 
 function Base.show(io::IO, of::OneOf)
     print(io, OneOf, "(")
@@ -797,6 +819,8 @@ struct Recursive{T,F} <: Possibility{T}
     end
 end
 
+Base.:(==)(r1::Recursive{T,F}, r2::Recursive{T,F}) where {T,F} = r1.inner == r2.inner
+
 function Base.show(io::IO, r::Recursive)
     print(io, Recursive, "(")
     show(io, r.base)
@@ -861,6 +885,8 @@ struct Characters <: Possibility{Char}
     Characters(; valid=false) = new(valid)
 end
 
+Base.:(==)(c1::Characters, c2::Characters) = c1.valid == c2.valid
+
 Base.show(io::IO, c::Characters) = print(io, Characters, "(; valid=", c.valid, ")")
 
 function Base.show(io::IO, ::MIME"text/plain", c::Characters)
@@ -922,8 +948,10 @@ struct UnicodeCharacters <: Possibility{Char}
     UnicodeCharacters(; valid=false, malformed=true) = new(valid, malformed)
 end
 
+Base.:(==)(c1::UnicodeCharacters, c2::UnicodeCharacters) = c1.valid == c2.valid && c1.malformed == c2.malformed
+
 function Base.show(io::IO, u::UnicodeCharacters)
-    print(io, Characters, "(; ")
+    print(io, UnicodeCharacters, "(; ")
     print(io, "valid=", u.valid, ", ")
     print(io, "malformed=", u.malformed, ")")
     nothing
@@ -985,6 +1013,8 @@ julia> example(ascii, 5)
 """
 struct AsciiCharacters <: Possibility{Char} end
 
+Base.:(==)(::AsciiCharacters, ::AsciiCharacters) = true
+
 Base.show(io::IO, ::AsciiCharacters) = print(io, AsciiCharacters, "()")
 
 function Base.show(io::IO, ::MIME"text/plain", ac::AsciiCharacters)
@@ -1031,6 +1061,8 @@ struct Text <: Possibility{String}
         new(vectors)
     end
 end
+
+Base.:(==)(t1::Text, t2::Text) = t1.vectors == t2.vectors
 
 function Base.show(io::IO, t::Text)
     print(io, Text, "(")
@@ -1088,6 +1120,13 @@ struct Dicts{K,V} <: Possibility{Dict{K,V}}
         min_size <= max_size || throw(ArgumentError("`min_size` must be `<= max_size`!"))
         new{K,V}(keys, values, min_size, max_size)
     end
+end
+
+function Base.:(==)(d1::Dicts{K,V}, d2::Dicts{K,V}) where {K,V}
+    d1.min_size == d2.min_size &&
+    d1.max_size == d2.max_size &&
+    d1.keys     == d2.keys     &&
+    d1.values   == d2.values
 end
 
 function Base.show(io::IO, d::Dicts)
@@ -1161,6 +1200,8 @@ struct SampledFrom{T, C} <: Possibility{T}
     SampledFrom(col) = new{eltype(col), typeof(col)}(col)
 end
 
+Base.:(==)(sf1::SampledFrom{T,C}, sf2::SampledFrom{T,C}) where {T,C} = sf1.collection == sf2.collection
+
 function Base.show(io::IO, sf::SampledFrom)
     print(io, SampledFrom, "(")
     show(IOContext(io, :compact=>true), sf.collection)
@@ -1207,6 +1248,8 @@ julia> example(bools, 4)
 ```
 """
 struct Booleans <: Possibility{Bool} end
+
+Base.:(==)(::Booleans, ::Booleans) = true
 
 Base.show(io::IO, ::Booleans) = print(io, Booleans, "()")
 
@@ -1259,6 +1302,8 @@ struct Floats{T <: Base.IEEEFloat} <: Possibility{T}
     end
 end
 
+Base.:(==)(f1::Floats{T}, f2::Floats{T}) where {T} = f1.nans == f2.nans && f1.infs == f2.infs
+
 function Base.show(io::IO, f::Floats)
     print(io, typeof(f), "(; ")
     print(io, "nans=", f.nans, ", ")
@@ -1300,6 +1345,8 @@ struct AllFloats <: Data.Possibility{Union{Float16, Float32, Float64}}
     infs::Bool
 end
 AllFloats(;nans=true, infs=true) = AllFloats(nans, infs)
+
+Base.:(==)(af1::AllFloats, af2::AllFloats) = af1.nans == af2.nans && af1.infs == af2.infs
 
 """
     Floats(;nans=true, infs=true) <: Possibility{Union{Float64,Float32,Float16}}
@@ -1446,6 +1493,8 @@ struct WeightedNumbers <: Possibility{Int}
     end
 end
 
+Base.:(==)(wn1::WeightedNumbers, wn2::WeightedNumbers) = wn1.table == wn2.table
+
 function recover_weights(wn::WeightedNumbers)
     probs = zeros(Float64, size(wn.table))
     n = length(wn.table)
@@ -1544,6 +1593,8 @@ struct WeightedSample{T,C} <: Possibility{T}
         new{eltype(col),typeof(col)}(bn, col)
     end
 end
+
+Base.:(==)(wn1::WeightedSample{T,C}, wn2::WeightedSample{T,C}) where {T,C} = wn1.col == wn2.col && wn1.idx == wn2.idx
 
 function Base.show(io::IO, ws::WeightedSample)
     print(io, WeightedSample, "(")
