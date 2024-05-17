@@ -721,7 +721,7 @@ struct OneOf{X, N} <: Possibility{X}
     end
 end
 
-Base.:(==)(of1::OneOf{X,N}, of2::OneOf{X,N}) where {X,N} = all(splat(==), zip(of1.strats, of2.strats))
+Base.:(==)(of1::OneOf{X,N}, of2::OneOf{X,N}) where {X,N} = all(Base.splat(==), zip(of1.strats, of2.strats))
 
 function Base.show(io::IO, of::OneOf)
     print(io, OneOf, "(")
