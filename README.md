@@ -61,34 +61,6 @@ julia> @testset "Examples" begin
        end
 ```
 
-Which will (on 1.11+ - in older versions, the testset printing can't be as pretty :/) produce this output:
+Which will produce this output:
 
-```
-┌ Error: Property doesn't hold!
-│   Description = "foo"
-│   Example = (i = -128,)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:255
-┌ Error: Property errored!
-│   Description = "baba"
-│   Example = (i = -5,)
-│   exception =
-│
-│    Stacktrace:
-│     [1] error()
-│       @ Base ./error.jl:44
-│     [2] (::var"#baba#11")(i::Int8)
-│       @ Main ./REPL[2]:18
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:250
-┌ Error: Property doesn't hold!
-│   Description = "bar"
-│   Example = (Float16(0.0),)
-└ @ Supposition ~/Documents/projects/Supposition.jl/src/testset.jl:255
-Test Summary: | Pass  Fail  Error  Broken  Total  Time
-Examples      |    1     2      1       1      5  1.2s
-  foo         |          1                     1  0.0s
-  bar         |    1                           1  0.0s
-  baba        |                 1              1  0.2s
-  bar         |          1                     1  0.0s
-  broke       |                         1      1  0.0s
-ERROR: Some tests did not pass: 1 passed, 2 failed, 1 errored, 1 broken.
-```
+![README example output](./readme_example.png)
