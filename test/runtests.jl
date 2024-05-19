@@ -1031,28 +1031,170 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
     end
 
-    @testset "show Report: $pos" for pos in (
-            Data.Integers{UInt8}(),
-            Data.Integers(0x1,0xfe),
-            Data.Floats{Float16}(),
-            Data.Floats(),
-            Data.Booleans(),
-            Data.Pairs(Data.Booleans(), Data.Booleans()),
-            Data.Vectors(Data.Booleans();max_size=1),
-            Data.Dicts(Data.Booleans(),Data.Booleans();max_size=1),
-            Data.AsciiCharacters(),
-            Data.Characters(),
-            Data.UnicodeCharacters(),
-            Data.Text(Data.AsciiCharacters();max_len=1),
-            Data.SampledFrom(0:10),
-            Data.filter(iseven, Data.Just(0:10)),
-            Data.map(sqrt, Data.Just(0:10)),
-            Data.Just(1),
-            Data.Floats() | Data.Booleans(),
-            Data.WeightedNumbers([.1, .2, .7]),
-            Data.WeightedSample(1:3, [.1, .2, .7]),
-            )
-        @test eval(Meta.parse(repr(pos))) == pos
+    @testset "show" begin
+    @testset "2-arg show" begin
+        @testset "repr is evalable: $pos" for pos in (
+                Data.Integers{UInt8}(),
+                Data.Integers(0x1,0xfe),
+                Data.Floats{Float16}(),
+                Data.Floats(),
+                Data.Booleans(),
+                Data.Pairs(Data.Booleans(), Data.Booleans()),
+                Data.Vectors(Data.Booleans();max_size=1),
+                Data.Dicts(Data.Booleans(),Data.Booleans();max_size=1),
+                Data.AsciiCharacters(),
+                Data.Characters(),
+                Data.UnicodeCharacters(),
+                Data.Text(Data.AsciiCharacters();max_len=1),
+                Data.SampledFrom(0:10),
+                Data.filter(iseven, Data.Just(0:10)),
+                Data.map(sqrt, Data.Just(0:10)),
+                Data.Just(1),
+                Data.Floats() | Data.Booleans(),
+                Data.WeightedNumbers([.1, .2, .7]),
+                Data.WeightedSample(1:3, [.1, .2, .7]),
+                )
+            @test eval(Meta.parse(repr(pos))) == pos
+        end
+    end
+    @testset "3-arg show" begin
+        @testset "Integers" begin
+            @test occursin("Produce an integer of type $Int", repr("text/plain", Data.Integers{Int}()))
+            limited_repr = repr("text/plain", Data.Integers(5, 10))
+            @test occursin("Integers", limited_repr)
+            @test occursin("Int64", limited_repr)
+            @test occursin("[5, 10]", limited_repr)
+            bitint_repr = repr("text/plain", Data.BitIntegers())
+            @testset "BitIntegers: $T" for T in (
+                    UInt8, Int8, UInt16, Int16, UInt32, Int32, UInt64, Int64, UInt128, Int128
+                )
+                @test occursin(string(T), bitint_repr)
+            end
+        end
+        @testset "Floats" begin
+            @test occursin("of type Float16", repr("text/plain", Data.Floats{Float16}()))
+            @test occursin("isinf: never", repr("text/plain", Data.Floats{Float16}(;infs=false)))
+            @test occursin("isnan: never", repr("text/plain", Data.Floats{Float16}(;nans=false)))
+            @test occursin("AllFloats", repr("text/plain", Data.Floats()))
+            @test occursin("AllFloats", repr("text/plain", Data.AllFloats()))
+            @test occursin("true and false have a probability of 50%", repr("text/plain", Data.Booleans()))
+        end
+        @testset "Data.Pairs" begin
+            pair_repr = repr("text/plain", Data.Pairs(Data.Booleans(), Data.Characters()))
+            @test occursin("Pairs", pair_repr)
+            @test occursin(r"From[\w\s\.]+Booleans", pair_repr)
+            @test occursin(r"From[\w\s\.]+Characters", pair_repr)
+            @test occursin("Pair{Bool, Char}", pair_repr)
+        end
+        @testset "Data.Vectors" begin
+            vec_repr = repr("text/plain", Data.Vectors(Data.Booleans(); min_size=10, max_size=50))
+            @test occursin("Vectors", vec_repr)
+            # show the interval of the length
+            @test occursin("[10, 50]", vec_repr)
+            # show the `Possibility` for elements
+            @test occursin("Booleans()", vec_repr)
+            # show the target vector type
+            @test occursin("Vector{Bool}", vec_repr)
+        end
+        @testset "Data.Dicts" begin
+            dict_repr = repr("text/plain", Data.Dicts(Data.Booleans(), Data.Characters(); min_size=10, max_size=50))
+            @test occursin("Dicts", dict_repr)
+            # show the interval of the length
+            @test occursin("[10, 50]", dict_repr)
+            # show the `Possibility` for keys
+            @test occursin("Booleans()", dict_repr)
+            # show the `Possibility` for values
+            @test occursin("Characters", dict_repr)
+            # show the target Dict type
+            @test occursin("Dict{Bool, Char}", dict_repr)
+        end
+        @testset "`Char`" begin
+            ascii_char_repr = repr("text/plain", Data.AsciiCharacters())
+            @test occursin("AsciiCharacters", ascii_char_repr)
+            @test occursin("isascii returns true", ascii_char_repr)
+            char_repr = repr("text/plain", Data.Characters())
+            @test occursin("Characters", char_repr)
+            @test occursin("well-formed", char_repr)
+            uni_char_repr = repr("text/plain", Data.UnicodeCharacters())
+            @test occursin("UnicodeCharacters", uni_char_repr)
+            @test occursin("ismalformed", uni_char_repr)
+        end
+        @testset "Text" begin
+            text_repr = repr("text/plain", Data.Text(Data.AsciiCharacters(); min_len=10, max_len=50))
+            @test occursin("Text", text_repr)
+            # show the interval of the length
+            @test occursin("[10, 50]", text_repr)
+            # show the `Possibility` for individual characters
+            @test occursin("AsciiCharacters()", text_repr)
+            @test occursin("String", text_repr)
+        end
+        @testset "SampledFrom" begin
+            sf_repr = repr("text/plain", Data.SampledFrom((sin, cos)))
+            @test occursin("SampledFrom", sf_repr)
+            @test occursin("(sin, cos)", sf_repr)
+            @test occursin("equal probability", sf_repr)
+        end
+        @testset "filter" begin
+            satis_repr = repr("text/plain", filter(isinf, Data.Integers{Int8}()))
+            @test occursin("Satisfying", satis_repr)
+            @test occursin("Integers{Int8}", satis_repr)
+            @test occursin("isinf", satis_repr)
+        end
+        @testset "map" begin
+            map_repr = repr("text/plain", map(sqrt, Data.Integers{UInt8}()))
+            @test occursin("Map", map_repr)
+            @test occursin("Integers{UInt8}", map_repr)
+            @test occursin("Float64", map_repr)
+            @test occursin("sqrt", map_repr)
+            @check max_examples=100 description="map" (f=map(abs, Data.Floats{Float64}())) -> begin
+                str = repr("text/plain", map(sqrt, Data.Just(f)))
+                exp = "sqrt($f)"
+                occursin(exp, str)
+            end
+        end
+        @testset "Just" begin
+            # a totally random number for testing
+            just_repr = repr("text/plain", Data.Just(4))
+            @test occursin("Just", just_repr)
+            @test occursin("4", just_repr)
+        end
+        @testset "OneOf" begin
+            of_repr = repr("text/plain", Data.Just(4) | Data.Integers{UInt8}())
+            @test occursin("OneOf", of_repr)
+            @test occursin("Just(4)", of_repr)
+            @test occursin("Integers{UInt8}", of_repr)
+        end
+        @testset "Bind" begin
+            intbind(o) = Data.Integers(o,o)
+            bind_repr = repr("text/plain", Data.Bind(Data.Just(4), intbind))
+            @test occursin("Bind", bind_repr)
+            @test occursin("Just(4)", bind_repr)
+            @test occursin("intbind", bind_repr)
+        end
+        @testset "Recursive" begin
+            recwrap(pos) = map(tuple, pos)
+            recr_repr = repr("text/plain", Data.recursive(recwrap, Data.Characters(); max_layers=3))
+            @test occursin("Recursive", recr_repr)
+            @test occursin("Characters", recr_repr)
+            @test occursin("recwrap", recr_repr)
+            @test occursin("2", recr_repr)
+        end
+        @testset "WeightedNumbers" begin
+            wn_repr = repr("text/plain", Data.WeightedNumbers([.1, .2, .7]))
+            @test occursin("WeightedNumbers", wn_repr)
+            @test occursin("1:3", wn_repr)
+            @test occursin("10.00% : 1", wn_repr)
+            @test occursin("20.00% : 2", wn_repr)
+            @test occursin("70.00% : 3", wn_repr)
+        end
+        @testset "WeightedSample" begin
+            wn_repr = repr("text/plain", Data.WeightedSample(("foo", "bar", "baz"), [.1, .2, .7]))
+            @test occursin("WeightedSample", wn_repr)
+            @test occursin("10.00% : foo", wn_repr)
+            @test occursin("20.00% : bar", wn_repr)
+            @test occursin("70.00% : baz", wn_repr)
+        end
+    end
     end
 
     @testset "Utility" begin

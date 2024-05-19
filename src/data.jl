@@ -58,6 +58,7 @@ Fallback definitions:
 
   * `postype(::Possibility{T}) -> Type{T}`
   * `example(::Possibility{T}) -> T`
+  * `==(::Possibility, ::Possibility) = false`
 """
 abstract type Possibility{T} end
 Base.:(==)(::Possibility, ::Possibility) = false
@@ -285,7 +286,7 @@ function Base.show(io::IO, ::MIME"text/plain", b::Bind)
     print(io, styled"""
     {code,underline:$Bind}:
 
-
+        Binds the output of {code:$(b.source)} through {code:$(b.map)} to a new {code:Possibility}.
     """)
 end
 
@@ -832,7 +833,7 @@ function Base.show(io::IO, ::MIME"text/plain", r::Recursive)
     print(io, styled"""
     {code,underline:$Recursive}:
 
-        Wrap {code:$(r.base)} up to {code:$(length(r.inner.strats))} with {code:}
+        Wrap {code:$(r.base)} up to {code:$(length(r.inner.strats)-1)} times with {code:$(r.extend)}
     """)
 end
 
@@ -1067,7 +1068,8 @@ Base.:(==)(t1::Text, t2::Text) = t1.vectors == t2.vectors
 function Base.show(io::IO, t::Text)
     print(io, Text, "(")
     show(io, t.vectors.elements)
-    print(io, "; min_len=", t.vectors.min_size, ", max_len=", t.vectors.max_size, ")")
+    print(io, "; min_len=", string(t.vectors.min_size; base=10))
+    print(io, ", max_len=", string(t.vectors.max_size; base=10), ")")
     nothing
 end
 
@@ -1080,12 +1082,13 @@ function Base.show(io::IO, ::MIME"text/plain", t::Text)
         rem_len = textwidth(str) - available_space + 3
         str = str[begin:div(rem_len, 2)] * " _ " * str[(div(rem_len, 2)+3):end]
     end
-    lower = sprint(show, t.vectors.min_size % Int)
-    upper = sprint(show, (t.vectors.min_size + t.vectors.max_size) % Int)
+    lower = string(t.vectors.min_size; base=10)
+    upper = string(t.vectors.max_size; base=10)
     print(io, styled"""
     {code,underline:$Text}:
 
         Produce a {code:String} with length in the interval {code:[$lower, $upper]}
+        The {code:Char} of the {code:String} are produced by {code:$(t.vectors.elements)}.
 
     E.g. {code:$str} (may be abbreviated here)
     """)
@@ -1139,8 +1142,21 @@ function Base.show(io::IO, d::Dicts)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", d::Dicts)
+    lengths = styled"{code:[$(Int128(d.min_size)), $(Int128(d.max_size))]}"
     print(io, styled"""
-    """)
+    {code,underline:$Dicts}:
+
+        Produce a {code:Dict\{$(postype(d.keys)), $(postype(d.values))\}} with length in the interval $lengths.
+        The keys are produced by {code:$(d.keys)}.
+        The values are produced by {code:$(d.values)}.""")
+    obj = styled"""
+
+
+    Keys of the {code:Dict} may look like {code:$(sprint(show, example(d.keys)))}
+    Values of the {code:Dict} may look like {code:$(sprint(show, example(d.values)))}"""
+    if length(obj) < 100
+        print(io, obj)
+    end
 end
 
 function produce!(tc::TestCase, d::Dicts{K,V}) where {K,V}
