@@ -6,6 +6,9 @@ Supposition.jl in one form or another. If you find a new tutorial or resource
 that helped you test your code with Supposition.jl in some manner, please don't
 hesitate to open a PR adding the resource here!
 
+ * [Property-based Testing For The Rest Of Us (or: The Natural Next Step After TDD)](https://arialdomartini.github.io/property-testing) by Arialdo Martini
+   * A series of articles explaining property based testing and what problems with regular testing are solved by it. It's an extremely friendly introduction
+     to the topic, so much so that I'd recommend just following along with the examples there and playing around with the concepts in Supposition.jl.
  * [The purpose of Hypothesis](https://hypothesis.readthedocs.io/en/latest/manifesto.html) by David R. MacIver
    * > [...], the larger purpose of Hypothesis is to drag the world kicking and screaming into a new and terrifying age of high quality software.
  * [Hypothesis testing with Oracle functions](https://www.hillelwayne.com/post/hypothesis-oracles/) by Hillel Wayne
