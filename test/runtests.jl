@@ -1139,6 +1139,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test occursin("Satisfying", satis_repr)
             @test occursin("Integers{Int8}", satis_repr)
             @test occursin("isinf", satis_repr)
+            @test begin
+                repr("text/plain", filter(Data.Integers{UInt8}()) do i
+                    Data.produce!(Data.Just(i)) isa UInt16
+                end)
+                true # dummy pass, this used to throw
+            end
         end
         @testset "map" begin
             map_repr = repr("text/plain", map(sqrt, Data.Integers{UInt8}()))
@@ -1146,6 +1152,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test occursin("Integers{UInt8}", map_repr)
             @test occursin("Float64", map_repr)
             @test occursin("sqrt", map_repr)
+            @test begin
+                repr("text/plain", map(Data.Integers{UInt8}()) do i
+                    Data.produce!(Data.Just(i))
+                end)
+                true # dummy pass, this used to throw
+            end
             @check max_examples=100 description="map" (f=map(abs, Data.Floats{Float64}())) -> begin
                 str = repr("text/plain", map(sqrt, Data.Just(f)))
                 exp = "sqrt($f)"

@@ -151,8 +151,6 @@ function Base.show(io::IO, m::Map)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", m::Map)
-    obj = example(m.source)
-    res = m.map(obj)
     func_str = string(m.map)
     padding = textwidth(func_str)+1
     print(io, styled"""
@@ -162,9 +160,18 @@ function Base.show(io::IO, ::MIME"text/plain", m::Map)
 
         $(" "^padding)╭── {code:$(postype(m.source))} from {code:$(m.source)}
         {code:$func_str(x) -> $(postype(m))}
-        $(" "^(padding+6))╰─ Result type
+        $(" "^(padding+6))╰─ Result type""")
 
-    E.g. {code:$(m.map)($obj) == $res}""")
+    obj = example(m.source)
+    res = try
+        Some(m.map(obj))
+    catch
+        nothing
+    end
+
+    if !isnothing(res)
+        print(io, styled"E.g. {code:$(m.map)($obj) == $(something(res))}")
+    end
 end
 
 """
@@ -218,15 +225,22 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", s::Satisfying)
     obj = example(s.source)
-    fulfill_pred = s.predicate(obj)
-    isval = fulfill_pred ? styled"{green:✔}" : styled"{red:❌}"
-    pred_descr = fulfill_pred ? "fulfills the predicate" : "is rejected by the predicate"
+    fulfill_pred = try
+        Some(s.predicate(obj))
+    catch
+        nothing
+    end
     print(io, styled"""
     {code,underline:$Satisfying}:
 
-        Filter {code:$(s.source)} through the predicate {code:$(s.predicate)}.
+        Filter {code:$(s.source)} through the predicate {code:$(s.predicate)}.""")
 
-    E.g. {code:$obj} $pred_descr $isval""")
+    if !isnothing(fulfill_pred)
+        fp = @something fulfill_pred
+        isval = fp ? styled"{green:✔}" : styled"{red:❌}"
+        pred_descr = fp ? "fulfills the predicate" : "is rejected by the predicate"
+        styled"E.g. {code:$obj} $pred_descr $isval"
+    end
 end
 
 """
