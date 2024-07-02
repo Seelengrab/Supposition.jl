@@ -382,6 +382,20 @@ struct Composed{S,P,T} <: Data.Possibility{T}
     end
 end
 
+function Base.show(io::IO, c::Composed{S}) where S
+    print(io, "@composed ", S, "(...)")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", c::Composed{S,P,T}) where {S,P,T}
+    obj = example(c)
+    print(io, styled"""
+    {code,underline:$Composed\{$S\}}:
+
+        A {code:$Data.Possibility} generating {code:$T} through {code:$S}.
+
+    E.g. {code:$obj}""")
+end
+
 """
     @composed
 
