@@ -375,10 +375,10 @@ A `Possibility` composed from multiple different `Possibility` through
 Should not be instantiated manually; keep the object returned by `@composed`
 around instead.
 """
-struct Composed{S,T} <: Data.Possibility{T}
-    function Composed{S}() where S
-        prodtype = Base.promote_op(Data.produce!, TestCase, Composed{S})
-        new{S, prodtype}()
+struct Composed{S,P,T} <: Data.Possibility{T}
+    function Composed{S,P}() where {S,P}
+        prodtype = Base.promote_op(Data.produce!, TestCase, Composed{S,P})
+        new{S, P, prodtype}()
     end
 end
 
@@ -487,15 +487,16 @@ function composed_from_func(e::Expr)
     pushfirst!(funchead.args, name)
     push!(structfunc.args, funchead)
     push!(structfunc.args, body)
+    id = QuoteNode(gensym())
 
     return esc(quote
         $structfunc
 
-        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname})
+        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname,$id})
             $name($strategy_let...)
         end
 
-        $Composed{$prodname}()
+        $Composed{$prodname,$id}()
     end)
 end
 
@@ -511,13 +512,14 @@ function composed_from_call(e::Expr)
     for e in kwargs
         push!(args.args, :($Data.produce!($tc, $e)))
     end
+    id = QuoteNode(gensym())
 
     return esc(quote
-        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname})
+        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname,$id})
             $func($args...)
         end
 
-        $Composed{$prodname}()
+        $Composed{$prodname,$id}()
     end)
 end
 
