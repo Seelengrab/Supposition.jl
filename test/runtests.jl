@@ -35,6 +35,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "Interfaces" begin
         possibility_subtypes = filter(!=(Supposition.Composed), subtypes(Data.Possibility))
         @testset "Possibility" RI.check_implementations(Supposition.Data.Possibility, possibility_subtypes)
+        comp = @composed (i=Data.Integers(0,10),) -> i
+        @testset "Composed" RI.check_implementations(Supposition.Data.Possibility, (typeof(comp),))
         @testset "ExampleDB" RI.check_implementations(Supposition.ExampleDB)
     end
     # Write your tests here.
@@ -643,7 +645,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
 
             @testset "Expected return types" begin
-                @test gen isa Supposition.Composed{:uint8tup, Tuple{UInt8,UInt8}}
+                @test gen isa Supposition.Composed{:uint8tup}
                 @test Data.postype(gen) === Tuple{UInt8, UInt8}
                 @test example(gen) isa Tuple{UInt8, UInt8}
             end
@@ -685,7 +687,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
                 @testset "Named anon" begin
                     named = @composed named_anon(a=Data.Integers{Int8}(),b=preexisting) -> a isa Int8 && b isa Int8
-                    @test named isa Supposition.Composed{:named_anon, Bool}
+                    @test named isa Supposition.Composed{:named_anon}
                     @test Data.postype(named) === Bool
                     @test example(named) isa Bool
                     @test named_anon(Int8(1), Int8(2))
@@ -696,7 +698,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 foo(a,b) = a+b
                 preexisting = Data.Integers{Int8}()
                 existing = @composed foo(Data.Integers{Int8}(), preexisting)
-                @test existing isa Supposition.Composed{:foo, Int8}
+                @test existing isa Supposition.Composed{:foo}
                 @test Data.postype(existing) === Int8
                 @test example(existing) isa Int8
                 # can still call the existing function
@@ -713,7 +715,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
 
             @testset "Expected return types" begin
-                @test g2 isa Supposition.Composed{:stringcat, String}
+                @test g2 isa Supposition.Composed{:stringcat}
                 @test Data.postype(g2) === String
                 @test example(g2) isa String
             end

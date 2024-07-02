@@ -375,10 +375,10 @@ A `Possibility` composed from multiple different `Possibility` through
 Should not be instantiated manually; keep the object returned by `@composed`
 around instead.
 """
-struct Composed{S,P,T} <: Data.Possibility{T}
+struct Composed{S,T,P} <: Data.Possibility{T}
     function Composed{S,P}() where {S,P}
-        prodtype = Base.promote_op(Data.produce!, TestCase, Composed{S,P})
-        new{S, P, prodtype}()
+        prodtype = Base.promote_op(Data.produce!, TestCase, Composed{S,Any,P})
+        new{S, prodtype, P}()
     end
 end
 
@@ -386,7 +386,7 @@ function Base.show(io::IO, c::Composed{S}) where S
     print(io, "@composed ", S, "(...)")
 end
 
-function Base.show(io::IO, ::MIME"text/plain", c::Composed{S,P,T}) where {S,P,T}
+function Base.show(io::IO, ::MIME"text/plain", c::Composed{S,T,P}) where {S,P,T}
     obj = example(c)
     print(io, styled"""
     {code,underline:$Composed\{$S\}}:
@@ -506,7 +506,7 @@ function composed_from_func(e::Expr)
     return esc(quote
         $structfunc
 
-        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname,$id})
+        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname,T,$id}) where T
             $name($strategy_let...)
         end
 
@@ -529,7 +529,7 @@ function composed_from_call(e::Expr)
     id = QuoteNode(gensym())
 
     return esc(quote
-        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname,$id})
+        function $Data.produce!($tc::$TestCase, ::$Composed{$prodname,T,$id}) where T
             $func($args...)
         end
 
