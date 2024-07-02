@@ -1,6 +1,6 @@
 name = "Supposition"
 uuid = "5a0628fe-1738-4658-9b6d-0b7605a9755b"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["Sukera <Seelengrab@users.noreply.github.com> and contributors"]
 
 [deps]
