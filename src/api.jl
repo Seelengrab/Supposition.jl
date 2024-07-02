@@ -27,11 +27,10 @@ julia> example(Data.Integers(0, 10))
 7
 ```
 """
-function example(pos::Data.Possibility; tries=100_000, generation::Int=rand(1:500))
+function example(pos::Data.Possibility; tries=100_000, generation::Int=rand(1:500), max_generation=10_000)
     isassigned(CURRENT_TESTCASE) && error("Invalid use of `example`! Call `produce!` on your `Possibility` instead.")
-
     for _ in 1:tries
-        tc = for_choices(UInt[], Random.default_rng(), convert(UInt, generation), 10_000)
+        tc = for_choices(UInt[], Random.default_rng(), convert(UInt, generation), max_generation)
         tc.max_size = typemax(UInt)
         try
             @with CURRENT_TESTCASE => tc begin
@@ -80,14 +79,13 @@ julia> example(is, 10)
   8
 ```
 """
-function example(pos::Data.Possibility{T}, n::Integer; tries=100_000) where {T}
+function example(pos::Data.Possibility{T}, n::Integer; tries=100_000, max_generation=10_000) where {T}
     isassigned(CURRENT_TESTCASE) && error("Invalid use of `example`! Call `produce!` on a `Data.Vectors` wrapping your `Possibility` instead.")
-
     res = Vector{T}(undef, n)
     gens = Random.shuffle(1:n)
 
     for idx in eachindex(res)
-        res[idx] = example(pos; tries, generation=gens[idx])
+        res[idx] = example(pos; tries, generation=gens[idx], max_generation)
     end
 
     res
