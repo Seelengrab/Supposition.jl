@@ -477,6 +477,27 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test length(arr) == (upper_limit-offset)
     end
 
+    @testset "size bounds on matrices" begin
+        matgen = Data.Matrices(Data.Integers(0x0,0xa); min_cols=UInt(1), max_cols=UInt(3),
+                                                       min_rows=UInt(1), max_rows=UInt(3))
+        @check function bounds(m=matgen)
+            1 <= size(m, 1) <= 3 && 1 <= size(m, 2) <= 3
+        end
+    end
+
+    @testset "Can find close-to-maximum matrix size" begin
+        upper_limit = rand(50:70)
+        offset = rand(1:10)
+        matgen = Data.Matrices(Data.Integers{UInt8}(); min_rows=min(125, upper_limit)-2*offset, max_rows=upper_limit+2*offset,
+                                                       min_cols=min(125, upper_limit)-2*offset, max_cols=upper_limit+2*offset)
+        sr = @check db=NoRecordDB() record=false broken=true function findArr(m=matgen)
+                prod(size(m)) < (upper_limit-offset)^2
+            end;
+        @test @something(sr.result) isa Supposition.Fail
+        arr = only(@something(sr.result).example);
+        @test size(arr) == (upper_limit-offset, upper_limit-offset)
+    end
+
     @testset "Can produce floats" begin
         @testset for floatT in (Float16, Float32, Float64)
             @check verbose=verb function isfloat(f=Data.Floats{floatT}())

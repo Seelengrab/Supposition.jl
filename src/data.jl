@@ -11,6 +11,8 @@ These currently include:
  * [`Booleans`](@ref), for producing booleans
  * [`Pairs`](@ref), for producing pairs of values `a => b`
  * [`Vectors`](@ref), for producing `Vector`s out of `Possibility`
+ * [`Matrices`](@ref), for producing `Matrix` objects out of `Possibility`
+ * [`SquareMatrices`](@ref), for producing `Matrix` objects out of `Possibility` that are square (both axes have the same length)
  * [`Dicts`](@ref), for producing `Dict`s out of a `Possibility` for keys and one for values
  * [`AsciiCharacters`](@ref), for producing `Char`s that are `isascii`
  * [`Characters`](@ref), for producing all well-formed `Char`s, including invalid Unicode
@@ -38,8 +40,9 @@ as well as these utility functions:
 """
 module Data
 
+using Base: throw_eachindex_mismatch_indices
 using Supposition
-using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject
+using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject, BiasedAverage, should_continue
 using RequiredInterfaces: @required
 using StyledStrings: @styled_str
 using Printf: format, @format_str
@@ -546,6 +549,7 @@ struct Vectors{T, P <: Possibility{T}} <: Possibility{Vector{T}}
 
     function Vectors(elements::Possibility{T}; min_size=0, max_size=10_000) where T
         min_size <= max_size || throw(ArgumentError("`min_size` must be `<= max_size`!"))
+        min_size >= 0 || throw(ArgumentError("Can't specify a negative size!"))
 
         low = UInt(min_size)
         high = UInt(max_size)
@@ -586,85 +590,258 @@ end
 function produce!(tc::TestCase, v::Vectors{T}) where T
     result = T[]
 
-    # it's VERY important to let the shrinker shrink this!
-    # if we don't we get Invalids even when we shouldn't
-    max_offset = choice!(tc, v.max_size - v.min_size)
-
-    if tc.attempt.generation == tc.attempt.max_generation
-        # if we're on the last try (should that exist)
-        # guarantee that we're able to draw the maximum permissible size
-        average_offset = (v.max_size÷2 + v.min_size÷2) - v.min_size
-    else
-        # otherwise, get an average according to a beta distribution
-        raw_step = smootherstep(0.0, float(max(tc.attempt.max_generation÷2, 5_000)), tc.attempt.generation)
-        beta_param = lerp(0.5, 5.0, raw_step)
-        average_offset = floor(UInt, max_offset*(beta_param/(beta_param+1.0)))
-    end
+    # we're going to bias the target size slightly,
+    # favoring small vectors in the beginning
+    # and big vectors in the end
+    bb = BiasedAverage(tc, v.min_size, v.max_size, 0.05, 5.0, 1.0)
 
     # give some hint to the amount of data we're going to need
-    sizehint!(result, v.min_size+average_offset)
+    sizehint!(result, v.min_size+bb.target_offset)
 
-    # first, make sure we hit the minimum size
-    for _ in 1:v.min_size
+    # now, draw with our targeted average until we're done
+    while should_continue(bb)
         push!(result, produce!(tc, v.elements))
-    end
-
-    # now for the fiddly bit to reaching `v.max_size`
-    # the `min` here is important, otherwise we may _oversample_ if the
-    # beta distribution drew too high after `max_offset` shrank!
-    p_continue = _calc_p_continue(min(average_offset, max_offset), max_offset)
-
-    # finally, draw with our targeted average until we're done
-    for _ in 1:max_offset
-        if weighted!(tc, p_continue)
-            push!(result, produce!(tc, v.elements))
-        else
-            break
-        end
     end
 
     return result
 end
 
-function _calc_p_continue(desired_avg, max_size)
-    @assert desired_avg <= max_size "Require target <= max_size, not $desired_avg > $max_size"
-    if desired_avg == max_size
-        return 1.0
-    end
-    p_continue = 1.0 - 1.0/(1+desired_avg)
-    if iszero(p_continue)
-        @assert 0 <= p_continue < 1
-        return p_continue
-    end
+"""
+    Matrices(elements::Possibility{T}; min_rows=0, max_rows=100, min_cols=0, max_cols=100) <: Possibility{Matrix{T}}
 
-    while _p_continue_to_avg(p_continue, max_size) > desired_avg
-        p_continue -= 0.0001
-        smallest_positive = nextfloat(0.0)
-        if p_continue < smallest_positive
-            p_continue = smallest_positive
-            break
-        end
-    end
+A `Possibility` for creating `Matrix{T}` objects `mat` with `min_rows <= size(mat, 1) <= max_rows` and `min_cols <= size(mat, 2) <= max_cols`.
 
-    hi = 1.0
-    while desired_avg - _p_continue_to_avg(p_continue, max_size) > 0.01
-        @assert 0 < p_continue < hi "Binary search failed: $p_continue, $hi"
-        # this can't overflow, since the numbers are all in [0,1]
-        mid = (p_continue + hi) / 2
-        if _p_continue_to_avg(mid, max_size) <= desired_avg
-            p_continue = mid
-        else
-            hi = mid
-        end
+All of `min_*`/`max_*` must be positive numbers, with `min_*` being `<=` than the respective `max_*`.
+
+```
+julia> using Supposition
+
+julia> mats = Data.Matrices(Data.Integers{UInt8}(); min_cols=1, max_cols=5, min_rows=2, max_rows=7);
+
+julia> example(mats)
+5×3 Matrix{UInt8}:
+ 0x29  0x2c  0x20
+ 0x2a  0xb4  0xf2
+ 0x97  0x5b  0x24
+ 0x2e  0xfa  0x06
+ 0xd4  0x45  0x4e
+```
+"""
+struct Matrices{T, P <: Possibility{T}} <: Possibility{Matrix{T}}
+    data::Data.Vectors{T, P}
+    min_rows::UInt
+    max_rows::UInt
+    min_cols::UInt
+    max_cols::UInt
+    function Matrices(elements::Possibility{T}; min_rows=0, max_rows=100, min_cols=0, max_cols=100) where T
+        min_rows <= max_rows || throw(ArgumentError("`min_rows` must be `<= max_rows`"))
+        min_cols <= max_cols || throw(ArgumentError("`min_cols` must be `<= max_cols`"))
+        min_rows >= 0 || throw(ArgumentError("Can't specify a negative number of rows!"))
+        min_cols >= 0 || throw(ArgumentError("Can't specify a negative number of cols!"))
+
+        # we need to be able to store at least this many items
+        min_size = min_rows * min_cols
+
+        # we store at most this many items
+        max_size = max_rows * max_cols
+
+        vecs = Data.Vectors(elements; min_size, max_size)
+
+        new{T, typeof(elements)}(vecs, min_rows, max_rows, min_cols, max_cols)
     end
-    @assert 0 < p_continue < 1 "Binary search faileD: $p_continue, $hi"
-    @assert _p_continue_to_avg(p_continue, max_size) <= desired_avg "Found probability leads to higher-than-requested average"
-    return p_continue
 end
 
-function _p_continue_to_avg(p_continue, max_size)
-    p_continue >= 1 && return max_size
-    return (1.0 / (1 - p_continue) - 1.0) * (1 - p_continue^max_size)
+function Base.show(io::IO, mats::Matrices)
+    print(io, Matrices, "(")
+    show(io, mats.data)
+    print(io, "; ")
+    print(io, "min_rows=", mats.min_rows, ", ")
+    print(io, "max_rows=", mats.max_rows, ", ")
+    print(io, "min_cols=", mats.min_cols, ", ")
+    print(io, "max_cols=", mats.max_cols)
+    print(io, ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", mats::Matrices)
+    row_lengths = styled"{code:[$(Int128(mats.min_rows)), $(Int128(mats.max_rows))]}"
+    col_lengths = styled"{code:[$(Int128(mats.min_cols)), $(Int128(mats.max_cols))]}"
+    min_size = styled"{code:($(mats.min_rows), $(mats.min_cols))}"
+    max_size = styled"{code:($(mats.max_rows), $(mats.max_cols))}"
+    print(io, styled"""
+    {code,underline:$Matrices}:
+
+        Produce a {code:Matrix\{$(postype(mats.data))\}} with number of rows in the interval $row_lengths and
+        number of columns in $col_lengths. I.e., the produced matrices have a {code:size} somewhere between $min_size and $max_size.
+        The data is produced by {code:$(mats.data.elements)}.""")
+    obj = styled"""
+
+
+    Elements of the matrix may look like {code:$(sprint(show, example(mats.data.elements)))}"""
+    if length(obj) < 100
+        print(io, obj)
+    end
+end
+
+function produce!(tc::TestCase, mats::Matrices)
+    vec = produce!(tc, mats.data)
+
+    # We start with sampling row or columns, in order not to
+    # bias towards one or the other since they may have
+    # different ranges
+    if produce!(tc, Booleans())
+        # Sample as little as we require, and as much as possible
+        max_row = min(length(vec), mats.max_rows)
+
+        # we want to ramp the rows up somewhat slowly, so bias
+        # the sampling towards small rows in the beginning
+        # and towards large rows at the end
+        bb = BiasedAverage(tc, mats.min_rows, max_row, 0.05, 5.0, 5.0)
+        min_row = zero(UInt)
+        while should_continue(bb)
+            min_row += one(UInt)
+        end
+
+        # finally, sample the actual row we're going to use
+        rows = produce!(tc, Data.SampledFrom(min_row:max_row))
+
+        # the previous sampling constrains the number of columns
+        # we have left to draw, so take that into account
+        max_cols = div(length(vec), max(rows, one(UInt))) % UInt
+        if max_cols < mats.min_cols
+            # it can happen that there simply isn't enough data
+            # remaining if we happen to hit a sample of rows
+            # that won't work for the minimum required number of columns
+            # in this case, just reject the TC
+            # TODO: Take min_cols into account when determining the max number of rows
+            reject(tc)
+        end
+        max_cols = min(max_cols, mats.max_cols)
+
+        # do the same biased sampling for columns
+        bb = BiasedAverage(tc, mats.min_cols, max_cols, 0.05, 5.0, 5.0)
+        min_col = zero(UInt)
+        while should_continue(bb)
+            min_col += one(UInt)
+        end
+        cols = produce!(tc, Data.SampledFrom(min_col:max_cols))
+
+    else
+        # this is the same process as in the other branch,
+        # just with rows & columns reversed
+        max_col = min(length(vec), mats.max_cols)
+        bb = BiasedAverage(tc, mats.min_cols, max_col, 0.05, 5.0, 5.0)
+        min_col = zero(UInt)
+        while should_continue(bb)
+            min_col += one(UInt)
+        end
+        cols = produce!(tc, Data.SampledFrom(min_col:max_col))
+
+        max_rows = div(length(vec), max(cols, one(UInt))) % UInt
+        if max_rows < mats.min_rows
+            reject(tc)
+        end
+        max_rows = min(max_rows, mats.max_rows)
+        bb = BiasedAverage(tc, mats.min_rows, max_rows, 0.05, 5.0, 5.0)
+        min_row = zero(UInt)
+        while should_continue(bb)
+            min_row += one(UInt)
+        end
+        rows = produce!(tc, Data.SampledFrom(min_row:max_rows))
+    end
+
+    #=
+    safe, since we're guaranteed that `vec` has enough data
+    i.e., it must always be true that `row*cols <= length(vec)`
+    because `min_cols*min_rows <= row*cols <= max_cols*max_rows`
+    =#
+    resize!(vec, rows*cols)
+    reshape(vec, Int(rows), Int(cols))
+end
+
+"""
+    SquareMatrices(elements::Possibility{T}; min_size=0, max_size=1_000) <: Possibility{Matrix{T}}
+
+A `Possibility` for creating `Matrix{T}` objects `mat` with `min_size <= size(mat, 1) <= max_size` and `size(mat, 1) == size(mat, 2)`.
+
+Both `min_size` and `max_size` must be positive numbers, with `min_size <= max_size`.
+
+```
+julia> using Supposition
+
+julia> mats = Data.SquareMatrices(Data.Integers{UInt8}(); min_size=3, max_size=10);
+
+julia> example(mats)
+4×4 Matrix{UInt8}:
+ 0x36  0x7f  0x84  0x57
+ 0x11  0xfa  0x61  0x12
+ 0xb2  0x47  0xbf  0x66
+ 0x74  0xe3  0xf1  0x3a
+```
+"""
+struct SquareMatrices{T, P <: Possibility{T}} <: Possibility{Matrix{T}}
+    data::Data.Vectors{T, P}
+    min_size::UInt
+    max_size::UInt
+    function SquareMatrices(elements::Possibility{T}; min_size=0, max_size=1_000) where T
+        min_size <= max_size || throw(ArgumentError("`min_size` must be `<= max_size`"))
+        min_size >= 0 || throw(ArgumentError("Can't specify a negative number as a size!"))
+
+        # we need to be able to store at least this many items
+        min_vec_size = min_size * min_size
+
+        # we store at most this many items
+        max_vec_size = max_size * max_size
+
+        # This could probably take advantage of the fact that we're always
+        # generating a square matrix, but in general we don't *really* need
+        # to reinvent the wheel. Discarding a little bit won't be too expensive.
+        vecs = Data.Vectors(elements; min_size=min_vec_size, max_size=max_vec_size)
+
+        new{T, typeof(elements)}(vecs, min_size, max_size)
+    end
+end
+
+function Base.show(io::IO, mats::SquareMatrices)
+    print(io, SquareMatrices, "(")
+    show(io, mats.data)
+    print(io, "; ")
+    print(io, "min_size=", mats.min_size, ", ")
+    print(io, "max_size=", mats.max_size)
+    print(io, ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", mats::SquareMatrices)
+    lengths = styled"{code:[$(Int128(mats.min_size)), $(Int128(mats.max_size))]}"
+    min_size = styled"{code:($(mats.min_size), $(mats.min_size))}"
+    max_size = styled"{code:($(mats.max_size), $(mats.max_size))}"
+    print(io, styled"""
+    {code,underline:$SquareMatrices}:
+
+        Produce a {code:Matrix\{$(postype(mats.data))\}} that is square and whose sidelengths are in $lengths.
+        I.e., the produced matrices have a {code:size} somewhere between $min_size and $max_size, and `size(mat, 1) == size(mat, 2)`.
+        The data is produced by {code:$(mats.data.elements)}.""")
+    obj = styled"""
+
+
+    Elements of the matrix may look like {code:$(sprint(show, example(mats.data.elements)))}"""
+    if length(obj) < 100
+        print(io, obj)
+    end
+end
+
+function produce!(tc::TestCase, sm::SquareMatrices)
+    vec = produce!(tc, sm.data)
+
+    # The length of data is taken care of by the vector generation,
+    # so we can just grab as much as we'll possibly need in order
+    # not to waste too much generated data.
+    # this could be done even smarter by generating the data
+    # directly and not rely on Data.Vectors, but that's comparatively
+    # a lot of code for little gain
+    len = isqrt(length(vec))
+
+    resize!(vec, len*len)
+    reshape(vec, len, len)
 end
 
 ## Possibilities of pairs
@@ -1299,7 +1476,10 @@ julia> example(sampler, 4)
 """
 struct SampledFrom{T, C} <: Possibility{T}
     collection::C
-    SampledFrom(col) = new{eltype(col), typeof(col)}(col)
+    function SampledFrom(col)
+        isempty(col) && throw(ArgumentError("Can't sample from an empty collection!"))
+        new{eltype(col), typeof(col)}(col)
+    end
 end
 
 Base.:(==)(sf1::SampledFrom{T,C}, sf2::SampledFrom{T,C}) where {T,C} = sf1.collection == sf2.collection
