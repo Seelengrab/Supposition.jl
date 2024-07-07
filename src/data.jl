@@ -138,6 +138,7 @@ struct Map{R, S <: Possibility, F} <: Possibility{R}
     map::F
     Map(s::S, f::F) where {T, S <: Possibility{T}, F} = new{Base.promote_op(f, T), S, F}(s, f)
 end
+produce!(tc::TestCase, m::Map) = m.map(produce!(tc, m.source))
 
 Base.:(==)(m1::Map, m2::Map) = m1.map == m2.map && m1.source == m2.source
 
@@ -170,21 +171,92 @@ function Base.show(io::IO, ::MIME"text/plain", m::Map)
     end
 
     if !isnothing(res)
-        print(io, styled"E.g. {code:$(m.map)($obj) == $(something(res))}")
+        print(io, styled"\n\nE.g. {code:$(m.map)($obj) == $(something(res))}")
     end
 end
 
 """
     map(f, pos::Possibility)
+    map(f, pos::Vararg{Possibility})
 
 Apply `f` to the result of calling `produce!` on `pos` (lazy mapping).
 
-Equivalent to calling `Map(pos, f)`.
+Equivalent to calling `Map(pos, f)`, or `MultiMap(pos, f)` for the `Vararg` case (where `pos` is the tuple of `Possibility`).
+In the `Vararg` case, `f` is expected to take as many arguments as `Possibility` are passed to `map`.
 
 See also [`Map`](@ref).
 """
-Base.map(f, p::Possibility) = Map(p, f)
-produce!(tc::TestCase, m::Map) = m.map(produce!(tc, m.source))
+function Base.map(f, p::Possibility, ps::Possibility...) 
+    if isempty(ps)
+        Map(p, f)
+    else
+        all_pos = (p, ps...)
+        MultiMap(all_pos, f)
+    end
+end
+
+struct MultiMap{R, N, S <: NTuple{N, Possibility}, F} <: Possibility{R}
+    source::S
+    map::F
+    MultiMap(s::S, f::F) where {N, S <: NTuple{N, Possibility}, F} = new{multimap_eltype(f, S), N, S, F}(s, f)
+end
+produce!(tc::TestCase, mm::MultiMap) = mm.map(produce!.(Ref(tc), mm.source)...)
+
+Base.:(==)(m1::MultiMap, m2::MultiMap) = m1.map == m2.map && m1.source == m2.source
+
+function multimap_eltype(f, S::Type)
+    # this is accessing internals again, but what can ya do :shrug:
+    N = length(S.parameters)
+    argtypes = foldr(Base.tuple_type_cons, ntuple(t -> Data.postype(S.parameters[t]), N); init=Tuple{})
+    Base.promote_op(Base.splat(f), argtypes)
+end
+
+function Base.show(io::IO, mm::MultiMap)
+    print(io, MultiMap, "(")
+    show(io, mm.source)
+    print(io, ", ")
+    show(io, mm.map)
+    print(io, ")")
+    nothing
+end
+
+function Base.show(io::IO, ::MIME"text/plain", mm::MultiMap{R,N}) where {R,N}
+    func_str = string(mm.map)
+    padding = textwidth(func_str)
+    print(io, styled"""
+    {code,underline:$MultiMap}:
+
+        MultiMap {code:$(mm.map)}.
+
+        $(" "^padding)╭── {code:$(postype.(mm.source))} from {code:$(mm.source)}
+        {code:$func_str(}""")
+
+    join(io, (styled"{code:x$i}" for i in 1:N), styled"{code:, }")
+
+    #=
+        N for the 'x'
+        2*(N-1) for the ", "
+        and clamps for the numbers 1..., 10..., up to 999
+        if you pass more than that to `map`, the misalignment of printing is likely the least of your problems :)
+    =#
+    length_of_args = N + 2*(N-1)*(N>=2) + clamp(N, 0, 9) + 2*clamp(N-9, 0, 99) + 3*clamp(N-99, 0, 999)
+    # length of function name + length of args + parentheses/fluff
+    result_padding = padding + length_of_args + 10
+    print(io, styled"""{code:) -> $(postype(mm))}
+        $(" "^result_padding)╰─ Result type""")
+
+    obj = example.(mm.source)
+    res = try
+        Some(mm.map(obj...))
+    catch
+        nothing
+    end
+
+    if !isnothing(res)
+        # no need for parentheses, since we know `obj` to be a tuple of some kind which has parentheses in its printing
+        print(io, styled"\n\nE.g. {code:$(mm.map)$obj == $(something(res))}")
+    end
+end
 
 """
     Satisfying(source::Possibility, pred) <: Possibility
