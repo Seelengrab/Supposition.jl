@@ -471,6 +471,35 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
     end
 
+    @testset "Floating point clamping" begin
+        nums = Data.Floats{Float64}(;nans=false)
+        @check function floatclamp(a=nums, b=nums)
+            lower, upper = minmax(a, b)
+            inner = Data.Floats(;nans=false, minimum=lower, maximum=upper)
+            num = produce!(inner)
+            lower <= num <= upper
+        end
+
+        @check function floatclamp_type(T=Data.SampledFrom((Float16, Float32, Float64)))
+            nums = Data.Floats{T}(;nans=false)
+            a = produce!(nums)
+            b = produce!(nums)
+            lower, upper = minmax(a, b)
+            inner = Data.Floats{T}(;nans=false, minimum=lower, maximum=upper)
+            num = produce!(inner)
+            lower <= num <= upper
+        end
+
+        # test conversion
+        @test Data.Floats(;minimum=4, maximum=5) isa Data.AllFloats
+        @test Data.Floats{Float64}(;minimum=4, maximum=5) isa Data.Floats{Float64}
+
+        # test invariant checks
+        @test_throws ArgumentError Data.Floats(;minimum=NaN)
+        @test_throws ArgumentError Data.Floats(;maximum=NaN)
+        @test_throws ArgumentError Data.Floats(;minimum=2.0, maximum=1.0)
+    end
+
     @testset "@check API" begin
         # These tests are for accepted syntax, not functionality, so only one example is fine
         API_conf = Supposition.merge(DEFAULT_CONFIG[]; verbose=verb, max_examples=1)
@@ -1039,7 +1068,13 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 Data.Integers{UInt8}(),
                 Data.Integers(0x1,0xfe),
                 Data.Floats{Float16}(),
+                Data.Floats{Float16}(;minimum=3.0, maximum=7.0),
+                Data.Floats{Float16}(;minimum=3.0),
+                Data.Floats{Float16}(;maximum=7.0),
                 Data.Floats(),
+                Data.Floats(;minimum=3.0, maximum=7.0),
+                Data.Floats(;minimum=3.0),
+                Data.Floats(;maximum=7.0),
                 Data.Booleans(),
                 Data.Pairs(Data.Booleans(), Data.Booleans()),
                 Data.Vectors(Data.Booleans();max_size=1),
@@ -1077,8 +1112,18 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test occursin("of type Float16", repr("text/plain", Data.Floats{Float16}()))
             @test occursin("isinf: never", repr("text/plain", Data.Floats{Float16}(;infs=false)))
             @test occursin("isnan: never", repr("text/plain", Data.Floats{Float16}(;nans=false)))
+            minmax_float16 = Data.Floats{Float16}(;minimum=4.0, maximum=5.0)
+            @test occursin("4.0 <= x <= 5.0", repr("text/plain", minmax_float16))
+            @test occursin("isinf: never", repr("text/plain", minmax_float16))
+            @test occursin("isinf: maybe", repr("text/plain", Data.Floats{Float16}(;minimum=4.0)))
+            @test occursin("isinf: maybe", repr("text/plain", Data.Floats{Float16}(;maximum=5.0)))
             @test occursin("AllFloats", repr("text/plain", Data.Floats()))
             @test occursin("AllFloats", repr("text/plain", Data.AllFloats()))
+            minmax_allfloats = Data.Floats(;minimum=4.0, maximum=5.0)
+            @test occursin("4.0 <= x <= 5.0", repr("text/plain", minmax_allfloats))
+            @test occursin("isinf: never", repr("text/plain", minmax_allfloats))
+            @test occursin("isinf: maybe", repr("text/plain", Data.Floats(;minimum=4.0)))
+            @test occursin("isinf: maybe", repr("text/plain", Data.Floats(;maximum=5.0)))
             @test occursin("true and false have a probability of 50%", repr("text/plain", Data.Booleans()))
         end
         @testset "Data.Pairs" begin

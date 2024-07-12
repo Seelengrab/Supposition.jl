@@ -1299,7 +1299,7 @@ produce!(tc::TestCase, ::Booleans) = weighted!(tc, 0.5)
 ## Possibility of floating point values
 
 """
-    Floats{T <: Union{Float16,Float32,Float64}}(;infs=true, nans=true) <: Possibility{T}
+    Floats{T <: Union{Float16,Float32,Float64}}(;infs=true, nans=true, minimum=-T(Inf), maximum=+T(Inf)) <: Possibility{T}
 
 A `Possibility` for sampling floating point values.
 
@@ -1327,17 +1327,32 @@ julia> example(floats, 5)
 struct Floats{T <: Base.IEEEFloat} <: Possibility{T}
     nans::Bool
     infs::Bool
-    function Floats{T}(; nans=true, infs=true) where T <: Base.IEEEFloat
-        new{T}(nans, infs)
+    minimum::T
+    maximum::T
+    function Floats{T}(; nans::Bool=true, infs::Bool=true, minimum=T(-Inf), maximum=T(Inf)) where T <: Base.IEEEFloat
+        _min = convert(T, minimum)
+        _max = convert(T, maximum)
+        isnan(_min) && throw(ArgumentError("`minimum` must be non-NaN!"))
+        isnan(_max) && throw(ArgumentError("`maximum` must be non-NaN!"))
+        _min > _max && throw(ArgumentError("`minimum` must be `<= maximum`!"))
+        infs = (isinf(minimum) | isinf(maximum)) & infs
+        new{T}(nans, infs, _min, _max)
     end
 end
 
-Base.:(==)(f1::Floats{T}, f2::Floats{T}) where {T} = f1.nans == f2.nans && f1.infs == f2.infs
+Base.:(==)(f1::Floats{T}, f2::Floats{T}) where {T} = f1.nans == f2.nans && f1.infs == f2.infs && f1.minimum == f2.minimum && f1.maximum == f2.maximum
 
 function Base.show(io::IO, f::Floats)
     print(io, typeof(f), "(; ")
     print(io, "nans=", f.nans, ", ")
-    print(io, "infs=", f.infs, ")")
+    print(io, "infs=", f.infs)
+    if !isinf(f.minimum)
+        print(io, ", minimum=", f.minimum)
+    end
+    if !isinf(f.maximum)
+        print(io, ", maximum=", f.maximum)
+    end
+    print(io, ")")
     nothing
 end
 
@@ -1354,41 +1369,81 @@ function Base.show(io::IO, ::MIME"text/plain", f::Floats)
     print(io, styled"""
     {code,underline:$Floats}:
 
-        Produce a floating point value of type {code:$(postype(f))}, which is
+        Produce a floating point value {code:x} of type {code:$(postype(f))}, which is
             * {code:isinf}: $inf_str
             * {code:isnan}: $nan_str
+            * {code:$(f.minimum) <= x <= $(f.maximum)}
 
-    E.g. {code:$obj}; {code:isinf}: $inf, {code:isnan}: $nan
-    """)
+    E.g. {code:$obj}; {code:isinf}: $inf, {code:isnan}: $nan""")
 end
 
 function produce!(tc::TestCase, f::Floats{T}) where {T}
     iT = Supposition.uint(T)
     res = reinterpret(T, produce!(tc, Integers{iT}()))
+    # early rejections
     !f.infs && isinf(res) && reject(tc)
     !f.nans && isnan(res) && reject(tc)
-    return res
+
+    # early acception
+    f.nans && isnan(res) && return res
+    f.minimum <= res <= f.maximum && return res
+
+    return float_remap(res, f.minimum, f.maximum)
+end
+
+function float_remap(num::T, _min::T, _max::T) where T <: AbstractFloat
+    # We're outside of the desired bounds, so use the mantissa
+    # to resample the actual range
+    range_size = min(_max - _min, floatmax(T))
+    _, _, mantissa = Supposition.tear(num)
+    max_mantissa = oftype(mantissa, (2^Supposition.fracsize(T)) - 1)
+    num = _min + range_size * (mantissa / max_mantissa)
+
+    # ensure the value is still in the desired range
+    return clamp(convert(T, num), _min, _max)
 end
 
 struct AllFloats <: Data.Possibility{Union{Float16, Float32, Float64}}
     nans::Bool
     infs::Bool
+    minimum::Float64
+    maximum::Float64
+    function AllFloats(nans, infs, minimum, maximum)
+        _min = convert(Float64, minimum)
+        _max = convert(Float64, maximum)
+        isnan(_min) && throw(ArgumentError("`minimum` must be non-NaN!"))
+        isnan(_max) && throw(ArgumentError("`maximum` must be non-NaN!"))
+        _min > _max && throw(ArgumentError("`minimum` must be `<= maximum`!"))
+        infs = (isinf(minimum) | isinf(maximum)) & infs
+        new(convert(Bool, nans), convert(Bool, infs), _min, _max)
+    end
 end
-AllFloats(;nans=true, infs=true) = AllFloats(nans, infs)
+AllFloats(nans, infs) = AllFloats(nans, infs, -Inf, Inf)
+function AllFloats(; nans=true, infs=true,
+                     minimum=-Inf, maximum=Inf)
+    AllFloats(nans, infs, minimum, maximum)
+end
 
-Base.:(==)(af1::AllFloats, af2::AllFloats) = af1.nans == af2.nans && af1.infs == af2.infs
+Base.:(==)(af1::AllFloats, af2::AllFloats) = af1.nans == af2.nans && af1.infs == af2.infs && af1.minimum == af2.minimum && af1.maximum == af1.maximum
 
 """
     Floats(;nans=true, infs=true) <: Possibility{Union{Float64,Float32,Float16}}
 
 A catch-all for generating instances of all three IEEE floating point types.
 """
-Floats(;nans=true, infs=true) = AllFloats(nans, infs)
+Floats(;nans=true, infs=true, minimum=-Inf, maximum=Inf) = AllFloats(nans, infs, minimum, maximum)
 
 function Base.show(io::IO, f::AllFloats)
     print(io, Floats, "(; ")
     print(io, "nans=", f.nans, ", ")
-    print(io, "infs=", f.infs, ")")
+    print(io, "infs=", f.infs)
+    if !isinf(f.minimum)
+        print(io, ", minimum=", f.minimum)
+    end
+    if !isinf(f.maximum)
+        print(io, ", maximum=", f.maximum)
+    end
+    print(io, ")")
     nothing
 end
 
@@ -1408,9 +1463,9 @@ function Base.show(io::IO, ::MIME"text/plain", f::AllFloats)
         Produce a floating point value of type {code:Float16}, {code:Float32} or {code:Float64}, which may be
             * {code:isinf}: $inf_str
             * {code:isnan}: $nan_str
+            * {code:$(f.minimum) <= x <= $(f.maximum)}
 
-    E.g. {code:$obj}, a {code:$(typeof(ex))}; {code:isinf}: $inf, {code:isnan}: $nan
-    """)
+    E.g. {code:$obj}, a {code:$(typeof(ex))}; {code:isinf}: $inf, {code:isnan}: $nan""")
 end
 
 function produce!(tc::TestCase, af::AllFloats)
@@ -1418,7 +1473,29 @@ function produce!(tc::TestCase, af::AllFloats)
         Floats{Float16}(;af.nans,af.infs),
         Floats{Float32}(;af.nans,af.infs),
         Floats{Float64}(;af.nans,af.infs))
-    produce!(tc, of)
+    num = produce!(tc, of)
+    af.nans && isnan(num) && return num
+    af.minimum <= num <= af.maximum && return num
+
+    # Not all numbers in the given range are representable
+    # by all types, so normalize the bounds to the closest
+    # that are still in the interval for that type.
+    # This ensures that we don't accidentally go outside of the
+    # allowed range.
+    _min = oftype(num, af.minimum)
+    _max = oftype(num, af.maximum)
+    while _min < af.minimum
+        _min = nextfloat(_min)
+    end
+    while _max > af.maximum
+        _max = prevfloat(_max)
+    end
+
+    # in this case, the interval doesn't contain values of the chosen type
+    _min > _max && reject(tc)
+
+    # and finally remap the value to a valid one
+    return float_remap(num, _min, _max)
 end
 
 ####
