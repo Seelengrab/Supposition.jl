@@ -40,7 +40,7 @@ module Data
 
 using Supposition
 using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject
-using Supposition.FloatEncoding: lexographical_float
+using Supposition.FloatEncoding: lex_to_float
 using RequiredInterfaces: @required
 using StyledStrings: @styled_str
 using Printf: format, @format_str
@@ -1458,7 +1458,7 @@ function produce!(tc::TestCase, f::Floats{T}) where {T}
 
     is_negative = produce!(tc, Booleans())
 
-    res = lexographical_float(T, bits)
+    res = lex_to_float(T, bits)
     if is_negative
         res = -res
     end

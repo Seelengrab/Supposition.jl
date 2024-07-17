@@ -75,7 +75,7 @@ end
 
 
 """
-    lexographical_float(T, bits)
+    lex_to_float(T, bits)
 
 Reinterpret the bits of a floating point number using an encoding with better shrinking
 properties.
@@ -100,7 +100,7 @@ If the sign bit is not set:
     - the float is reassembled using `assemble`
 
 """
-function lexographical_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
+function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
     sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of `$T` needs to match the bidwidth of `I`!"))
     iT = uint(T)
     sign, exponent, mantissa = tear(reinterpret(T, bits))
@@ -128,7 +128,7 @@ function is_simple_float(f::T) where {T<:Base.IEEEFloat}
         if trunc(f) != f
             return false
         end
-        Base.top_set_bit(uint(f)) <= 8 * (sizeof(T) - 1)
+        Base.top_set_bit(reinterpret(uint(T), f)) <= 8 * (sizeof(T) - 1)
     catch e
         if isa(e, InexactError)
             return false
@@ -142,6 +142,6 @@ function base_float_to_lex(f::T) where {T<:Base.IEEEFloat}
     mantissa = update_mantissa(T, exponent, mantissa)
     exponent = decode_exponent(exponent)
 
-    reinterpret(uint(T), assemble(T, sign, exponent, mantissa))
+    reinterpret(uint(T), assemble(T, one(uint(T)), exponent, mantissa))
 end
 end
