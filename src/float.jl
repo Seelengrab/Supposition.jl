@@ -128,7 +128,7 @@ function is_simple_float(f::T) where {T<:Base.IEEEFloat}
         if trunc(f) != f
             return false
         end
-        Base.top_set_bit(reinterpret(uint(T), f)) <= 8 * (sizeof(T) - 1)
+        ndigits(reinterpret(uint(T), f), base=2) <= 8 * (sizeof(T) - 1)
     catch e
         if isa(e, InexactError)
             return false
@@ -138,7 +138,7 @@ function is_simple_float(f::T) where {T<:Base.IEEEFloat}
 end
 
 function base_float_to_lex(f::T) where {T<:Base.IEEEFloat}
-    sign, exponent, mantissa = tear(f)
+    _, exponent, mantissa = tear(f)
     mantissa = update_mantissa(T, exponent, mantissa)
     exponent = decode_exponent(exponent)
 
