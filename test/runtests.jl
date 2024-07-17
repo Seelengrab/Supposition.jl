@@ -1,5 +1,5 @@
 using Supposition
-using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
+using Supposition: Data, FloatEncoding, test_function, shrink_remove, shrink_redistribute,
         NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!
 using Test
 using Aqua
@@ -511,6 +511,25 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test_throws ArgumentError Data.Floats(;minimum=NaN)
         @test_throws ArgumentError Data.Floats(;maximum=NaN)
         @test_throws ArgumentError Data.Floats(;minimum=2.0, maximum=1.0)
+    end
+
+    # Tests the properties of the enocding used to represent floating point numbers
+    @testset "Floating point encoding" begin
+        @testset for T in (Float16, Float32, Float64)
+            # These invariants are ported from Hypothesis
+            @testset "Exponent encoding" begin
+                exponents = zero(Supposition.uint(T)):Supposition.max_exponent(T)
+
+                # Round tripping
+                @test all(exponents) do e
+                    FloatEncoding.decode_exponent(FloatEncoding.encode_exponent(e)) == e
+                end
+
+                @test all(exponents) do e
+                    FloatEncoding.encode_exponent(FloatEncoding.decode_exponent(e)) == e
+                end
+            end
+        end
     end
 
     @testset "@check API" begin
