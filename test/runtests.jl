@@ -517,12 +517,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "Floating point encoding" begin
         @testset for T in (Float16, Float32, Float64)
 
-            iT = Supposition.uint(T)
+            iT = FloatEncoding.uint(T)
             # These invariants are ported from Hypothesis
             @testset "Exponent encoding" begin
                 # The highest value here is 0x7ff (2047) with Int64,
                 # so we can just exhaustively test all 2048 possibilities
-                exponents = zero(iT):Supposition.max_exponent(T)
+                exponents = zero(iT):FloatEncoding.max_exponent(T)
 
                 # Round tripping
                 @test all(exponents) do e
@@ -568,7 +568,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 @check order_integral_part(
                     Data.Floats{T}(;
                         minimum=one(T),
-                        maximum=T(2^(Supposition.fracsize(T) + 1)),
+                        maximum=T(2^(FloatEncoding.fracsize(T) + 1)),
                         nans=false),
                         Data.Floats{T}(; minimum=nextfloat(zero(T)), maximum=prevfloat(one(T)), nans=false))
 
@@ -1369,7 +1369,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @testset for T in (Float16, Float32, Float64)
             @check function floatfunc(f=Data.Floats{T}())
                 orig = bitstring(f)
-                reassembled = bitstring(Supposition.assemble(T, Supposition.tear(f)...))
+                reassembled = bitstring(FloatEncoding.assemble(T, FloatEncoding.tear(f)...))
                 orig == reassembled
             end
         end

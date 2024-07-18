@@ -1,5 +1,99 @@
+"""
+    FloatEncoding
+
+This module includes utilities for maniuplating floating point numbers in an IEEE 754 encoding:
+
+Additionally, it implements an encoding for floating point numbers that has better shrinking properties, ported from hypothesis. See [`lex_to_float`](@ref) for more details.
+"""
 module FloatEncoding
-using Supposition: uint, tear, bias, fracsize, exposize, max_exponent, assemble
+
+"""
+    uint(::Type{F})
+
+Returns the unsigned integer type that can hold the bit pattern of a floating point number of type `F`.
+"""
+uint(::Type{Float16}) = UInt16
+"""
+    uint(::F)
+
+Returns the zero value of the unsigned integer type that can hold the bit pattern of a floating point number of type `F`.
+"""
+uint(::Float16) = zero(UInt16)
+uint(::Type{Float32}) = UInt32
+uint(::Float32) = zero(UInt32)
+uint(::Type{Float64}) = UInt64
+uint(::Float64) = zero(UInt64)
+
+"""
+    fracsize(::Type{F})
+
+Returns the number of bits in the fractional part of a floating point number of type `F`.
+"""
+fracsize(::Type{Float16}) = 10
+fracsize(::Type{Float32}) = 23
+fracsize(::Type{Float64}) = 52
+
+
+"""
+    exposize(::Type{F})
+
+Returns the number of bits in the exponent part of a floating point number of type `F`.
+"""
+exposize(::Type{Float16}) = 5
+exposize(::Type{Float32}) = 8
+exposize(::Type{Float64}) = 11
+
+"""
+    max_exponent(::Type{F})
+
+The maximum value of the exponent bits of a floating point number of type `F`.
+"""
+max_exponent(::Type{T}) where {T<:Base.IEEEFloat} = (1 << exposize(T) - 1) % uint(T)
+"""
+    bias(::Type{F})
+
+The IEEE 754 bias of the exponent bits of a floating point number of type `F`.
+"""
+bias(::Type{T}) where {T<:Base.IEEEFloat} = uint(T)(1 << (exposize(T) - 1) - 1)
+
+function masks(::Type{T}) where {T<:Base.IEEEFloat}
+    ui = uint(T)
+    signbitmask = one(ui) << (8 * sizeof(ui) - 1)
+    fracbitmask = (-1 % ui) >> (8 * sizeof(ui) - fracsize(T))
+    expobitmask = ((-1 % ui) >> (8 * sizeof(ui) - exposize(T))) << fracsize(T)
+    signbitmask, expobitmask, fracbitmask
+end
+
+"""
+    assemble(::T, sign::I, expo::I, frac::I) where {I, T <: Union{Float16, Float32, Float64}} -> T
+
+Assembles `sign`, `expo` and `frac` arguments into the floating point number of type `T` it represents.
+`sizeof(T)` must match `sizeof(I)`.
+"""
+function assemble(::Type{T}, sign::I, expo::I, frac::I) where {I,T<:Base.IEEEFloat}
+    sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of  `$T` needs to match the other arguments of type `I`!"))
+    signmask, expomask, fracmask = masks(T)
+    sign = (sign << (exposize(T) + fracsize(T))) & signmask
+    expo = (expo << fracsize(T)) & expomask
+    frac = frac & fracmask
+    ret = sign | expo | frac
+    reinterpret(T, ret)
+end
+
+"""
+    tear(x::T) where T <: Union{Float16, Float32, Float64} -> Tuple{I, I, I}
+
+Returns the sign, exponent and fractional parts of a floating point number.
+The returned tuple consists of three unsigned integer types `I` of the same bitwidth as `T`.
+"""
+function tear(x::T) where {T<:Base.IEEEFloat}
+    signbitmask, expobitmask, fracbitmask = masks(T)
+    ur = reinterpret(uint(T), x)
+    s = (ur & signbitmask) >> (exposize(T) + fracsize(T))
+    e = (ur & expobitmask) >> fracsize(T)
+    f = (ur & fracbitmask) >> 0x0
+    s, e, f
+end
 
 """
     exponent_key(T, e)
