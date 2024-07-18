@@ -5,12 +5,17 @@ using Supposition: uint, tear, bias, fracsize, exposize, max_exponent, assemble
     exponent_key(T, e)
 
 A lexicographical ordering for floating point exponents. The encoding is ported
-from hypothesis.
+from Hypothesis.
 
 The ordering is
+
     * non-negative exponents in increasing order
     * negative exponents in decreasing order
     * the maximum exponent
+
+# Extended Help
+
+The [reference implementation](https://github.com/HypothesisWorks/hypothesis/blob/aad70fb2d9dec2cef9719cdf5369eec9fae0d2a4/hypothesis-python/src/hypothesis/internal/conjecture/floats.py#L82) in Hypothesis.
 """
 function exponent_key(::Type{T}, e::iT) where {T<:Base.IEEEFloat,iT<:Unsigned}
     if e == max_exponent(T)
@@ -18,21 +23,61 @@ function exponent_key(::Type{T}, e::iT) where {T<:Base.IEEEFloat,iT<:Unsigned}
     end
     unbiased = float(e) - bias(T)
     if unbiased < 0
-        10000 - unbiased
+        # order all negative exponents after the positive ones
+        # in reverse order
+        # max_exponent(T) - 1 maps to the key bias(T)
+        # so the first negative exponent maps to bias(T) + 1
+        bias(T) - unbiased
     else
         unbiased
     end
 end
 
+""" 
+    _make_encoding_table(T)
+
+Build a look up table for encoding exponents of floating point numbers of type `T`.
+For a floating point type `T`, the lookup table is a permutation of the unsigned integers of type [`uint`](@ref) from `0` to `max_exponent(T)`.
+
+This allows the reordering of the exponent bits of a floating point number according to the encoding described in [`exponent_key`](@ref).
+"""
 _make_encoding_table(T) = sort(zero(uint(T)):max_exponent(T);
                                by = Base.Fix1(exponent_key, T))
+"""
+    ENCODING_TABLE
+
+A dictionary mapping `Unsigned` types to encoding tables for exponents.
+The encoding is described in [`exponent_key`](@ref) and is ported from Hypothesis.
+
+# See Also
+
+[`encode_exponent`](@ref)
+[`DECODING_TABLE`](@ref)
+"""
 const ENCODING_TABLE = Dict(
     UInt16 => _make_encoding_table(Float16),
     UInt32 => _make_encoding_table(Float32),
     UInt64 => _make_encoding_table(Float64))
 
+"""
+    encode_exponent(e)
+
+Encode the exponent of a floating point number using an encoding with better shrinking.
+The exponent can be extracted from a floating point number `f` using [`tear`](@ref).
+
+# See Also
+
+[`ENCODING_TABLE`](@ref)
+[`exponent_key`](@ref)
+[`tear`](@ref)
+"""
 encode_exponent(e::T) where {T<:Unsigned} = ENCODING_TABLE[T][e+1]
 
+"""
+    _make_decoding_table(T)
+
+Build a look up table for decoding exponents of floating point numbers of type `T` which is the inverse of the table built by [`_make_encoding_table`](@ref).
+"""
 function _make_decoding_table(T)
     decoding_table = zeros(uint(T), max_exponent(T) + 1)
     for (i, e) in enumerate(ENCODING_TABLE[uint(T)])
@@ -40,10 +85,28 @@ function _make_decoding_table(T)
     end
     decoding_table
 end
+
+"""
+    DECODING_TABLE
+
+A dictionary mapping `Unsigned` types to decoding tables for exponents.
+The encoding is described in [`exponent_key`](@ref) and is ported from Hypothesis.
+
+# See Also
+
+[`decode_exponent`](@ref)
+[`ENCODING_TABLE`](@ref)
+"""
 const DECODING_TABLE = Dict(
     UInt16 => _make_decoding_table(Float16),
     UInt32 => _make_decoding_table(Float32),
     UInt64 => _make_decoding_table(Float64))
+
+"""
+    decode_exponent(e)
+
+Undoes the encoding of the exponent of a floating point number used by [`encode_exponent`](@ref).
+"""
 decode_exponent(e::T) where {T<:Unsigned} = DECODING_TABLE[T][e+1]
 
 
@@ -51,6 +114,17 @@ decode_exponent(e::T) where {T<:Unsigned} = DECODING_TABLE[T][e+1]
     update_mantissa(exponent, mantissa)
 
 Encode the mantissa of a floating point number using an encoding with better shrinking.
+The encoding is ported from Hypothesis.
+
+The encoding is as follows:
+
+    * If the unbiased exponent is <= 0, reverse the bits of the mantissa
+    * If the unbiased exponent is >= fracsize(T) + bias(T), do nothing
+    * Otherwise, reverse the low bits of the fractional part
+
+# Extended help
+
+See the [reference implementation](https://github.com/HypothesisWorks/hypothesis/blob/aad70fb2d9dec2cef9719cdf5369eec9fae0d2a4/hypothesis-python/src/hypothesis/internal/conjecture/floats.py#L165) in hypothesis
 """
 function update_mantissa(::Type{T}, exponent::iT, mantissa::iT)::iT where {T<:Base.IEEEFloat,iT<:Unsigned}
     @assert uint(T) == iT
@@ -81,7 +155,7 @@ Reinterpret the bits of a floating point number using an encoding with better sh
 properties.
 This produces a non-negative floating point number, possibly including `NaN` or `Inf`.
 
-The encoding is ported from hypothesis, and has the property that lexicographically smaller
+The encoding is ported from Hypothesis, and has the property that lexicographically smaller
 bit patterns correspond to 'simpler' floats.
 
 # Encoding
@@ -95,9 +169,13 @@ If the sign bit is set:
 
 If the sign bit is not set:
 
-    - the exponent is decoded using `decode_exponent`
-    - the mantissa is updated using `update_mantissa`
-    - the float is reassembled using `assemble`
+    - the exponent is encoded using [`encoded_exponent`](@ref)
+    - the mantissa is updated using [`update_mantissa`](@ref)
+    - the float is reassembled using [`assemble`](@ref)
+
+## Extended Help
+
+See the [reference implementation](https://github.com/HypothesisWorks/hypothesis/blob/aad70fb2d9dec2cef9719cdf5369eec9fae0d2a4/hypothesis-python/src/hypothesis/internal/conjecture/floats.py#L176) in Hypothesis.
 
 """
 function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
@@ -115,30 +193,61 @@ function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
     end
 end
 
+"""
+    float_to_lex(f)
+
+Encoding a floating point number as a bit pattern.
+
+This is essentially the inverse of [`lex_to_float`](@ref) and produces a bit pattern that is lexicographically
+smaller for 'simpler' floats.
+
+Note that while `lex_to_float` can produce any valid positive floating point number, it is not injective. So combined with the fact that positive and negative floats map to the same bit pattern,
+`float_to_lex` is not an exact inverse of `lex_to_float`.
+"""
 function float_to_lex(f::T) where {T<:Base.IEEEFloat}
+    # If the float is simple, we can just reinterpret it as an integer
+    # This corresponds to the latter branch of lex_to_float
     if is_simple_float(f)
         uint(T)(f)
     else
-        base_float_to_lex(f)
+        nonsimple_float_to_lex(f)
     end
 end
 
+"""
+    is_simple_float(f)
+
+`f` is simple if it is integral and the first byte is all zeros.
+"""
 function is_simple_float(f::T) where {T<:Base.IEEEFloat}
-    try
-        if trunc(f) != f
-            return false
-        end
-        # In the encoding, the float is simple if the first byte is all zeros
-        leading_zeros(reinterpret(uint(T), f)) >= 8
-    catch e
-        if isa(e, InexactError)
-            return false
-        end
-        rethrow(e)
+    if trunc(f) != f
+        return false
     end
+    # In the encoding, the float is simple if the first byte is all zeros
+    leading_zeros(reinterpret(uint(T), f)) >= 8
 end
 
-function base_float_to_lex(f::T) where {T<:Base.IEEEFloat}
+"""
+    nonsimple_float_to_lex(f)
+
+Encode a floating point number as a bit pattern, when the float is not simple.
+
+This is the inverse of [`lex_to_float`](@ref) for bit patterns with the signbit set i.e.,
+
+```jldoctest
+julia> using Supposition.FloatEncoding: lex_to_float, nonsimple_float_to_lex
+
+julia> bits = 0xff00
+0xff00
+
+julia> signbit(reinterpret(Float16, bits))
+true
+
+julia> nonsimple_float_to_lex(lex_to_float(Float16, bits)) == bits
+true
+```
+"""
+function nonsimple_float_to_lex(f::T) where {T<:Base.IEEEFloat}
     _, exponent, mantissa = tear(f)
     mantissa = update_mantissa(T, exponent, mantissa)
     exponent = decode_exponent(exponent)
