@@ -535,14 +535,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
 
             function roundtrip_encoding(f)
-                assume!(!signbit(f))
                 encoded = FloatEncoding.float_to_lex(f)
                 decoded = FloatEncoding.lex_to_float(T, encoded)
                 reinterpret(iT, decoded) == reinterpret(iT, f)
             end
 
-            roundtrip_examples = map(Data.Just,
-                T[
+            @testset for f in T[
                     0.0,
                     2.5,
                     8.000000000000007,
@@ -550,9 +548,11 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                     2.0,
                     1.9999999999999998,
                     1.0
-                ])
-            @check roundtrip_encoding(Data.OneOf(roundtrip_examples...))
-            @check roundtrip_encoding(Data.Floats{T}(; minimum=zero(T)))
+            ]
+                @test roundtrip_encoding(f)
+            end
+
+            @check roundtrip_encoding(Data.Floats{T}(; minimum=nextfloat(zero(T))))
 
             @testset "Ordering" begin
                 function order_integral_part(n, g)
@@ -581,8 +581,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 end
 
                 @check function fractional_floats_greater_than_1(
-                    f=Data.Floats{T}(; minimum=zero(T), maximum=one(T), nans=false))
-                    assume!(0 < f < 1)
+                    f=Data.Floats{T}(; minimum=nextfloat(zero(T)), maximum=prevfloat(one(T)), nans=false))
                     FloatEncoding.float_to_lex(f) > FloatEncoding.float_to_lex(one(T))
                 end
             end
