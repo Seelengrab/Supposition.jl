@@ -26,7 +26,7 @@ exposize(::Type{Float16}) = 5
 exposize(::Type{Float32}) = 8
 exposize(::Type{Float64}) = 11
 
-max_exponent(::Type{T}) where {T<:Base.IEEEFloat} = uint(T)(1 << exposize(T) - 1)
+max_exponent(::Type{T}) where {T<:Base.IEEEFloat} = (1 << exposize(T) - 1) % uint(T)
 bias(::Type{T}) where {T<:Base.IEEEFloat} = uint(T)(1 << (exposize(T) - 1) - 1)
 
 function masks(::Type{T}) where T <: Base.IEEEFloat

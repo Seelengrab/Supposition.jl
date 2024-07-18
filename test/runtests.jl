@@ -568,8 +568,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                         minimum=one(T),
                         maximum=T(2^(Supposition.fracsize(T) + 1)),
                         nans=false),
-                    filter(x -> !(x in T[0, 1]),
-                        Data.Floats{T}(; minimum=zero(T), maximum=one(T), nans=false)))
+                        Data.Floats{T}(; minimum=nextfloat(zero(T)), maximum=prevfloat(one(T)), nans=false))
 
                 integral_float_gen = map(abs ∘ trunc,
                     Data.Floats{T}(; minimum=zero(T), infs=false, nans=false))

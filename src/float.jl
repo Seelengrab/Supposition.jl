@@ -103,12 +103,12 @@ function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
     sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of `$T` needs to match the bitwidth of the given bits!"))
     iT = uint(T)
     sign, exponent, mantissa = tear(reinterpret(T, bits))
-    if sign == 1
+    if isone(sign)
         exponent = encode_exponent(exponent)
         mantissa = update_mantissa(T, exponent, mantissa)
         assemble(T, zero(iT), exponent, mantissa)
     else
-        integral_mask = iT((1 << (8 * (sizeof(T) - 1))) - 1)
+        integral_mask = iT(-1) >>> 0x8
         integral_part = bits & integral_mask
         T(integral_part)
     end
@@ -127,7 +127,8 @@ function is_simple_float(f::T) where {T<:Base.IEEEFloat}
         if trunc(f) != f
             return false
         end
-        ndigits(reinterpret(uint(T), f), base=2) <= 8 * (sizeof(T) - 1)
+        # In the encoding, the float is simple if the first byte is all zeros
+        leading_zeros(reinterpret(uint(T), f)) >= 8
     catch e
         if isa(e, InexactError)
             return false
