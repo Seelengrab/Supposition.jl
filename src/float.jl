@@ -127,7 +127,8 @@ The encoding is as follows:
 See the [reference implementation](https://github.com/HypothesisWorks/hypothesis/blob/aad70fb2d9dec2cef9719cdf5369eec9fae0d2a4/hypothesis-python/src/hypothesis/internal/conjecture/floats.py#L165) in hypothesis
 """
 function update_mantissa(::Type{T}, exponent::iT, mantissa::iT)::iT where {T<:Base.IEEEFloat,iT<:Unsigned}
-    @assert uint(T) == iT
+    exponent = convert(uint(T), exponent)
+    mantissa = convert(uint(T), mantissa)
     # The unbiased exponent is <= 0
     if exponent <= bias(T)
         # reverse the bits of the mantissa in place
