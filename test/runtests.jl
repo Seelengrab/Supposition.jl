@@ -520,6 +520,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             iT = Supposition.uint(T)
             # These invariants are ported from Hypothesis
             @testset "Exponent encoding" begin
+                # The highest value here is 0x7ff (2047) with Int64,
+                # so we can just exhaustively test all 2048 possibilities
                 exponents = zero(iT):Supposition.max_exponent(T)
 
                 # Round tripping
