@@ -4,12 +4,13 @@ using Supposition: uint, tear, bias, fracsize, exposize, max_exponent, assemble
 """
     exponent_key(T, e)
 
-A lexographical ordering for floating point exponents. The encoding is taken
+A lexicographical ordering for floating point exponents. The encoding is ported
 from hypothesis.
+
 The ordering is
-- non-negative exponents in increasing order
-- negative exponents in decreasing order
-- the maximum exponent
+    * non-negative exponents in increasing order
+    * negative exponents in decreasing order
+    * the maximum exponent
 """
 function exponent_key(::Type{T}, e::iT) where {T<:Base.IEEEFloat,iT<:Unsigned}
     if e == max_exponent(T)
