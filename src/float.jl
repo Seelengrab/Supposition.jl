@@ -109,7 +109,7 @@ function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
         mantissa = update_mantissa(T, exponent, mantissa)
         assemble(T, zero(iT), exponent, mantissa)
     else
-        integral_mask = iT(-1) >>> 0x8
+        integral_mask = signed(iT)(-1) >>> 0x8
         integral_part = bits & integral_mask
         T(integral_part)
     end
