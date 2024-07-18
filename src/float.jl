@@ -23,9 +23,8 @@ function exponent_key(::Type{T}, e::iT) where {T<:Base.IEEEFloat,iT<:Unsigned}
     end
 end
 
-_make_encoding_table(T) = sort(
-    zero(uint(T)):max_exponent(T),
-    by=Base.Fix1(exponent_key, T))
+_make_encoding_table(T) = sort(zero(uint(T)):max_exponent(T);
+                               by = Base.Fix1(exponent_key, T))
 const ENCODING_TABLE = Dict(
     UInt16 => _make_encoding_table(Float16),
     UInt32 => _make_encoding_table(Float32),
@@ -79,10 +78,10 @@ end
 
 Reinterpret the bits of a floating point number using an encoding with better shrinking
 properties.
-This produces a non-negative floating point number, possibly including NaN or Inf.
+This produces a non-negative floating point number, possibly including `NaN` or `Inf`.
 
-The encoding is taken from hypothesis, and has the property that lexicographically smaller
-bit patterns corespond to 'simpler' floats.
+The encoding is ported from hypothesis, and has the property that lexicographically smaller
+bit patterns correspond to 'simpler' floats.
 
 # Encoding
 
@@ -101,7 +100,7 @@ If the sign bit is not set:
 
 """
 function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
-    sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of `$T` needs to match the bidwidth of `I`!"))
+    sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of `$T` needs to match the bitwidth of the given bits!"))
     iT = uint(T)
     sign, exponent, mantissa = tear(reinterpret(T, bits))
     if sign == 1
