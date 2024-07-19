@@ -554,16 +554,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 @test roundtrip_encoding(f)
             end
 
-            @check roundtrip_encoding(Data.Floats{T}(; minimum=nextfloat(zero(T)), nans=false))
-
-            # sample from all possible NaN bit patterns
-            # with the signbit unset
-            nan_gen =
-                map(bits ->
-                        FloatEncoding.assemble(T, zero(iT), FloatEncoding.max_exponent(T), bits),
-                    Data.Integers(zero(iT), (1 << FloatEncoding.fracsize(T) - 1) % iT))
-
-            @check roundtrip_encoding(nan_gen)
+             # `roundtrip_encoding` assumes the signbit is unset
+             roundtrip_gen = map(Data.Floats{T}()) do f
+                 _, exp, frac = FloatEncoding.tear(f)
+                 FloatEncoding.assemble(T, zero(iT), exp, frac)
+             end
+            @check roundtrip_encoding(roundtrip_gen)
 
             @testset "Ordering" begin
                 function order_integral_part(n, g)
