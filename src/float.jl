@@ -1,23 +1,22 @@
 """
     FloatEncoding
 
-This module includes utilities for maniuplating floating point numbers in an IEEE 754 encoding:
+This module includes utilities for manipulating floating point numbers in IEEE 754 encoding, focusing on the standard Julia types `Float16`, `Float32` and `Float64`.
 
 Additionally, it implements an encoding for floating point numbers that has better shrinking properties, ported from hypothesis. See [`lex_to_float`](@ref) for more details.
 """
 module FloatEncoding
 
 """
-    uint(::Type{F})
+    uint(::Type{F}) where F <: Base.IEEEFloat
+    uint(::F) where F <: Base.IEEEFloat
 
-Returns the unsigned integer type that can hold the bit pattern of a floating point number of type `F`.
+When given a type, returns the unsigned integer type `T` that can hold the bit pattern of a floating point number of type `F`.
+When given an object, returns `zero(T)`.
 """
+function uint end
+
 uint(::Type{Float16}) = UInt16
-"""
-    uint(::F)
-
-Returns the zero value of the unsigned integer type that can hold the bit pattern of a floating point number of type `F`.
-"""
 uint(::Float16) = zero(UInt16)
 uint(::Type{Float32}) = UInt32
 uint(::Float32) = zero(UInt32)
@@ -46,13 +45,15 @@ exposize(::Type{Float64}) = 11
 """
     max_exponent(::Type{F})
 
-The maximum value of the exponent bits of a floating point number of type `F`.
+The maximum value of the exponent bits of a floating point number of type `F`, given as a `uint(F)`.
 """
 max_exponent(::Type{T}) where {T<:Base.IEEEFloat} = (1 << exposize(T) - 1) % uint(T)
 """
     bias(::Type{F})
 
 The IEEE 754 bias of the exponent bits of a floating point number of type `F`.
+
+See also [Wikipedia: Exponent bias](https://en.wikipedia.org/wiki/Exponent_bias).
 """
 bias(::Type{T}) where {T<:Base.IEEEFloat} = uint(T)(1 << (exposize(T) - 1) - 1)
 
@@ -98,8 +99,10 @@ end
 """
     exponent_key(T, e)
 
-A lexicographical ordering for floating point exponents. The encoding is ported
+A lexicographical ordering for floating point exponents `e`, for the given floating point type `T`. The encoding is ported
 from Hypothesis.
+
+`e` is expected to be in the closed interval `[0, max_exponent(T)]`.
 
 The ordering is
 
@@ -131,7 +134,7 @@ end
     _make_encoding_table(T)
 
 Build a look up table for encoding exponents of floating point numbers of type `T`.
-For a floating point type `T`, the lookup table is a permutation of the unsigned integers of type [`uint`](@ref) from `0` to `max_exponent(T)`.
+For a floating point type `T`, the lookup table is a permutation of the unsigned integers of type [`uint(T)`](@ref) from `0` to `max_exponent(T)`.
 
 This allows the reordering of the exponent bits of a floating point number according to the encoding described in [`exponent_key`](@ref).
 """
@@ -142,6 +145,8 @@ _make_encoding_table(T) = sort(zero(uint(T)):max_exponent(T);
 
 A dictionary mapping `Unsigned` types to encoding tables for exponents.
 The encoding is described in [`exponent_key`](@ref) and is ported from Hypothesis.
+
+Currently, only `UInt16`, `UInt32` and `UInt64` are available.
 
 # See Also
 
@@ -185,6 +190,8 @@ end
 
 A dictionary mapping `Unsigned` types to decoding tables for exponents.
 The encoding is described in [`exponent_key`](@ref) and is ported from Hypothesis.
+
+Currently, only `UInt16`, `UInt32` and `UInt64` are available.
 
 # See Also
 
@@ -246,8 +253,8 @@ end
 """
     lex_to_float(T, bits)
 
-Reinterpret the bits of a floating point number using an encoding with better shrinking
-properties.
+Convert the given `bits` of the lexicographical encoding to a floating point number of type `T`.
+The bitwidth of `T` must match `sizeof(bits)`.
 This produces a non-negative floating point number, possibly including `NaN` or `Inf`.
 
 The encoding is ported from Hypothesis, and has the property that lexicographically smaller
@@ -271,7 +278,6 @@ If the sign bit is not set:
 ## Extended Help
 
 See the [reference implementation](https://github.com/HypothesisWorks/hypothesis/blob/aad70fb2d9dec2cef9719cdf5369eec9fae0d2a4/hypothesis-python/src/hypothesis/internal/conjecture/floats.py#L176) in Hypothesis.
-
 """
 function lex_to_float(::Type{T}, bits::I)::T where {I,T<:Base.IEEEFloat}
     sizeof(T) == sizeof(I) || throw(ArgumentError("The bitwidth of `$T` needs to match the bitwidth of the given bits!"))
@@ -296,11 +302,13 @@ Encoding a floating point number as a bit pattern.
 This is essentially the inverse of [`lex_to_float`](@ref) and produces a bit pattern that is lexicographically
 smaller for 'simpler' floats.
 
-Note that while `lex_to_float` can produce any valid positive floating point number, it is not injective. So combined with the fact that positive and negative floats map to the same bit pattern,
-`float_to_lex` is not an exact inverse of `lex_to_float`.
+!!! note "Injectivity"
+    Note that while `lex_to_float` can produce any valid positive floating point number, it is not injective.
+    So combined with the fact that positive and negative floats map to the same bit pattern, `float_to_lex`
+    is not an exact inverse of `lex_to_float`.
 """
 function float_to_lex(f::T) where {T<:Base.IEEEFloat}
-    # If the float is simple, we can just reinterpret it as an integer
+    # If the float is simple, we can just convert it to an integer
     # This corresponds to the latter branch of lex_to_float
     if is_simple_float(f)
         uint(T)(f)
@@ -312,7 +320,7 @@ end
 """
     is_simple_float(f)
 
-`f` is simple if it is integral and the first byte is all zeros.
+Return whether the given floating point number is considered "simple" in terms of the lexicographic encoding.
 """
 function is_simple_float(f::T) where {T<:Base.IEEEFloat}
     if trunc(f) != f
