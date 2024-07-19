@@ -55,7 +55,7 @@ The IEEE 754 bias of the exponent bits of a floating point number of type `F`.
 
 See also [Wikipedia: Exponent bias](https://en.wikipedia.org/wiki/Exponent_bias).
 """
-bias(::Type{T}) where {T<:Base.IEEEFloat} = uint(T)(1 << (exposize(T) - 1) - 1)
+bias(::Type{T}) where {T<:Base.IEEEFloat} = (1 << (exposize(T) - 1) - 1) % uint(T)
 
 function masks(::Type{T}) where {T<:Base.IEEEFloat}
     ui = uint(T)
