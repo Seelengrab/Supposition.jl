@@ -39,7 +39,8 @@ as well as these utility functions:
 module Data
 
 using Supposition
-using Supposition: smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject
+using Supposition: FloatEncoding, smootherstep, lerp, TestCase, choice!, weighted!, forced_choice!, reject
+using Supposition.FloatEncoding: lex_to_float
 using RequiredInterfaces: @required
 using StyledStrings: @styled_str
 using Printf: format, @format_str
@@ -1449,9 +1450,19 @@ function Base.show(io::IO, ::MIME"text/plain", f::Floats)
     E.g. {code:$obj}; {code:isinf}: $inf, {code:isnan}: $nan""")
 end
 
+
 function produce!(tc::TestCase, f::Floats{T}) where {T}
-    iT = Supposition.uint(T)
-    res = reinterpret(T, produce!(tc, Integers{iT}()))
+    iT = FloatEncoding.uint(T)
+
+    bits = produce!(tc, Integers{iT}())
+
+    is_negative = produce!(tc, Booleans())
+
+    res = lex_to_float(T, bits)
+    if is_negative
+        res = -res
+    end
+
     # early rejections
     !f.infs && isinf(res) && reject(tc)
     !f.nans && isnan(res) && reject(tc)
@@ -1467,8 +1478,8 @@ function float_remap(num::T, _min::T, _max::T) where T <: AbstractFloat
     # We're outside of the desired bounds, so use the mantissa
     # to resample the actual range
     range_size = min(_max - _min, floatmax(T))
-    _, _, mantissa = Supposition.tear(num)
-    max_mantissa = oftype(mantissa, (2^Supposition.fracsize(T)) - 1)
+    _, _, mantissa = FloatEncoding.tear(num)
+    max_mantissa = oftype(mantissa, (2^FloatEncoding.fracsize(T)) - 1)
     num = _min + range_size * (mantissa / max_mantissa)
 
     # ensure the value is still in the desired range
