@@ -41,7 +41,7 @@ function builddocs(clear=false)
             ],
             "PBT Resources" => "resources.md",
             "FAQ" => "faq.md",
-            "Userfacing API" => "interfaces.md",
+            "User-facing API" => "interfaces.md",
             "Benchmarks" => "benchmarks.md",
             "API Reference" => "api.md",
             "Glossary" => "glossary.md"
