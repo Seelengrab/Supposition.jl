@@ -643,6 +643,20 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
         end
 
+        @testset "@event!" begin
+            sr = @check db=false record=false broken=true function isi16(f=Data.Integers{Int16}())
+                @event!(f*2) isa String || error("")
+            end
+            res = @something sr.result
+            events = res.events
+            @test !isempty(events)
+            # don't hardcode the string value, the printing is not stable
+            # for most expressions...
+            # this still only tests one expression, but getting arbitrary ones
+            # into `@event!` is tricky
+            @test first(only(events)) == string(:(f*2))
+        end
+
         @testset "targeting score" begin
             high = 0xaaaaaaaaaaaaaaaa # a reckless disregard for gravity
             @check verbose=verb function target_test(i=Data.Integers(zero(UInt),high))

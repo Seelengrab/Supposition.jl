@@ -36,6 +36,12 @@ A struct representing a single (ongoing) test case.
  * `max_size`: The maximum number of choices this `TestCase` is allowed to make.
  * `choices`: The binary choices made so far.
  * `targeting_score`: The score this `TestCase` attempts to maximize.
+
+!!! warning "Internal"
+    The properties of this struct, as well as the functions acting on it directly,
+    are considered internal and not intended for use outside of the internals of
+    Supposition.jl. Doing so may lead to wrong results, crashes, infinite
+    loops or other undesirable behavior.
 """
 mutable struct TestCase{RNG <: Random.AbstractRNG}
     prefix::Vector{UInt64}

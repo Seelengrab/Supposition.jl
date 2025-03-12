@@ -201,8 +201,19 @@ from the `styled""` macro are an option, for fancy labelling. The recorded objec
 alive for the entire duration of the testsuite, so it's better to record small objects. Only the events associated with the "most important"
 test case encountered during fuzzing will be kept alive; if a better one comes around, the existing events are deleted.
 
+In case you can't quickly come up with a name for the event or don't need a long-term descriptor of what exactly you're interested in,
+you can also use the [`@event!`](@ref) macro form of this API:
+
+```@example tmux_oracle
+@check function oracle_8bit_macro(r=uint8gen,g=uint8gen,b=uint8gen)
+    @event!(termcolor8bit(r,g,b)) == @event!(tmux_8bit_oracle(r,g,b))
+end
+```
+
+The `@event!` macro uses the stringified version of the expression passed to it as the name of the event.
+
 ## When to use this
 
 Events are a great way to diagnose & trace how a minimal input affects deeper parts of your code, in particular when you have a failing minimal example
-that you can't quite seem to get a handle on when debugging. In those cases, you can add `event!` calls into your code base and check the resulting
+that you can't quite seem to get a handle on when debugging. In those cases, you can add `event!` calls or `@event!` invocations into your code base and check the resulting
 trace for clues what might be going wrong.

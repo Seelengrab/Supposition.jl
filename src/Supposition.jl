@@ -17,7 +17,7 @@ The package features:
 module Supposition
 
 export assume!, target!, event!, reject!, example
-export Data, @composed, @check
+export Data, @composed, @check, @event!
 
 using Base
 using Base: stacktrace, StackFrame

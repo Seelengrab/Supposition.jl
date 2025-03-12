@@ -550,7 +550,7 @@ Update the currently running testcase to track the given score as its target.
 !!! warning "Callability"
     This can only be called while a testcase is currently being examined or an example for a `Possibility`
     is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
-    functions only intended to be called from one of those places.
+    functions called from one of those places.
 """
 function target!(score::Float64)
     # CURRENT_TESTCASE is a ScopedValue that's being managed by the testing framework
@@ -566,7 +566,7 @@ If this precondition is not met, abort the test and mark the currently running t
 !!! warning "Callability"
     This can only be called while a testcase is currently being examined or an example for a `Possibility`
     is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
-    functions only intended to be called from one of those places.
+    functions called from one of those places.
 """
 assume!(precondition::Bool) = precondition || reject!()
 
@@ -579,7 +579,7 @@ valid counterexample.
 !!! warning "Callability"
     This can only be called while a testcase is currently being examined or an example for a `Possibility`
     is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
-    functions only intended to be called from one of those places.
+    functions called from one of those places.
 """
 reject!() = reject(CURRENT_TESTCASE[])
 
@@ -591,7 +591,7 @@ Produces a value from the given `Possibility`, recording the required choices in
 !!! warning "Callability"
     This can only be called while a testcase is currently being examined or an example for a `Possibility`
     is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
-    functions only intended to be called from one of those places.
+    functions called from one of those places.
 """
 Data.produce!(p::Data.Possibility) = Data.produce!(CURRENT_TESTCASE[], p)
 
@@ -605,7 +605,9 @@ your property. If no `label` is given, a default one will be chosen.
 !!! warning "Callability"
     This can only be called while a testcase is currently being examined or an example for a `Possibility`
     is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
-    functions only intended to be called from one of those places.
+    functions called from one of those places.
+
+See also [`@event!`](@ref).
 """
 function event! end
 
@@ -614,6 +616,31 @@ event!(tc::TestCase, obj) = event!(tc, "UNLABELED_EVENT_$(length(tc.attempt.even
 event!(label::AbstractString, obj) = event!(CURRENT_TESTCASE[], label, obj)
 
 event!(tc::TestCase, label::AbstractString, obj) = push!(tc.attempt.events, label => obj)
+
+"""
+    @event!(expr)
+
+Macro-version of [`event!`](@ref).
+
+Uses the stringified version of `expr` as the label, and returns the
+value of `expr`.
+
+!!! warning "Callability"
+    This can only be called while a testcase is currently being examined or an example for a `Possibility`
+    is being actively generated. It is ok to call this inside of `@composed` or `@check`, as well as any
+    functions called from one of those places.
+
+See also [`event!`](@ref).
+"""
+macro event!(arg)
+    str = string(arg)
+    event_value = gensym(:event_value)
+    return :(
+        $event_value = $arg;
+        $event!($str, $event_value);
+        $event_value;
+    ) |> esc
+end
 
 """
     err_less(e1::E, e2::E) where E

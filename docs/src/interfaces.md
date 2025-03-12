@@ -23,6 +23,7 @@ orchestrating the generation of examples & reporting back to the testing framewo
 ```@docs
 Supposition.@check
 Supposition.@composed
+Supposition.@event!
 ```
 
 ## API for controlling fuzzing
