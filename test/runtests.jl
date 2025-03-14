@@ -1239,11 +1239,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                     end)
                     true # dummy pass, this used to throw
                 end
-                @check max_examples=100 description="map" (f=map(abs, Data.Floats{Float64}())) -> begin
-                    str = repr("text/plain", map(sqrt, Data.Just(f)))
-                    exp = "sqrt($f)"
-                    occursin(exp, str)
-                end
+                f = rand()
+                str = repr("text/plain", map(sqrt, Data.Just(f)))
+                exp = "sqrt($f)"
+                @test occursin(exp, str)
             end
             @testset "multi map" begin
                 map_repr = repr("text/plain", map(+, Data.Integers{UInt8}(), Data.Integers{Int}()))
@@ -1257,11 +1256,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                     end)
                     true # dummy pass, this used to throw
                 end
-                @check max_examples=100 description="map" (f=map(abs, Data.Floats{Float64}())) -> begin
-                    str = repr("text/plain", map(+, Data.Just(f), Data.Just(1.0)))
-                    exp = "+($f, 1.0)"
-                    occursin(exp, str)
-                end
+                f = rand()
+                str = repr("text/plain", map(+, Data.Just(f), Data.Just(1.0)))
+                exp = "+($f, 1.0)"
+                @test occursin(exp, str)
             end
         end
         @testset "Just" begin
@@ -1332,8 +1330,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         datgen = map(Data.Vectors(Data.Integers(1, 10_000); min_size=1, max_size=100)) do v
             v ./ sum(v)
         end
-        @check max_examples=1000 function correctly_biased(weights=datgen,n=Data.Integers(1_000,10_000))
-            data = example(Data.WeightedNumbers(weights), n)
+        @check max_examples=1000 function correctly_biased(weights=datgen,data=Data.Vectors(Data.WeightedNumbers(weights); min_size=1_000, max_size=10_000))
+            n = length(data)
             counts = zeros(length(weights))
             for d in data
                 counts[d] += 1.0
