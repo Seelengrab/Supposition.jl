@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Events &amp; Oracle testing · Supposition.jl Documentation</title><meta name="title" content="Events &amp; Oracle testing · Supposition.jl Documentation"/><meta property="og:title" content="Events &amp; Oracle testing · Supposition.jl Documentation"/><meta property="twitter:title" content="Events &amp; Oracle testing · Supposition.jl Documentation"/><meta name="description" content="Documentation for Supposition.jl Documentation."/><meta property="og:description" content="Documentation for Supposition.jl Documentation."/><meta property="twitter:description" content="Documentation for Supposition.jl Documentation."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../index.html">Supposition.jl Documentation</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../index.html">Main Page</a></li><li><a class="tocitem" href="../intro.html">Introduction to PBT</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="basic.html">Basic Usage</a></li><li><a class="tocitem" href="composition.html">Composing Generators</a></li><li><a class="tocitem" href="recursive.html">Recursive Generation</a></li><li><a class="tocitem" href="docalignment.html">Alignment of Documentation</a></li><li><a class="tocitem" href="target.html">Targeted Operation</a></li><li><a class="tocitem" href="stateful.html">Stateful Testing</a></li><li class="is-active"><a class="tocitem" href="events.html">Events &amp; Oracle testing</a><ul class="internal"><li><a class="tocitem" href="#Porting-an-example"><span>Porting an example</span></a></li><li><a class="tocitem" href="#When-to-use-this"><span>When to use this</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../resources.html">PBT Resources</a></li><li><a class="tocitem" href="../faq.html">FAQ</a></li><li><a class="tocitem" href="../interfaces.html">Userfacing API</a></li><li><a class="tocitem" href="../benchmarks.html">Benchmarks</a></li><li><a class="tocitem" href="../api.html">API Reference</a></li><li><a class="tocitem" href="../glossary.html">Glossary</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href="events.html">Events &amp; Oracle testing</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="events.html">Events &amp; Oracle testing</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Seelengrab/Supposition.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Seelengrab/Supposition.jl/blob/main/docs/src/Examples/events.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Events-and-Oracle-testing"><a class="docs-heading-anchor" href="#Events-and-Oracle-testing">Events &amp; Oracle testing</a><a id="Events-and-Oracle-testing-1"></a><a class="docs-heading-anchor-permalink" href="#Events-and-Oracle-testing" title="Permalink"></a></h1><p>One of the most useful applications of Supposition.jl is to assist developers when porting code from another language to Julia, while trying to optimize that same code a bit. In these cases, it can be extremely useful to compare the output of the port with the output of the original implementation (which is usually called a <a href="https://en.wikipedia.org/wiki/Test_oracle">test oracle</a>).</p><p>A typical fuzzing test making use of an oracle looks like this:</p><pre><code class="language-julia hljs">@check function checkOracle(input=...)
+    new_res = optimized_func(input)
+    old_res = old_func(input)
+    new_res == old_res
+end</code></pre><p>which generates some valid input and simply compares whether the new implementation produces the same output as the old implementation.</p><p>In order not to get bogged down in the abstract, let&#39;s look at a concrete example of how this can be used in practice. The following example is inspired by the work <code>@tecosaur</code> has recently done in StyledStrings.jl, huge shoutout for giving permission to use it as an example!</p><h2 id="Porting-an-example"><a class="docs-heading-anchor" href="#Porting-an-example">Porting an example</a><a id="Porting-an-example-1"></a><a class="docs-heading-anchor-permalink" href="#Porting-an-example" title="Permalink"></a></h2><p>The task is seemingly simple - map an <code>NTuple{3, UInt8}</code> representing an RGB color to an 8-bit colour space, via some imperfect mapping.</p><p>The original function we&#39;re trying to port here is the following, from <a href="https://github.com/tmux/tmux/blob/b79e28b2c30e7ef9b1f7ec6233eeb70a1a177231/colour.c">tmux</a>:</p><pre><code class="language-c hljs">/*
+ * Copyright (c) 2008 Nicholas Marriott &lt;nicholas.marriott@gmail.com&gt;
+ * Copyright (c) 2016 Avi Halachmi &lt;avihpit@yahoo.com&gt;
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+ * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#include &lt;sys/types.h&gt;
+
+static int
+colour_dist_sq(int R, int G, int B, int r, int g, int b)
+{
+	return ((R - r) * (R - r) + (G - g) * (G - g) + (B - b) * (B - b));
+}
+
+static int
+colour_to_6cube(int v)
+{
+	if (v &lt; 48)
+		return (0);
+	if (v &lt; 114)
+		return (1);
+	return ((v - 35) / 40);
+}
+
+int
+colour_find_rgb(u_char r, u_char g, u_char b)
+{
+	static const int	q2c[6] = { 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff };
+	int			qr, qg, qb, cr, cg, cb, d, idx;
+	int			grey_avg, grey_idx, grey;
+
+	/* Map RGB to 6x6x6 cube. */
+	qr = colour_to_6cube(r); cr = q2c[qr];
+	qg = colour_to_6cube(g); cg = q2c[qg];
+	qb = colour_to_6cube(b); cb = q2c[qb];
+
+	/* If we have hit the colour exactly, return early. */
+	if (cr == r &amp;&amp; cg == g &amp;&amp; cb == b)
+		return (16 + (36 * qr) + (6 * qg) + qb);
+
+	/* Work out the closest grey (average of RGB). */
+	grey_avg = (r + g + b) / 3;
+	if (grey_avg &gt; 238)
+		grey_idx = 23;
+	else
+		grey_idx = (grey_avg - 3) / 10;
+	grey = 8 + (10 * grey_idx);
+
+	/* Is grey or 6x6x6 colour closest? */
+	d = colour_dist_sq(cr, cg, cb, r, g, b);
+	if (colour_dist_sq(grey, grey, grey, r, g, b) &lt; d)
+		idx = 232 + grey_idx;
+	else
+		idx = 16 + (36 * qr) + (6 * qg) + qb;
+	return idx;
+}</code></pre><div class="admonition is-info"><header class="admonition-header">Modifications</header><div class="admonition-body"><p>I&#39;ve modified the code slightly, since we don&#39;t really care for the flags tmux is storing in the upper bits of the result. The transform would be simple enough to undo when fuzzing/using this as an oracle, but would mostly just distract from the core of what I&#39;m trying to show here.</p></div></div><p>That is quite a handful of code! There&#39;s lots of magic numbers, two basically-one-liner helper functions and very specific input types, the behavior of which must all be taken into account.</p><p>One attempt at a port to Julia might look like this (courtesy of <code>@tecosaur</code>):</p><pre><code class="language-julia hljs">function termcolor8bit(r::UInt8, g::UInt8, b::UInt8)
+    # Magic numbers? Lots.
+    cdistsq(r1, g1, b1) = (r1 - r)^2 + (g1 - g)^2 + (b1 - b)^2
+    to6cube(value) = (value - 35) ÷ 40
+    from6cube(r6, g6, b6) = 16 + 6^2 * r6 + 6^1 * g6 + 6^0 * b6
+    sixcube = (0, 95:40:255...)
+    r6cube, g6cube, b6cube = to6cube(r), to6cube(g), to6cube(b)
+    rnear, gnear, bnear = sixcube[r6cube+1], sixcube[g6cube+1], sixcube[b6cube+1]
+    colorcode = if r == rnear &amp;&amp; g == gnear &amp;&amp; b == bnear
+        from6cube(r6cube, g6cube, b6cube)
+    else
+        grey_avg = Int(r + g + b) ÷ 3
+        grey_index = if grey_avg &gt; 238 23 else (grey_avg - 3) ÷ 10 end
+        grey = 8 + 10 * grey_index
+        if cdistsq(grey, grey, grey) &lt;= cdistsq(rnear, gnear, bnear)
+            16 + 6^3 + grey_index
+        else
+            from6cube(r6cube, g6cube, b6cube)
+        end
+    end
+    UInt8(colorcode)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">termcolor8bit (generic function with 1 method)</code></pre><p>The basic structure is the same, albeit formatted a bit differently and with inner helper functions instead of outer ones. There are also some additional subtleties, such as the <code>+1</code> that are necessary when indexing into <code>sixcube</code> and the explicit call to construct an <code>Int</code> for the average.</p><p>So without further ado, let&#39;s compare the two implementations! We can compile the C code with <code>gcc -shared colors.c -o colors.o</code> and wrap the resulting shared object from Julia like so:</p><pre><code class="language-julia hljs"># `colors.o` is stored in a subdirectory relative to this file!
+so_path = joinpath(@__DIR__, &quot;tmux_colors&quot;, &quot;colors.o&quot;)
+tmux_8bit_oracle(r::UInt8, g::UInt8, b::UInt8) = @ccall so_path.colour_find_rgb(r::UInt8, g::UInt8, b::UInt8)::UInt8</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">tmux_8bit_oracle (generic function with 1 method)</code></pre><p>Great, this now allows us to call the oracle function and compare to our ported implementation:</p><pre><code class="language-julia-repl hljs" style="display:block;">julia&gt; tmux_8bit_oracle(0x4, 0x2, 0x3)</code><code class="nohighlight hljs ansi" style="display:block;">0x10</code><br/><code class="language-julia-repl hljs" style="display:block;">julia&gt; termcolor8bit(0x4, 0x2, 0x3)</code><code class="nohighlight hljs ansi" style="display:block;">0x10</code></pre><p>And at least for this initial example, the 8-bit colorcodes we get out are the same.</p><p>But are they the same for all colors? You&#39;re reading the docs of Supposition.jl, so let&#39;s <code>@check</code> that out, following the pattern for oracle tests we saw earlier:</p><pre><code class="language-julia hljs">using Supposition
+uint8gen = Data.Integers{UInt8}()
+@check function oracle_8bit(r=uint8gen,g=uint8gen,b=uint8gen)
+    jl = termcolor8bit(r,g,b)
+    tmux = tmux_8bit_oracle(r,g,b)
+    jl == tmux
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr91"><span class="sgr1">Found counterexample</span></span>
+  <span class="sgr4">Context:</span> oracle_8bit
+
+  <span class="sgr4">Arguments:</span>
+      <span class="sgr36">r::UInt8 = 0x00</span>
+      <span class="sgr36">g::UInt8 = 0x00</span>
+      <span class="sgr36">b::UInt8 = 0x35</span></code></pre><p>and indeed, we find a counterexample where our port doesn&#39;t match the original code for some reason. It would be really interesting to see what exactly these two functions put out, so that it&#39;s easier to reconstruct where the port has gone wrong (or perhaps even the oracle!). Now, while we <em>could</em> go in and add <code>@info</code> or manually call <code>termcolor8bit</code> and <code>tmux_8bit_oracl</code> with the minimized input, neither of those is really attractive, for multiple reasons:</p><ul><li><code>@info</code> will output logs for <em>every</em> invocation of our property, which is potentially quite a lot. That&#39;s a lot of text to scroll back through, both locally and in CI. In the worst case, we might even hit the scrollback limit of our terminal, or fill the disk on a resource-limited CI.</li><li>Calling the functions manually can quickly get cumbersome, since you have to copy the output of <code>@check</code>, make sure you format it correctly to call the various functions etc. The interfaces between the two functionalities may be entirely different too in a more complex example than this one, adding more complexity that a developer has to keep in mind.</li></ul><p>No, &quot;manual&quot; checking &amp; reading logs is certainly not in the spirit of Supposition.jl! Indeed, there&#39;s a feature we can make use of here that gives us exactly the information we wanted to have in the first place - <a href="../interfaces.html#Supposition.event!"><code>event!</code></a>. We simply insert calls to it into our property, and it records any events we consider to be interesting enough to record. We can also optionally give these events a label, though that&#39;s only used for display purposes:</p><pre><code class="language-julia hljs">@check function oracle_8bit(r=uint8gen,g=uint8gen,b=uint8gen)
+    jl = termcolor8bit(r,g,b)
+    event!(&quot;Port&quot;, jl)
+    tmux = tmux_8bit_oracle(r,g,b)
+    event!(&quot;Oracle&quot;, tmux)
+    jl == tmux
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr91"><span class="sgr1">Found counterexample</span></span>
+  <span class="sgr4">Context:</span> oracle_8bit
+
+  <span class="sgr4">Arguments:</span>
+      <span class="sgr36">r::UInt8 = 0x00</span>
+      <span class="sgr36">g::UInt8 = 0x00</span>
+      <span class="sgr36">b::UInt8 = 0x35</span>
+
+  <span class="sgr4">Events:</span>
+    Port
+        <span class="sgr36">0xe9</span>
+    Oracle
+        <span class="sgr36">0x11</span></code></pre><p>The first argument in the 2-arg form of <code>event!</code> is any <code>AbstractString</code>, so even the (upcoming with Julia 1.11) <code>AnnotatedString</code>s from the <code>styled&quot;&quot;</code> macro are an option, for fancy labelling. The recorded object can be arbitrary, but be aware that it will be kept alive for the entire duration of the testsuite, so it&#39;s better to record small objects. Only the events associated with the &quot;most important&quot; test case encountered during fuzzing will be kept alive; if a better one comes around, the existing events are deleted.</p><p>In case you can&#39;t quickly come up with a name for the event or don&#39;t need a long-term descriptor of what exactly you&#39;re interested in, you can also use the <a href="../interfaces.html#Supposition.@event!"><code>@event!</code></a> macro form of this API:</p><pre><code class="language-julia hljs">@check function oracle_8bit_macro(r=uint8gen,g=uint8gen,b=uint8gen)
+    @event!(termcolor8bit(r,g,b)) == @event!(tmux_8bit_oracle(r,g,b))
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr91"><span class="sgr1">Found counterexample</span></span>
+  <span class="sgr4">Context:</span> oracle_8bit_macro
+
+  <span class="sgr4">Arguments:</span>
+      <span class="sgr36">r::UInt8 = 0x00</span>
+      <span class="sgr36">g::UInt8 = 0x00</span>
+      <span class="sgr36">b::UInt8 = 0x35</span>
+
+  <span class="sgr4">Events:</span>
+    termcolor8bit(r, g, b)
+        <span class="sgr36">0xe9</span>
+    tmux_8bit_oracle(r, g, b)
+        <span class="sgr36">0x11</span></code></pre><p>The <code>@event!</code> macro uses the stringified version of the expression passed to it as the name of the event.</p><h2 id="When-to-use-this"><a class="docs-heading-anchor" href="#When-to-use-this">When to use this</a><a id="When-to-use-this-1"></a><a class="docs-heading-anchor-permalink" href="#When-to-use-this" title="Permalink"></a></h2><p>Events are a great way to diagnose &amp; trace how a minimal input affects deeper parts of your code, in particular when you have a failing minimal example that you can&#39;t quite seem to get a handle on when debugging. In those cases, you can add <code>event!</code> calls or <code>@event!</code> invocations into your code base and check the resulting trace for clues what might be going wrong.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="stateful.html">« Stateful Testing</a><a class="docs-footer-nextpage" href="../resources.html">PBT Resources »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Sunday 16 March 2025 11:18">Sunday 16 March 2025</span>. Using Julia version 1.11.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
