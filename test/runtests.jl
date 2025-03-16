@@ -487,11 +487,11 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "Can find close-to-maximum matrix size" begin
         upper_limit = rand(50:70)
-        offset = rand(1:10)
+        offset = rand(0:10)
         matgen = Data.Matrices(Data.Integers{UInt8}(); min_rows=min(125, upper_limit)-2*offset, max_rows=upper_limit+2*offset,
                                                        min_cols=min(125, upper_limit)-2*offset, max_cols=upper_limit+2*offset)
         sr = @check db=NoRecordDB() record=false broken=true function findArr(m=matgen)
-                prod(size(m)) < (upper_limit-offset)^2
+                size(m) != (upper_limit-offset, upper_limit-offset)
             end;
         @test @something(sr.result) isa Supposition.Fail
         arr = only(@something(sr.result).example);
