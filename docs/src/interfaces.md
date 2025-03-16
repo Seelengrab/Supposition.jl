@@ -67,6 +67,10 @@ Filter = t -> begin
 end
 ```
 
+```@docs
+Supposition.example
+```
+
 ### Types
 
 ```@autodocs
