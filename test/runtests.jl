@@ -644,8 +644,9 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         @testset "@event!" begin
-            sr = @check db=false record=false broken=true function isi16(f=Data.Integers{Int16}())
-                @event!(f*2) isa String || error("")
+            sr = @check db=false record=false broken=true function log_is_exprstring(f=Data.Integers{Int16}())
+                # this fails intentionally!
+                @event!(f*2) isa Vector || error("")
             end
             res = @something sr.result
             events = res.events
@@ -655,6 +656,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             # this still only tests one expression, but getting arbitrary ones
             # into `@event!` is tricky
             @test first(only(events)) == string(:(f*2))
+            @check function use_event_result(f=Data.Integers{Int16}())
+                res = @event!(2f)
+                iseven(res)
+            end
         end
 
         @testset "targeting score" begin
