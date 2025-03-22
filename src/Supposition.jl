@@ -24,6 +24,7 @@ using Base: stacktrace, StackFrame
 using Test: AbstractTestSet
 
 import Random
+using Dates
 using Logging
 using Serialization
 

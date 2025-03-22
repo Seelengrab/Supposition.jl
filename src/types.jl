@@ -90,6 +90,19 @@ Options:
  * `broken`: Whether the invocation is expected to fail. Defaults to `false`.
  * `db`: An `ExampleDB` for recording failure cases for later replaying. Defaults to `default_directory_db()`.
  * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
+ * `timeout`: The maximum amount of time `@check` attempts new examples for. Expects a `Dates.TimeType`, can be disabled by setting to `nothing`. Defaults to `nothing`.
+
+!!! note "`timeout` & `max_examples` interactions"
+    These two configurations have similar goals - putting some upper limit on the number
+    of examples attempted. If both are set, whichever occurs first will stop execution.
+
+!!! warning "Timeout behavior"
+    There are some caveats regarding a set timeout:
+        * If a property is tested while the timeout occurs, the existing computation
+          will currently not be aborted. This is considered an implementation detail,
+          and thus may change in the future.
+        * If the timeout is set too small and no execution starts at all, this is also
+          considered a test failure.
 
 !!! warning "Buffer Size"
     At any one point, there may be more than one active buffer being worked on.
@@ -107,8 +120,10 @@ struct CheckConfig
     broken::Bool
     db::ExampleDB
     buffer_size::UInt
+    timeout::Option{Dates.TimePeriod}
     function CheckConfig(; rng::Random.AbstractRNG, max_examples::Int, record=true,
-                            verbose=false, broken=false, db::Union{Bool,ExampleDB}=true, buffer_size=100_000, kws...)
+                            verbose=false, broken=false, db::Union{Bool,ExampleDB}=true, buffer_size=100_000,
+                            timeout::Union{Dates.TimePeriod, Nothing}=nothing, kws...)
         !isempty(kws) && @warn "Got unsupported keyword arguments to CheckConfig! Ignoring:" Keywords=keys(kws)
         database::ExampleDB = if db isa Bool
             if db
@@ -125,7 +140,8 @@ struct CheckConfig
             verbose,
             broken,
             database,
-            buffer_size)
+            buffer_size,
+            isnothing(timeout) ? nothing : Some(timeout))
     end
 end
 
@@ -163,6 +179,7 @@ mutable struct TestState
     error_cache::Vector{Tuple{Type, StackFrame}}
     test_is_trivial::Bool
     previous_example::Option{Attempt}
+    stop_time::Option{Float64}
     function TestState(conf::CheckConfig, test_function, previous_example::Option{Attempt}=nothing)
         rng_orig = try
             copy(conf.rng)
@@ -172,6 +189,11 @@ mutable struct TestState
             rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Random.Xoshiro` and pass that instead."))
         end
         error_cache = Tuple{Type,StackFrame}[]
+        stop_time = if !isnothing(conf.timeout)
+            Some(time() + Dates.tons(@something(conf.timeout))*1e-9)
+        else
+            nothing
+        end
         new(
             conf,              # pass the given arguments through
             test_function,
@@ -183,7 +205,8 @@ mutable struct TestState
             nothing,          # no error thrown so far
             error_cache,      # for display purposes only
             false,            # test is presumed nontrivial
-            previous_example) # the choice sequence for the previous failure
+            previous_example, # the choice sequence for the previous failure
+            stop_time)        # for timeout purposes
     end
 end
 
@@ -229,6 +252,16 @@ struct Error <: Result
 end
 
 """
+    Timeout
+
+A result indicating that no examples whatsoever were attempted,
+due to reaching the timeout before a single example concluded.
+"""
+struct Timeout <: Result
+    duration::Dates.TimePeriod
+end
+
+"""
     SuppositionReport <: AbstractTestSet
 
 An `AbstractTestSet`, for recording the final result of `@check` in the context of `@testset`
@@ -255,9 +288,11 @@ mutable struct SuppositionReport <: AbstractTestSet
 end
 
 function Base.show(io::IO, m::MIME"text/plain", sr::SuppositionReport)
-    (;ispass,isfail,iserror,isbroken) = results(sr)
+    (;ispass,isfail,iserror,isbroken,istimeout) = results(sr)
     expect_broken = sr.config.broken
-    if expect_broken && isfail
+    if istimeout
+        show_timeout(io, m, sr)
+    elseif expect_broken && isfail
         # the test passed unexpectedly
         show_fix_broken(io, m, sr)
     elseif isfail
@@ -390,4 +425,12 @@ function show_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
     !sr.config.verbose && return
 
     !isempty(res.events) && show_events(io, m, res)
+end
+
+function show_timeout(io::IO, _::MIME"text/plain", sr::SuppositionReport)
+    res::Timeout = @something sr.result
+
+    print(io, styled"""
+    {blue,bold:Hit timeout before any tests concluded (Timeout: $(res.duration))}
+      {underline:Context:} $(sr.description)""")
 end

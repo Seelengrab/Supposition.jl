@@ -5,6 +5,7 @@ using Test
 using Aqua
 using Random
 using Logging
+using Dates
 using Statistics: mean
 using InteractiveUtils: subtypes
 using ScopedValues: @with
@@ -978,27 +979,32 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
         pass_sr       = @check db=db record=false pass(Data.Just("Dummy"))
         # silence the expected printing
-        fail_sr, err_sr, broke_pass_sr = redirect_stderr(devnull) do
+        fail_sr, err_sr, broke_pass_sr, timeout_sr = redirect_stderr(devnull) do
             fail_sr       = @check db=db record=false fail(Data.Just("Dummy"))
             err_sr        = @check db=db record=false err(Data.Just("Dummy"))
             broke_pass_sr = @check db=db record=false broken=true pass(Data.Just("Dummy"))
-            fail_sr, err_sr, broke_pass_sr
+            timeout_sr    = @check db=db record=false timeout=Nanosecond(1) pass(Data.Just("Dummy"))
+            fail_sr, err_sr, broke_pass_sr, timeout_sr
         end
-        broke_fail_sr = @check db=db record=false broken=true fail(Data.Just("Dummy"))
-        broke_err_sr  = @check db=db record=false broken=true err(Data.Just("Dummy"))
+        broke_fail_sr    = @check db=db record=false broken=true fail(Data.Just("Dummy"))
+        broke_err_sr     = @check db=db record=false broken=true err(Data.Just("Dummy"))
 
-        @test @something(pass_sr.result) isa Supposition.Pass
-        @test @something(broke_pass_sr.result) isa Supposition.Pass
-        @test @something(fail_sr.result) isa Supposition.Fail
-        @test @something(broke_fail_sr.result) isa Supposition.Fail
-        @test @something(err_sr.result) isa Supposition.Error
-        @test @something(broke_err_sr.result) isa Supposition.Error
+        @testset "Result types" begin
+            @test @something(pass_sr.result)       isa Supposition.Pass
+            @test @something(broke_pass_sr.result) isa Supposition.Pass
+            @test @something(fail_sr.result)       isa Supposition.Fail
+            @test @something(broke_fail_sr.result) isa Supposition.Fail
+            @test @something(err_sr.result)        isa Supposition.Error
+            @test @something(broke_err_sr.result)  isa Supposition.Error
+            @test @something(timeout_sr.result)    isa Supposition.Timeout
+        end
 
         @testset "Pass" begin
             @test  Supposition.results(pass_sr).ispass
             @test !Supposition.results(pass_sr).isfail
             @test !Supposition.results(pass_sr).iserror
             @test !Supposition.results(pass_sr).isbroken
+            @test !Supposition.results(pass_sr).istimeout
         end
 
         @testset "Fail" begin
@@ -1006,6 +1012,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test  Supposition.results(fail_sr).isfail
             @test !Supposition.results(fail_sr).iserror
             @test !Supposition.results(fail_sr).isbroken
+            @test !Supposition.results(fail_sr).istimeout
         end
 
         @testset "Error" begin
@@ -1013,6 +1020,15 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(err_sr).isfail
             @test  Supposition.results(err_sr).iserror
             @test !Supposition.results(err_sr).isbroken
+            @test !Supposition.results(err_sr).istimeout
+        end
+
+        @testset "Timeout" begin
+            @test !Supposition.results(timeout_sr).ispass
+            @test !Supposition.results(timeout_sr).isfail
+            @test !Supposition.results(timeout_sr).iserror
+            @test !Supposition.results(timeout_sr).isbroken
+            @test  Supposition.results(timeout_sr).istimeout
         end
 
         @testset "Broken Pass" begin
@@ -1020,6 +1036,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test  Supposition.results(broke_pass_sr).isfail
             @test !Supposition.results(broke_pass_sr).iserror
             @test !Supposition.results(broke_pass_sr).isbroken
+            @test !Supposition.results(broke_pass_sr).istimeout
         end
 
         @testset "Broken Fail" begin
@@ -1027,6 +1044,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(broke_fail_sr).isfail
             @test !Supposition.results(broke_fail_sr).iserror
             @test  Supposition.results(broke_fail_sr).isbroken
+            @test !Supposition.results(broke_fail_sr).istimeout
         end
 
         @testset "Broken Error" begin
@@ -1034,6 +1052,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(broke_err_sr).isfail
             @test !Supposition.results(broke_err_sr).iserror
             @test  Supposition.results(broke_err_sr).isbroken
+            @test !Supposition.results(broke_err_sr).istimeout
         end
 
         @testset "Alignment" begin
@@ -1091,6 +1110,24 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
             # all of these must have been rejected as an Overrun, so no call should ever take place
             @test iszero(@something(res.final_state).valid_test_cases)
+        end
+
+        @testset "Timeouts" begin
+            @testset "Hit timeout" begin
+                sr = @check record=false timeout=Millisecond(100) (x=Data.Integers{Int8}()) -> (sleep(0.01); return true)
+                @test !isnothing(sr.result)
+                @test @something(sr.result) isa Supposition.Pass
+                fs = @something sr.final_state
+                @test @something(sr.time_end) >= @something(fs.stop_time)
+                @test fs.calls < sr.config.max_examples
+            end
+
+            @testset "No run happened" begin
+                sr = @check record=false broken=true timeout=Nanosecond(1) (x=Data.Integers{Int8}()) -> return true
+                @test !isnothing(sr.result)
+                @test @something(sr.result) isa Supposition.Timeout
+                @test iszero(@something(sr.final_state).calls)
+            end
         end
     end
 

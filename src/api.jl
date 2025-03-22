@@ -316,8 +316,8 @@ end
 
 function final_check_block(namestr, run_input, gen_input, tsargs)
     @gensym(ts, sr, report, previous_failure, got_res, got_err, got_score,
-            res, attempt, n_tc, obj, exc, trace, len, err, fail,
-            pass, score)
+            res, attempt, n_tc, obj, exc, trace, len, err, fail, pass,
+            timeout, score)
 
     return quote
         # need this for backwards compatibility
@@ -332,7 +332,10 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
             $got_err = !isnothing($ts.target_err)
             $got_score = !isnothing($ts.best_scoring)
             $Logging.@debug "Any result?" Res=$got_res Err=$got_err Score=$got_score
-            if $got_res | $got_err | $got_score
+            if iszero($ts.calls)
+                $timeout = $Timeout(@something($report.config.timeout))
+                $Test.record($report, $timeout)
+            elseif $got_res | $got_err | $got_score
                 $res = $Base.@something $ts.target_err $ts.best_scoring $ts.result
                 $attempt = if $got_err | $got_score
                     $last($res)

@@ -4,6 +4,7 @@ version = "0.3.5"
 authors = ["Sukera <Seelengrab@users.noreply.github.com> and contributors"]
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
@@ -26,4 +27,5 @@ ScopedValues = "1.2.0"
 Serialization = "1.8"
 StyledStrings = "1"
 Test = "1"
+Dates = "1"
 julia = "1.8"

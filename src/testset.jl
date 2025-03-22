@@ -9,12 +9,13 @@ function results(sr::SuppositionReport)
     res_pass = @something(sr.result) isa Pass
     res_fail = @something(sr.result) isa Fail
     res_error = @something(sr.result) isa Error
+    istimeout = @something(sr.result) isa Timeout
     expect_broken = sr.config.broken
     ispass = res_pass && !expect_broken
     iserror = res_error && !expect_broken
     isfail = (res_pass && expect_broken) || (res_fail && !expect_broken)
-    isbroken = !(ispass | iserror | isfail)
-    (;ispass,isfail,iserror,isbroken)
+    isbroken = !(ispass | iserror | isfail | istimeout)
+    (;ispass,isfail,iserror,isbroken,istimeout)
 end
 
 function _format_duration(sr::SuppositionReport)
@@ -42,13 +43,13 @@ Test.get_alignment(sr::SuppositionReport, depth::Int) = 2*depth + textwidth(sr.d
 
     function Test.get_test_counts(sr::SuppositionReport)
         res = results(sr)
-        (;ispass,isfail,iserror,isbroken) = res
+        (;ispass,isfail,iserror,isbroken,istimeout) = res
         @assert isone(count(values(res))) values(res)
         return Test.TestCounts(
             true,
             ispass,
             isfail,
-            iserror,
+            iserror+istimeout,
             isbroken,
             0,
             0,
@@ -194,7 +195,8 @@ function Test.finish(sr::SuppositionReport)
     expect_broken = sr.config.broken
 
     # this is a failure, so record the result in the db
-    if !(res isa Pass)
+    # timeouts are like a failure, but there is nothing to record
+    if !(res isa Pass || res isa Timeout)
         ts = @something sr.final_state
         attempt::Attempt = @something err_choices(ts) ts.result begin
             @warn "Unexpected result!" Res=res

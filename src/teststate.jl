@@ -199,9 +199,12 @@ end
 Whether `ts` should keep generating new test cases, or whether `ts` is finished.
 
 `true` returned here means that the given property is not trivial, there is no result yet
-and we have room for more examples.
+we have room for more examples, and we haven't hit the specified timeout yet.
 """
 function should_keep_generating(ts::TestState)
+    end_time = @something ts.stop_time Some(typemax(Float64))
+    time() >= end_time && return false
+
     triv = ts.test_is_trivial
     # Either we find a regular counterexample, or we error
     # both mean we can stop looking, and start shrinking
