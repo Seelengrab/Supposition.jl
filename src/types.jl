@@ -92,17 +92,18 @@ Options:
  * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
  * `timeout`: The maximum amount of time `@check` attempts new examples for. Expects a `Dates.TimeType`, can be disabled by setting to `nothing`. Defaults to `nothing`.
 
-!!! note "`timeout` & `max_examples` interactions"
+!!! note "`timeout` & `max_examples` interaction"
     These two configurations have similar goals - putting some upper limit on the number
     of examples attempted. If both are set, whichever occurs first will stop execution.
 
 !!! warning "Timeout behavior"
     There are some caveats regarding a set timeout:
-        * If a property is tested while the timeout occurs, the existing computation
-          will currently not be aborted. This is considered an implementation detail,
-          and thus may change in the future.
-        * If the timeout is set too small and no execution starts at all, this is also
-          considered a test failure.
+
+      * If a property is tested while the timeout occurs, the existing computation
+        will currently not be aborted. This is considered an implementation detail,
+        and thus may change in the future.
+      * If the timeout is set too small and no execution starts at all, this is also
+        considered a test failure.
 
 !!! warning "Buffer Size"
     At any one point, there may be more than one active buffer being worked on.

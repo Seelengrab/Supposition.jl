@@ -131,7 +131,7 @@ julia> Supposition.@check [options...] function foo(a = Data.Text(Data.Character
 
 Supported options, passed as `key=value`:
 
- * `rng::Random.AbstractRNG`: Pass an RNG to use. Defaults to `Random.Xoshiro(rand(Random.RandomDevice(), UInt))`.
+ * `rng::Random.AbstractRNG`: Pass an RNG to use. Defaults to a copyable `Random.AbstractRNG`.
  * `max_examples::Int`: The maximum number of generated examples that are passed to the property.
  * `broken::Bool`: Mark a property that should pass but doesn't as broken, so that failures are not counted.
  * `record::Bool`: Whether the result of the invocation should be recorded with any parent testsets.
