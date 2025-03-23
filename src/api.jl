@@ -136,6 +136,7 @@ Supported options, passed as `key=value`:
  * `broken::Bool`: Mark a property that should pass but doesn't as broken, so that failures are not counted.
  * `record::Bool`: Whether the result of the invocation should be recorded with any parent testsets.
  * `db`: Either a Boolean (`true` uses a fallback database, `false` stops recording examples) or an [`ExampleDB`](@ref).
+ * `timeout`: The maximum amount of time `@check` attempts new examples for. Expects a `Dates.TimeType`, can be disabled by setting to `nothing`.
  * `config`: A `CheckConfig` object that will be used as a default for all previous options. Options that are passed
    explicitly to `@check` will override whatever is provided through `config`.
 

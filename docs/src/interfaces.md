@@ -28,7 +28,7 @@ Supposition.@event!
 
 ## API for controlling fuzzing
 
-These functions are intended for usage while testing, having various effects
+These items are intended for usage while testing, having various effects
 on either the shrinking or fuzzing process. They are not intended to be part
 of a codebase permanently or remain active while deployed in production.
 
@@ -79,6 +79,10 @@ Order = [:type]
 Filter = t -> begin
     t != Supposition.Data.Possibility
 end
+```
+
+```@docs
+Supposition.CheckConfig
 ```
 
 ## Type-based hooks
