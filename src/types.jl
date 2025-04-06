@@ -154,13 +154,57 @@ function merge(cc::CheckConfig; kws...)
 end
 
 """
+    Stats
+
+A collection of various statistics of the execution of one [`@check`](@ref).
+
+ * `examples`: Total number of attempts to generate an input
+ * `acceptions`: Number of times an input returned was accepted as valid
+ * `rejections`: Number of times an input was `reject!`ed
+ * `invocations`: Total number of invocations of the property under test
+ * `mean_runtime`: Mean execution time of the property
+ * `squared_dist_runtime`: Aggregated squared distance from the mean runtime
+ * `shrinks`: Number of times a counterexample was shrunk successfully
+"""
+struct Stats
+    examples::Int
+    acceptions::Int
+    rejections::Int
+    invocations::Int
+    overruns::Int
+    mean_runtime::Float64
+    squared_dist_runtime::Float64
+    shrinks::Int
+    function Stats(; examples=0,
+                     acceptions=0,
+                     rejections=0,
+                     invocations=0,
+                     overruns=0,
+                     mean_runtime=NaN,
+                     squared_dist_runtime=0.0,
+                     shrinks=0,
+                     kws...)
+        !isempty(kws) && @warn "Got unsupported keyword arguments to Stats! Ignoring:" Keywords=keys(kws)
+        new(examples, acceptions, rejections,
+            invocations, overruns, mean_runtime,
+            squared_dist_runtime, shrinks)
+    end
+end
+
+function merge(stats::Stats; kws...)
+    unknown_args = setdiff(keys(kws), propertynames(stats))
+    isempty(unknown_args) || @warn "Got unsupported keyword arguments to Stats! Ignoring:" Keywords=unknown_args
+    data = ( k => get(kws, k, getproperty(stats, k)) for k in propertynames(stats) )
+    Stats(;data...)
+end
+
+"""
     TestState
 
  * `config`: The configuration this `TestState` is running with
  * `is_interesting`: The user given property to investigate
  * `rng`: The currently used RNG
- * `valid_test_cases`: The count of (so far) valid encountered testcases
- * `calls`: The number of times `is_interesting` was called in total
+ * `stats`: A collection of statistics about this `TestState`
  * `result`: The choice sequence leading to a non-throwing counterexample
  * `best_scoring`: The best scoring result that was encountered during targeting
  * `target_err`: The error this test has previously encountered and the smallest choice sequence leading to it
@@ -172,8 +216,7 @@ mutable struct TestState
     config::CheckConfig
     is_interesting::Any
     rng::Random.AbstractRNG
-    valid_test_cases::UInt
-    calls::UInt
+    stats::Stats
     result::Option{Attempt}
     best_scoring::Option{Tuple{Float64, Attempt}}
     target_err::Option{Tuple{Exception, Vector{StackFrame}, Int, Attempt}}
@@ -199,8 +242,7 @@ mutable struct TestState
             conf,              # pass the given arguments through
             test_function,
             rng_orig,
-            0,                # no tests so far
-            0,                # no calls so far
+            Stats(),
             nothing,          # no result so far
             nothing,          # no target score so far
             nothing,          # no error thrown so far

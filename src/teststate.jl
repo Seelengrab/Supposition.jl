@@ -31,8 +31,9 @@ Returns a `NTuple{Bool, 2}` indicating whether `tc` is interesting and whether i
 """
 function test_function(ts::TestState, tc::TestCase)
     # one call == one test of the function in `ts` for the given `TestCase`
-    ts.calls += 1
+    count_call!(ts)
 
+    before_invocation = time()
     interesting, threw = try
         @with CURRENT_TESTCASE => tc begin
             ts.is_interesting(tc)
@@ -43,17 +44,24 @@ function test_function(ts::TestState, tc::TestCase)
         # UndefVarError are a programmer error, so rethrow
         e isa UndefVarError && rethrow()
         # These are wanted rejections
-        e isa TestException && return (false, false)
+        if e isa TestException
+            e isa Overrun && count_overrun!(ts)
+            e isa Invalid && count_invalid!(ts)
+            return (false, false)
+        end
         # true errors are always interesting
         true, Some((e, stacktrace(catch_backtrace())))
+    finally
+        after_invocation = time()
+        record_duration!(ts, after_invocation - before_invocation)
     end
 
     !(interesting isa Bool) && return (false, false)
 
-    if !interesting
-        ts.test_is_trivial = isempty(tc.attempt.choices)
-        ts.valid_test_cases += 1
+    ts.test_is_trivial = isempty(tc.attempt.choices)
+    count_valid!(ts)
 
+    if !interesting
         # check for target improvement
         was_better = false
         if !isnothing(tc.targeting_score)
@@ -68,9 +76,6 @@ function test_function(ts::TestState, tc::TestCase)
         return (false, was_better)
 
     else
-        ts.test_is_trivial = isempty(tc.attempt.choices)
-        ts.valid_test_cases += 1
-
         # Check for interestingness
         was_more_interesting = false
         if isnothing(threw) && (isnothing(ts.result) ||
@@ -209,10 +214,10 @@ function should_keep_generating(ts::TestState)
     # Either we find a regular counterexample, or we error
     # both mean we can stop looking, and start shrinking
     no_result = isnothing(ts.result) & isnothing(ts.target_err)
-    more_examples = ts.valid_test_cases < ts.config.max_examples
+    more_examples = ts.stats.acceptions < ts.config.max_examples
     # this 10x ensures that we can make many more calls than
     # we need to fill valid test cases, especially when targeting
-    more_calls = ts.calls < (10*ts.config.max_examples)
+    more_calls = ts.stats.invocations < (10*ts.config.max_examples)
     ret = !triv & no_result & more_examples & more_calls
     return ret
 end
@@ -323,9 +328,9 @@ function generate!(ts::TestState)
     # 2) try to generate new counterexamples
     while should_keep_generating(ts) & # no result
             (isnothing(ts.best_scoring) || # no score
-             (ts.valid_test_cases <= ts.config.max_examples÷2))
+             (ts.stats.acceptions <= ts.config.max_examples÷2))
         # +1, since we this test case is for the *next* call
-        tc = TestCase(UInt64[], ts.rng, ts.calls+1, ts.config.max_examples, ts.config.buffer_size*8)
+        tc = TestCase(UInt64[], ts.rng, ts.stats.invocations+1, ts.config.max_examples, ts.config.buffer_size*8)
         test_function(ts, tc)
     end
 end
@@ -342,4 +347,22 @@ function consider(ts::TestState, attempt::Attempt)::Bool
     else
         first(test_function(ts, for_choices(attempt.choices, copy(ts.rng), attempt.generation, attempt.max_generation)))
     end
+end
+
+count_call!(ts::TestState)    = ts.stats = merge(ts.stats; invocations = ts.stats.invocations+1)
+count_valid!(ts::TestState)   = ts.stats = merge(ts.stats; acceptions  = ts.stats.acceptions+1)
+count_invalid!(ts::TestState) = ts.stats = merge(ts.stats; rejections  = ts.stats.rejections+1)
+count_overrun!(ts::TestState) = ts.stats = merge(ts.stats; overruns    = ts.stats.overruns+1)
+function record_duration!(ts::TestState, dur::Float64)
+    stats = ts.stats
+    if isnan(stats.mean_runtime)
+        delta  = 0.0
+        mean_runtime = dur
+    else
+        delta = dur - stats.mean_runtime
+        mean_runtime = stats.mean_runtime + (dur-stats.mean_runtime)/stats.invocations
+    end
+    delta2 = dur - mean_runtime
+    squared_dist_runtime = stats.squared_dist_runtime + delta*delta2
+    ts.stats = merge(stats; mean_runtime, squared_dist_runtime)
 end

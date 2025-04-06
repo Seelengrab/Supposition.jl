@@ -1100,7 +1100,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             res = @check config=conf max_examples=100 function passConfFailTestFailTest(i=intgen)
                 true
             end
-            @test @something(res.final_state).calls == 100
+            @test @something(res.final_state).stats.invocations == 100
         end
 
         @testset "Buffer Size" begin
@@ -1109,7 +1109,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 isempty(v)
             end
             # all of these must have been rejected as an Overrun, so no call should ever take place
-            @test iszero(@something(res.final_state).valid_test_cases)
+            @test iszero(@something(res.final_state).stats.acceptions)
         end
 
         @testset "Timeouts" begin
@@ -1119,14 +1119,14 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 @test @something(sr.result) isa Supposition.Pass
                 fs = @something sr.final_state
                 @test @something(sr.time_end) >= @something(fs.stop_time)
-                @test fs.calls < sr.config.max_examples
+                @test fs.stats.invocations < sr.config.max_examples
             end
 
             @testset "No run happened" begin
                 sr = @check record=false broken=true timeout=Nanosecond(1) (x=Data.Integers{Int8}()) -> return true
                 @test !isnothing(sr.result)
                 @test @something(sr.result) isa Supposition.Timeout
-                @test iszero(@something(sr.final_state).calls)
+                @test iszero(@something(sr.final_state).stats.invocations)
             end
         end
     end
