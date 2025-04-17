@@ -1,4 +1,4 @@
-# Userfacing API
+# User-facing API
 
 Supposition.jl provides a few main interfaces to hook into with your code,
 as well as use during general usage of Supposition.jl. These
