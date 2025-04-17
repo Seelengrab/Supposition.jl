@@ -1,5 +1,5 @@
 using Supposition
-using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
+using Supposition: Data, FloatEncoding, test_function, shrink_remove, shrink_redistribute,
         NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!
 using Test
 using Aqua
@@ -512,6 +512,88 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test_throws ArgumentError Data.Floats(;minimum=NaN)
         @test_throws ArgumentError Data.Floats(;maximum=NaN)
         @test_throws ArgumentError Data.Floats(;minimum=2.0, maximum=1.0)
+    end
+
+    # Tests the properties of the enocding used to represent floating point numbers
+    @testset "Floating point encoding" begin
+        @testset for T in (Float16, Float32, Float64)
+
+            iT = FloatEncoding.uint(T)
+            # These invariants are ported from Hypothesis
+            @testset "Exponent encoding" begin
+                # The highest value here is 0x7ff (2047) with Int64,
+                # so we can just exhaustively test all 2048 possibilities
+                exponents = zero(iT):FloatEncoding.max_exponent(T)
+
+                # Round tripping
+                @test all(exponents) do e
+                    FloatEncoding.decode_exponent(FloatEncoding.encode_exponent(e)) == e
+                end
+
+                @test all(exponents) do e
+                    FloatEncoding.encode_exponent(FloatEncoding.decode_exponent(e)) == e
+                end
+            end
+
+            # check that the encoding roundtrips properly
+            # N.B. this property only holds for floats with the signbit unset
+            function roundtrip_encoding(f)
+                encoded = FloatEncoding.float_to_lex(f)
+                decoded = FloatEncoding.lex_to_float(T, encoded)
+                reinterpret(iT, decoded) == reinterpret(iT, f)
+            end
+
+            @testset for f in T[
+                    0.0,
+                    2.5,
+                    8.000000000000007,
+                    3.0,
+                    2.0,
+                    1.9999999999999998,
+                    1.0
+            ]
+                @test roundtrip_encoding(f)
+            end
+
+             # `roundtrip_encoding` assumes the signbit is unset
+             roundtrip_gen = map(Data.Floats{T}()) do f
+                 _, exp, frac = FloatEncoding.tear(f)
+                 FloatEncoding.assemble(T, zero(iT), exp, frac)
+             end
+            @check roundtrip_encoding(roundtrip_gen)
+
+            @testset "Ordering" begin
+                function order_integral_part(n, g)
+                    f = n + g
+                    assume!(trunc(f) != f)
+                    assume!(trunc(f) != 0)
+                    i = FloatEncoding.float_to_lex(f)
+                    g = trunc(f)
+                    FloatEncoding.float_to_lex(g) < i
+                end
+
+                @check order_integral_part(Data.Just(1.0), Data.Just(0.5))
+                @check order_integral_part(
+                    Data.Floats{T}(;
+                        minimum=one(T),
+                        maximum=T(2^(FloatEncoding.fracsize(T) + 1)),
+                        nans=false),
+                        Data.Floats{T}(; minimum=nextfloat(zero(T)), maximum=prevfloat(one(T)), nans=false))
+
+                integral_float_gen = map(abs ∘ trunc,
+                    Data.Floats{T}(; minimum=zero(T), infs=false, nans=false))
+
+                @check function integral_floats_order_as_integers(x=integral_float_gen,
+                    y=integral_float_gen)
+                    (x < y) == (FloatEncoding.float_to_lex(x) < FloatEncoding.float_to_lex(y))
+                end
+
+                @check function fractional_floats_greater_than_1(
+                    f=Data.Floats{T}(; minimum=nextfloat(zero(T)), maximum=prevfloat(one(T)), nans=false))
+                    FloatEncoding.float_to_lex(f) > FloatEncoding.float_to_lex(one(T))
+                end
+            end
+        end
     end
 
     @testset "@check API" begin
@@ -1348,7 +1430,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @testset for T in (Float16, Float32, Float64)
             @check function floatfunc(f=Data.Floats{T}())
                 orig = bitstring(f)
-                reassembled = bitstring(Supposition.assemble(T, Supposition.tear(f)...))
+                reassembled = bitstring(FloatEncoding.assemble(T, FloatEncoding.tear(f)...))
                 orig == reassembled
             end
         end

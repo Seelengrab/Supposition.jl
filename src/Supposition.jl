@@ -36,6 +36,7 @@ using StyledStrings
 include("types.jl")
 include("testcase.jl")
 include("util.jl")
+include("float.jl")
 include("data.jl")
 include("teststate.jl")
 include("shrink.jl")
