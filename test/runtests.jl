@@ -1,12 +1,14 @@
 using Supposition
 using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
-        NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!
+        NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!,
+        Stats, add_invocation, add_validation, add_invalidation, add_overrun, add_duration,
+        add_shrink, runtime_mean, runtime_variance
 using Test
 using Aqua
 using Random
 using Logging
 using Dates
-using Statistics: mean
+using Statistics: mean, std, var
 using InteractiveUtils: subtypes
 using ScopedValues: @with
 using .Threads: @spawn
@@ -1387,5 +1389,32 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @check chars_nonmalformed(c=Data.Characters()) -> !Base.ismalformed(c)
         # There isn't anything left to check for here
         @check allascii(c=Data.UnicodeCharacters()) -> c isa Char
+    end
+
+    @testset "Statistics" begin
+        @testset "individual calls" begin
+            # TODO: Replace this with stateful property based testing
+            @test add_invocation(Stats())    == Supposition.merge(Stats(); invocations=1)
+            @test add_validation(Stats())    == Supposition.merge(Stats(); acceptions=1)
+            @test add_invalidation(Stats())  == Supposition.merge(Stats(); rejections=1)
+            @test add_overrun(Stats())       == Supposition.merge(Stats(); overruns=1)
+            @test add_shrink(Stats())        == Supposition.merge(Stats(); shrinks=1)
+            dur = rand()
+            @test add_duration(Stats(), dur) == Supposition.merge(Stats(); mean_runtime=dur, squared_dist_runtime=0.0)
+        end
+        @testset "Duration aggregation" begin
+        durations = Float64[]
+            sleep_durs = Data.Floats(;nans=false,minimum=0.001, maximum=0.1)
+            sr = @check max_examples=500 db=false record=false function duration_test(f=sleep_durs)
+                push!(durations, f)
+                sleep(f)
+                return true
+            end
+            stats = @something(sr.final_state).stats
+            # Our targets are tight - the calculated mean should be well within 1σ.
+            @test runtime_mean(stats) ≈ mean(durations) atol=std(durations)
+            # The online variance should not be too far off either; +-5%
+            @test runtime_variance(stats) ≈ var(durations) rtol=0.05
+        end
     end
 end

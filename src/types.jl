@@ -191,6 +191,28 @@ struct Stats
     end
 end
 
+examples(s::Stats)         = s.examples
+acceptions(s::Stats)       = s.acceptions
+rejections(s::Stats)       = s.rejections
+invocations(s::Stats)      = s.invocations
+overruns(s::Stats)         = s.overruns
+shrinks(s::Stats)          = s.shrinks
+runtime_mean(s::Stats)     = s.mean_runtime
+runtime_variance(s::Stats) = s.squared_dist_runtime / s.invocations
+
+function Base.:(==)(a::Stats, b::Stats)
+    a.examples             ==  b.examples             &&
+    a.acceptions           ==  b.acceptions           &&
+    a.rejections           ==  b.rejections           &&
+    a.invocations          ==  b.invocations          &&
+    a.overruns             ==  b.overruns             &&
+    # these two need === since they're floats and use NaN
+    # as an auxilliary
+    a.mean_runtime         === b.mean_runtime         &&
+    a.squared_dist_runtime === b.squared_dist_runtime &&
+    a.shrinks              ==  b.shrinks
+end
+
 function merge(stats::Stats; kws...)
     unknown_args = setdiff(keys(kws), propertynames(stats))
     isempty(unknown_args) || @warn "Got unsupported keyword arguments to Stats! Ignoring:" Keywords=unknown_args

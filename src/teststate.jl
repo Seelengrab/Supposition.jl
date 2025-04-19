@@ -1,3 +1,29 @@
+####
+# Statistics
+###
+
+add_invocation(s::Stats)   = merge(s; invocations = s.invocations+1)
+add_validation(s::Stats)   = merge(s; acceptions  = s.acceptions+1)
+add_invalidation(s::Stats) = merge(s; rejections  = s.rejections+1)
+add_overrun(s::Stats)      = merge(s; overruns    = s.overruns+1)
+add_shrink(s::Stats)       = merge(s; shrinks     = s.shrinks+1)
+function add_duration(s::Stats, dur::Float64)
+    if isnan(s.mean_runtime)
+        delta  = 0.0
+        mean_runtime = dur
+    else
+        delta = dur - s.mean_runtime
+        mean_runtime = s.mean_runtime + (dur-s.mean_runtime)/s.invocations
+    end
+    delta2 = dur - mean_runtime
+    squared_dist_runtime = s.squared_dist_runtime + delta*delta2
+    merge(s; mean_runtime, squared_dist_runtime)
+end
+
+###
+# TestState manipulations & queries
+###
+
 """
     err_choices
 
@@ -349,20 +375,8 @@ function consider(ts::TestState, attempt::Attempt)::Bool
     end
 end
 
-count_call!(ts::TestState)    = ts.stats = merge(ts.stats; invocations = ts.stats.invocations+1)
-count_valid!(ts::TestState)   = ts.stats = merge(ts.stats; acceptions  = ts.stats.acceptions+1)
-count_invalid!(ts::TestState) = ts.stats = merge(ts.stats; rejections  = ts.stats.rejections+1)
-count_overrun!(ts::TestState) = ts.stats = merge(ts.stats; overruns    = ts.stats.overruns+1)
-function record_duration!(ts::TestState, dur::Float64)
-    stats = ts.stats
-    if isnan(stats.mean_runtime)
-        delta  = 0.0
-        mean_runtime = dur
-    else
-        delta = dur - stats.mean_runtime
-        mean_runtime = stats.mean_runtime + (dur-stats.mean_runtime)/stats.invocations
-    end
-    delta2 = dur - mean_runtime
-    squared_dist_runtime = stats.squared_dist_runtime + delta*delta2
-    ts.stats = merge(stats; mean_runtime, squared_dist_runtime)
-end
+count_call!(ts::TestState)                    = ts.stats = add_invocation(ts.stats)
+count_valid!(ts::TestState)                   = ts.stats = add_validation(ts.stats)
+count_invalid!(ts::TestState)                 = ts.stats = add_invalidation(ts.stats)
+count_overrun!(ts::TestState)                 = ts.stats = add_overrun(ts.stats)
+record_duration!(ts::TestState, dur::Float64) = ts.stats = add_duration(ts.stats, dur)
