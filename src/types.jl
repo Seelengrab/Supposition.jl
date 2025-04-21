@@ -36,6 +36,8 @@ A struct representing a single (ongoing) test case.
  * `max_size`: The maximum number of choices this `TestCase` is allowed to make.
  * `choices`: The binary choices made so far.
  * `targeting_score`: The score this `TestCase` attempts to maximize.
+ * `generation_start`: A timestamp from the moment before generation of the input started.
+ * `call_start`: A timestamp from the moment before the input was passed to the property under test.
 
 !!! warning "Internal"
     The properties of this struct, as well as the functions acting on it directly,
@@ -49,10 +51,14 @@ mutable struct TestCase{RNG <: Random.AbstractRNG}
     max_size::UInt
     targeting_score::Option{Float64}
     attempt::Attempt
+    generation_start::Option{Float64}
+    call_start::Option{Float64}
 end
 
 TestCase(prefix::Vector{UInt64}, rng::Random.AbstractRNG, generation, max_generation, max_size) =
-     TestCase(prefix, rng, convert(UInt, max_size), nothing, Attempt(UInt64[], convert(UInt, generation), convert(Int, max_generation), Pair{AbstractString,Any}[]))
+     TestCase(prefix, rng, convert(UInt, max_size), nothing,
+                Attempt(UInt64[], convert(UInt, generation), convert(Int, max_generation), Pair{AbstractString,Any}[]),
+                nothing, nothing)
 
 """
     ExampleDB
@@ -158,56 +164,66 @@ end
 
 A collection of various statistics of the execution of one [`@check`](@ref).
 
- * `examples`: Total number of attempts to generate an input
- * `acceptions`: Number of times an input returned was accepted as valid
+ * `attempts`: Total number of attempts to generate an input
+ * `acceptions`: Number of times an input was accepted as valid
  * `rejections`: Number of times an input was `reject!`ed
+ * `overruns`: Number of times an `Overrun` occurred during generation
  * `invocations`: Total number of invocations of the property under test
+ * `mean_gentime`: Mean time for generating an input
+ * `squared_dist_gentime`: Aggregated squared distance from the mean gentime
  * `mean_runtime`: Mean execution time of the property
  * `squared_dist_runtime`: Aggregated squared distance from the mean runtime
  * `shrinks`: Number of times a counterexample was shrunk successfully
 """
 struct Stats
-    examples::Int
+    attempts::Int
     acceptions::Int
     rejections::Int
     invocations::Int
     overruns::Int
+    mean_gentime::Float64
+    squared_dist_gentime::Float64
     mean_runtime::Float64
     squared_dist_runtime::Float64
     shrinks::Int
-    function Stats(; examples=0,
+    function Stats(; attempts=0,
                      acceptions=0,
                      rejections=0,
                      invocations=0,
                      overruns=0,
+                     mean_gentime=NaN,
+                     squared_dist_gentime=0.0,
                      mean_runtime=NaN,
                      squared_dist_runtime=0.0,
                      shrinks=0,
                      kws...)
         !isempty(kws) && @warn "Got unsupported keyword arguments to Stats! Ignoring:" Keywords=keys(kws)
-        new(examples, acceptions, rejections,
-            invocations, overruns, mean_runtime,
+        new(attempts, acceptions, rejections,
+            invocations, overruns, mean_gentime,
+            squared_dist_gentime, mean_runtime,
             squared_dist_runtime, shrinks)
     end
 end
 
-examples(s::Stats)         = s.examples
+attempts(s::Stats)         = s.attempts
 acceptions(s::Stats)       = s.acceptions
 rejections(s::Stats)       = s.rejections
 invocations(s::Stats)      = s.invocations
 overruns(s::Stats)         = s.overruns
 shrinks(s::Stats)          = s.shrinks
 runtime_mean(s::Stats)     = s.mean_runtime
-runtime_variance(s::Stats) = s.squared_dist_runtime / s.invocations
+runtime_variance(s::Stats) = s.squared_dist_runtime / invocations(s)
+gentime_mean(s::Stats)     = s.mean_gentime
+gentime_variance(s::Stats) = s.squared_dist_gentime / attempts(s)
 
 function Base.:(==)(a::Stats, b::Stats)
-    a.examples             ==  b.examples             &&
+    a.attempts             ==  b.attempts             &&
     a.acceptions           ==  b.acceptions           &&
     a.rejections           ==  b.rejections           &&
     a.invocations          ==  b.invocations          &&
     a.overruns             ==  b.overruns             &&
     # these two need === since they're floats and use NaN
-    # as an auxilliary
+    # as an auxilliary; NaN === NaN is true (up to bitpatterns)
     a.mean_runtime         === b.mean_runtime         &&
     a.squared_dist_runtime === b.squared_dist_runtime &&
     a.shrinks              ==  b.shrinks

@@ -1,8 +1,10 @@
 using Supposition
 using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
-        NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, TestCase, TestState, choice!, weighted!,
-        Stats, add_invocation, add_validation, add_invalidation, add_overrun, add_duration,
-        add_shrink, runtime_mean, runtime_variance
+        NoRecordDB, UnsetDB, Attempt, DEFAULT_CONFIG, CURRENT_TESTCASE, TestCase, TestState,
+        choice!, weighted!, Stats, add_invocation, add_validation, add_invalidation,
+        add_overrun, add_call_duration, add_gen_duration, add_shrink, gentime_mean, runtime_mean,
+        runtime_variance, statistics, shrinks, overruns, attempts, acceptions, rejections, invocations,
+        online_mean
 using Test
 using Aqua
 using Random
@@ -16,7 +18,7 @@ import Pkg
 import RequiredInterfaces
 const RI = RequiredInterfaces
 
-function sum_greater_1000(tc::TestCase)
+function sum_greater_1000(_, tc::TestCase)
     ls = Data.produce!(tc, Data.Vectors(Data.Integers(0, 10_000); min_size=UInt(0), max_size=UInt(1_000)))
     sum(ls) > 1_000
 end
@@ -69,13 +71,15 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @test isnothing(ts.result) && isnothing(ts.target_err)
 
         ts.result = Some(Attempt(UInt[1,2,3,4],1,10_000))
-        test_function(ts, TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000))
-        @test @something(ts.result).choices == UInt[1,2,3,4]
+        @test begin
+            test_function(ts, TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000))
+            @something(ts.result).choices == UInt[1,2,3,4]
+        end
     end
 
     @testset "test function invalid" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, _ -> Supposition.reject!())
+        ts = TestState(conf, (_, _) -> Supposition.reject!())
 
         tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
@@ -95,7 +99,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         ts.result = Some(Attempt(UInt[1,2,3,4,5], 1,10_000))
         @test @something(shrink_remove(ts, Attempt(UInt[1,2,3,4],1,10_000), UInt(2))).choices == [1,2]
 
-        function second_is_five(tc::TestCase)
+        function second_is_five(_, tc::TestCase)
             ls = [ choice!(tc, 10) for _ in 1:3 ]
             last(ls) == 5
         end
@@ -136,7 +140,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             [ choice!(tc, 10_000) for _ in 1:n ]
         end
 
-        function bl_sum_greater_1000(tc::TestCase)
+        function bl_sum_greater_1000(_, tc::TestCase)
             ls = produce!(tc, BadList())
             sum(ls) > 1000
         end
@@ -148,7 +152,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "reduces additive pairs" begin
-        function int_sum_greater_1000(tc::TestCase)
+        function int_sum_greater_1000(_, tc::TestCase)
             n = choice!(tc, 1_000)
             m = choice!(tc, 1_000)
 
@@ -161,7 +165,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "test cases satisfy preconditions" begin
-        function test(tc::TestCase)
+        function test(_, tc::TestCase)
             n = choice!(tc, 10)
             assume!(tc, !iszero(n))
             iszero(n)
@@ -173,7 +177,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "finds local maximum" begin
-        function test_maxima(tc::TestCase)
+        function test_maxima(_, tc::TestCase)
             m = Float64(choice!(tc, 1000))
             n = Float64(choice!(tc, 1000))
 
@@ -189,7 +193,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     end
 
     @testset "can target score upwards to interesting" begin
-        function target_upwards(tc::TestCase)
+        function target_upwards(_, tc::TestCase)
             n = Float64(choice!(tc, 1_000))
             m = Float64(choice!(tc, 1_000))
             score = n+m
@@ -200,11 +204,11 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, target_upwards)
         Supposition.run(ts)
-        @test !isnothing(ts.result)
+        @test ts.result != nothing
     end
 
     @testset "can target score upwards without failing" begin
-        function target_upwards_nofail(tc::TestCase)
+        function target_upwards_nofail(_, tc::TestCase)
             n = Float64(choice!(tc, 1_000))
             m = Float64(choice!(tc, 1_000))
             score = n+m
@@ -215,13 +219,14 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, target_upwards_nofail)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
-        @test !isnothing(ts.best_scoring)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
+        @test ts.best_scoring != nothing
         @test first(something(ts.best_scoring)) == 2000.0
     end
 
     @testset "targeting when most don't benefit" begin
-        function no_benefit(tc::TestCase)
+        function no_benefit(_, tc::TestCase)
             choice!(tc, 1_000)
             choice!(tc, 1_000)
             score = Float64(choice!(tc, 1_000))
@@ -232,11 +237,11 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, no_benefit)
         Supposition.run(ts)
-        @test !isnothing(ts.result)
+        @test ts.result != nothing
     end
 
     @testset "can target score downwards" begin
-        function target_downwards(tc::TestCase)
+        function target_downwards(_, tc::TestCase)
             n = Float64(choice!(tc, 1_000))
             m = Float64(choice!(tc, 1_000))
             score = n+m
@@ -254,7 +259,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "mapped possibility" begin
         @testset "Single Map" begin
-            function map_pos(tc::TestCase)
+            function map_pos(_, tc::TestCase)
                 n = Data.produce!(tc, map(n -> 2n, Data.Integers(0, 5)))
                 isodd(n)
             end
@@ -262,10 +267,11 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=100)
             ts = TestState(conf, map_pos)
             Supposition.run(ts)
-            @test isnothing(ts.result) && isnothing(ts.target_err)
+            @test ts.result == nothing
+            @test ts.target_err == nothing
         end
         @testset "Multi Map" begin
-            function multi_map_pos(tc::TestCase)
+            function multi_map_pos(_, tc::TestCase)
                 n = Data.produce!(tc, map((n,m) -> 2*n*m, Data.Integers(0, 5), Data.Integers(0, 5)))
                 isodd(n)
             end
@@ -273,12 +279,13 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=100)
             ts = TestState(conf, multi_map_pos)
             Supposition.run(ts)
-            @test isnothing(ts.result) && isnothing(ts.target_err)
+            @test ts.result == nothing
+            @test ts.target_err == nothing
         end
     end
 
     @testset "selected possibility" begin
-        function sel_pos(tc::TestCase)
+        function sel_pos(_, tc::TestCase)
             n = Data.produce!(tc, Data.satisfying(iseven, Data.Integers(0,5)))
             return isodd(n)
         end
@@ -286,11 +293,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, sel_pos)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
     end
 
     @testset "bound possibility" begin
-        function bound_pos(tc::TestCase)
+        function bound_pos(_, tc::TestCase)
             t = Data.produce!(tc, Data.bind(Data.Integers(0, 5)) do m
                 Data.pairs(Data.just(m), Data.Integers(m, m+10))
             end)
@@ -300,11 +308,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, bound_pos)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
     end
 
     @testset "cannot witness nothing" begin
-        function witness_nothing(tc::TestCase)
+        function witness_nothing(_, tc::TestCase)
             Data.produce!(tc, nothing)
             return false
         end
@@ -312,11 +321,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, witness_nothing)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
     end
 
     @testset "can draw mixture" begin
-        function draw_mix(tc::TestCase)
+        function draw_mix(_, tc::TestCase)
             m = Data.produce!(tc, Data.OneOf(Data.Integers(-5, 0), Data.Integers(2,5)))
             return (-5 > m) || (m > 5) || (m == 1)
         end
@@ -324,11 +334,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, draw_mix)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
     end
 
     @testset "impossible weighted" begin
-        function impos(tc::TestCase)
+        function impos(_, tc::TestCase)
             for _ in 1:10
                 if weighted!(tc, 0.0)
                     @assert false
@@ -341,11 +352,12 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, impos)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
     end
 
     @testset "guaranteed weighted" begin
-        function guaran(tc::TestCase)
+        function guaran(_, tc::TestCase)
             for _ in 1:10
                 if !weighted!(tc, 1.0)
                     @assert false
@@ -358,7 +370,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, guaran)
         Supposition.run(ts)
-        @test isnothing(ts.result) && isnothing(ts.target_err)
+        @test ts.result == nothing
+        @test ts.target_err == nothing
     end
 
     @testset "boolean unbiased" begin
@@ -440,12 +453,10 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "Can find the smallest even Integer" begin
         @testset for T in integer_types
             gen = Data.Integers{T}()
-            findEven(tc) = iseven(Data.produce!(tc, gen))
-
-            conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-            ts = TestState(conf, findEven)
-            Supposition.run(ts)
-            tc = Supposition.for_choices(@something(ts.result), copy(conf.rng))
+            sr = @check record=false broken=true iseven(gen)
+            # TODO: Replace this with retrieval of the counterexample
+            fs = @something(sr.final_state)
+            tc = Supposition.for_choices(@something(fs.result), copy(sr.config.rng))
             obj = Data.produce!(tc, gen)
             @test obj == typemin(T)
         end
@@ -1083,35 +1094,40 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         )
         intgen = Data.Integers{Int}()
         @with DEFAULT_CONFIG => conf begin
-            cntr = Ref(0)
+            local unrecorded_report::Supposition.SuppositionReport
+            local   recorded_report::Supposition.SuppositionReport
             @testset "RecordNotOverwritten" begin
-                redirect_stderr(devnull) do
+                unrecorded_report = redirect_stderr(devnull) do
+                    # This one must NOT be recorded! It must still run though
                     @check broken=true function This_Is_Known_Passing_Ignore_In_CI_As_Long_As_Its_Not_In_The_Final_Testset_Report(i=intgen)
-                        cntr[] += 1
                         true
                     end
                 end
-                @check record=true function truthy(i=Data.Integers{Int8}())
+                # This one MUST be recorded!
+                recorded_report = @check record=true function truthy(i=Data.Integers{Int8}())
                     true
                 end
             end
-            @test cntr[] == 10
+            @test invocations(statistics(unrecorded_report)) == 10
+            @test invocations(statistics(recorded_report))   == 10
         end
 
         @testset "Partially overwrite given Config" begin
             res = @check config=conf max_examples=100 function passConfFailTestFailTest(i=intgen)
                 true
             end
-            @test @something(res.final_state).stats.invocations == 100
+            @test invocations(statistics(res)) == 100
         end
 
         @testset "Buffer Size" begin
             vecgen = Data.Vectors(Data.Integers{UInt8}(); min_size=10)
-            res = @check buffer_size=1 record=false function passConfFailTestFailTest(v=vecgen)
+            res = @check max_examples=500 buffer_size=1 record=false function passConfFailTestFailTest(v=vecgen)
                 isempty(v)
             end
             # all of these must have been rejected as an Overrun, so no call should ever take place
-            @test iszero(@something(res.final_state).stats.acceptions)
+            @test iszero(acceptions(statistics(res)))
+            # 5000 instead of 500 since the upper limit is 10*max_examples
+            @test overruns(statistics(res)) == 5000
         end
 
         @testset "Timeouts" begin
@@ -1121,14 +1137,14 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 @test @something(sr.result) isa Supposition.Pass
                 fs = @something sr.final_state
                 @test @something(sr.time_end) >= @something(fs.stop_time)
-                @test fs.stats.invocations < sr.config.max_examples
+                @test invocations(statistics(fs)) < sr.config.max_examples
             end
 
             @testset "No run happened" begin
                 sr = @check record=false broken=true timeout=Nanosecond(1) (x=Data.Integers{Int8}()) -> return true
                 @test !isnothing(sr.result)
                 @test @something(sr.result) isa Supposition.Timeout
-                @test iszero(@something(sr.final_state).stats.invocations)
+                @test iszero(invocations(statistics(sr)))
             end
         end
     end
@@ -1394,27 +1410,58 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "Statistics" begin
         @testset "individual calls" begin
             # TODO: Replace this with stateful property based testing
-            @test add_invocation(Stats())    == Supposition.merge(Stats(); invocations=1)
-            @test add_validation(Stats())    == Supposition.merge(Stats(); acceptions=1)
-            @test add_invalidation(Stats())  == Supposition.merge(Stats(); rejections=1)
-            @test add_overrun(Stats())       == Supposition.merge(Stats(); overruns=1)
-            @test add_shrink(Stats())        == Supposition.merge(Stats(); shrinks=1)
+            @test add_invocation(Stats())         == Supposition.merge(Stats(); invocations=1)
+            @test add_validation(Stats())         == Supposition.merge(Stats(); acceptions=1)
+            @test add_invalidation(Stats())       == Supposition.merge(Stats(); rejections=1)
+            @test add_overrun(Stats())            == Supposition.merge(Stats(); overruns=1)
+            @test add_shrink(Stats())             == Supposition.merge(Stats(); shrinks=1)
             dur = rand()
-            @test add_duration(Stats(), dur) == Supposition.merge(Stats(); mean_runtime=dur, squared_dist_runtime=0.0)
+            @test add_call_duration(Stats(), dur) == Supposition.merge(Stats(); mean_runtime=dur, squared_dist_runtime=0.0)
+            @test add_gen_duration(Stats(), dur)  == Supposition.merge(Stats(); mean_gentime=dur, squared_dist_gentime=0.0)
         end
-        @testset "Duration aggregation" begin
-        durations = Float64[]
-            sleep_durs = Data.Floats(;nans=false,minimum=0.001, maximum=0.1)
-            sr = @check max_examples=500 db=false record=false function duration_test(f=sleep_durs)
-                push!(durations, f)
-                sleep(f)
-                return true
+
+        # the maximum is only here to prevent edge cases with overflow
+        sleep_durs = Data.Vectors(Data.Floats{Float64}(;nans=false,infs=false, minimum=0.001, maximum=100.0); min_size=2)
+        @check function online_mean_oracle(durations=sleep_durs)
+            runtime_mean, runtime_variance = foldl(enumerate(durations); init=(NaN, 0.0)) do (mu, sig²), (n, val)
+                online_mean(mu, sig², n, val)
             end
-            stats = @something(sr.final_state).stats
+            runtime_variance = runtime_variance / length(durations)
+            var_oracle = var(durations; corrected=false)
+            mean_oracle = mean(durations)
+            # The online variance should not be too far off; +-5%
+            var_correct = @event! isapprox(runtime_variance, var_oracle; rtol=0.05)
             # Our targets are tight - the calculated mean should be well within 1σ.
-            @test runtime_mean(stats) ≈ mean(durations) atol=std(durations)
-            # The online variance should not be too far off either; +-5%
-            @test runtime_variance(stats) ≈ var(durations) rtol=0.05
+            mean_correct = @event! isapprox(runtime_mean, mean_oracle; atol=std(durations))
+            var_correct & mean_correct
+        end
+
+        @testset "Long generation & fast property" begin
+            # This ensures that the duration of the generation of input
+            # does not influence the statistics about the duration of the call.
+            gen = map(Data.Just(0x1)) do x
+                sleep(0.05) # 50 ms sleep is AGES
+                return x
+            end
+            stats = statistics(@check max_examples=10 db=false record=false (x=gen) -> true)
+            # The property is so trivial, calls here should never EVER take this long.
+            # If it does, something is seriously wacky in the environment where the test is run.
+            @test runtime_mean(stats) < 0.01
+            @test gentime_mean(stats) ≈ 0.05 rtol=0.05
+        end
+
+        @testset "Aggregated counts" begin
+            @testset "Trivial property" begin
+                truthy(_) = true
+                sr = @check max_examples=500 record=false truthy(Data.Integers{UInt8}())
+                stats = statistics(sr)
+                @test shrinks(stats)     == 0
+                @test overruns(stats)    == 0
+                @test attempts(stats)    == 500
+                @test acceptions(stats)  == 500
+                @test rejections(stats)  == 0
+                @test invocations(stats) == 500
+            end
         end
     end
 end

@@ -1,10 +1,3 @@
-"""
-    num_testcases(sr::SuppositionReport)
-
-Returns the number of valid `TestCase`s that were attempted during this run.
-"""
-num_testcases(sr::SuppositionReport) = Int64(@something(sr.final_state, (;stats=(;acceptions=zero(UInt64)))).stats.acceptions)
-
 function results(sr::SuppositionReport)
     res_pass = @something(sr.result) isa Pass
     res_fail = @something(sr.result) isa Fail

@@ -230,7 +230,7 @@ function check_func(e::Expr, tsargs)
     kwargs = @view head.args[2:end]
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
 
-    tc = gensym()
+    @gensym(tc, ts, data)
     gen_input = gensym(Symbol(name, :__geninput))
     run_input = gensym(Symbol(name, :__run))
     args = kw_to_produce(tc, kwargs)
@@ -255,8 +255,12 @@ function check_func(e::Expr, tsargs)
             $args
         end
 
-        function $run_input($tc::$TestCase)
-            return !$name($gen_input($tc)...)
+        function $run_input($ts::$TestState, $tc::$TestCase)
+            $tc.generation_start = Some($time())
+            $data = $gen_input($tc)
+            $count_call!($ts)
+            $tc.call_start = Some($time())
+            return !$name($data...)
         end
 
         $testfunc
@@ -286,7 +290,7 @@ function check_call(e::Expr, tsargs)
     name, kwargs... = e.args
     namestr = string(name)
 
-    tc = gensym()
+    @gensym(tc, ts, data)
     gen_input = gensym(Symbol(name, :__geninput))
     run_input = gensym(Symbol(name, :__run))
 
@@ -307,8 +311,12 @@ function check_call(e::Expr, tsargs)
             $args
         end
 
-        function $run_input($tc::$TestCase)
-            return !$name($gen_input($tc)...)
+        function $run_input($ts::$TestState, $tc::$TestCase)
+            $tc.generation_start = Some($time())
+            $data = $gen_input($tc)
+            $count_call!($ts)
+            $tc.call_start = Some($time())
+            return !$name($data...)
         end
 
         $final_block
@@ -333,7 +341,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
             $got_err = !isnothing($ts.target_err)
             $got_score = !isnothing($ts.best_scoring)
             $Logging.@debug "Any result?" Res=$got_res Err=$got_err Score=$got_score
-            if iszero($ts.stats.invocations)
+            if iszero($attempts($statistics($ts)))
                 $timeout = $Timeout(@something($report.config.timeout))
                 $Test.record($report, $timeout)
             elseif $got_res | $got_err | $got_score
@@ -512,7 +520,7 @@ function composed_from_func(e::Expr)
     kwargs = @view head.args[2:end]
     any(kw -> !isexpr(kw, :kw), kwargs) && throw(ArgumentError("An argument doesn't have a generator set!"))
 
-    tc = gensym()
+    @gensym(tc, ts, data)
     strategy_let = kw_to_let(tc, kwargs)
 
     prodname = QuoteNode(name)
@@ -715,3 +723,12 @@ function err_less(e1::BoundsError, e2::BoundsError)
     idx_less = have_idxs && applicable(isless, e1.i, e2.i) && isless(e1.i, e2.i)
     arr_less || (arr_eq && idx_less)
 end
+
+"""
+    statistics(::SuppositionReport) -> Stats
+
+Returns the statistics collected about this `SuppositionReport`.
+
+See [`Stats`](@ref) for information about what statistics are collected.
+"""
+statistics(sr::SuppositionReport) = statistics(@something(sr.final_state))

@@ -11,6 +11,7 @@ function shrink!(ts::TestState)
             while true
                 res = shrink_remove(ts, attempt, k)
                 attempt = @something res break
+                count_shrink!(ts)
                 improved = true
             end
         end
@@ -19,6 +20,7 @@ function shrink!(ts::TestState)
         res = shrink_float(ts, attempt)
         if !isnothing(res)
             attempt = @something res
+            count_shrink!(ts)
             improved = true
         end
 
@@ -27,6 +29,7 @@ function shrink!(ts::TestState)
             while true
                 res = shrink_zeros(ts, attempt, k)
                 attempt = @something res break
+                count_shrink!(ts)
                 improved = true
             end
         end
@@ -35,6 +38,7 @@ function shrink!(ts::TestState)
         res = shrink_reduce(ts, attempt)
         if !isnothing(res)
             attempt = @something res
+            count_shrink!(ts)
             improved = true
         end
 
@@ -43,6 +47,7 @@ function shrink!(ts::TestState)
             while true
                 res = shrink_sort(ts, attempt, k)
                 attempt = @something res break
+                count_shrink!(ts)
                 improved = true
             end
         end
@@ -52,6 +57,7 @@ function shrink!(ts::TestState)
             while true
                 res = shrink_swap(ts, attempt, k)
                 attempt = @something res break
+                count_shrink!(ts)
                 improved = true
             end
         end
@@ -61,6 +67,7 @@ function shrink!(ts::TestState)
             while true
                 res = shrink_redistribute(ts, attempt, k)
                 attempt = @something res break
+                count_shrink!(ts)
                 improved = true
             end
         end

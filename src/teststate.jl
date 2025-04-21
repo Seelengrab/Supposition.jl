@@ -1,25 +1,3 @@
-####
-# Statistics
-###
-
-add_invocation(s::Stats)   = merge(s; invocations = s.invocations+1)
-add_validation(s::Stats)   = merge(s; acceptions  = s.acceptions+1)
-add_invalidation(s::Stats) = merge(s; rejections  = s.rejections+1)
-add_overrun(s::Stats)      = merge(s; overruns    = s.overruns+1)
-add_shrink(s::Stats)       = merge(s; shrinks     = s.shrinks+1)
-function add_duration(s::Stats, dur::Float64)
-    if isnan(s.mean_runtime)
-        delta  = 0.0
-        mean_runtime = dur
-    else
-        delta = dur - s.mean_runtime
-        mean_runtime = s.mean_runtime + (dur-s.mean_runtime)/s.invocations
-    end
-    delta2 = dur - mean_runtime
-    squared_dist_runtime = s.squared_dist_runtime + delta*delta2
-    merge(s; mean_runtime, squared_dist_runtime)
-end
-
 ###
 # TestState manipulations & queries
 ###
@@ -56,13 +34,12 @@ Returns a `NTuple{Bool, 2}` indicating whether `tc` is interesting and whether i
 "better" than the previously best recorded example in `ts`.
 """
 function test_function(ts::TestState, tc::TestCase)
-    # one call == one test of the function in `ts` for the given `TestCase`
-    count_call!(ts)
+    # No user code has run yet, so record only that we will attempt to do so
+    count_attempt!(ts)
 
-    before_invocation = time()
     interesting, threw = try
         @with CURRENT_TESTCASE => tc begin
-            ts.is_interesting(tc)
+            ts.is_interesting(ts, tc)
         end, nothing
     catch e
         # Interrupts are an abort signal, so rethrow
@@ -78,13 +55,13 @@ function test_function(ts::TestState, tc::TestCase)
         # true errors are always interesting
         true, Some((e, stacktrace(catch_backtrace())))
     finally
-        after_invocation = time()
-        record_duration!(ts, after_invocation - before_invocation)
+        record_durations!(ts, tc)
     end
 
     !(interesting isa Bool) && return (false, false)
 
     ts.test_is_trivial = isempty(tc.attempt.choices)
+    # Now we know that the testcase was not rejected, so it is valid (true, false, or error in user code)
     count_valid!(ts)
 
     if !interesting
@@ -235,15 +212,16 @@ we have room for more examples, and we haven't hit the specified timeout yet.
 function should_keep_generating(ts::TestState)
     end_time = @something ts.stop_time Some(typemax(Float64))
     time() >= end_time && return false
+    stats = statistics(ts)
 
     triv = ts.test_is_trivial
     # Either we find a regular counterexample, or we error
     # both mean we can stop looking, and start shrinking
     no_result = isnothing(ts.result) & isnothing(ts.target_err)
-    more_examples = ts.stats.acceptions < ts.config.max_examples
-    # this 10x ensures that we can make many more calls than
+    more_examples = invocations(stats) < ts.config.max_examples
+    # this 10x ensures that we can make many more attempts than
     # we need to fill valid test cases, especially when targeting
-    more_calls = ts.stats.invocations < (10*ts.config.max_examples)
+    more_calls = attempts(stats) < (10*ts.config.max_examples)
     ret = !triv & no_result & more_examples & more_calls
     return ret
 end
@@ -354,9 +332,9 @@ function generate!(ts::TestState)
     # 2) try to generate new counterexamples
     while should_keep_generating(ts) & # no result
             (isnothing(ts.best_scoring) || # no score
-             (ts.stats.acceptions <= ts.config.max_examples÷2))
-        # +1, since we this test case is for the *next* call
-        tc = TestCase(UInt64[], ts.rng, ts.stats.invocations+1, ts.config.max_examples, ts.config.buffer_size*8)
+             (acceptions(statistics(ts)) <= ts.config.max_examples÷2))
+        # +1, since this test case is for the *next* call
+        tc = TestCase(UInt64[], ts.rng, invocations(statistics(ts))+1, ts.config.max_examples, ts.config.buffer_size*8)
         test_function(ts, tc)
     end
 end
@@ -375,8 +353,23 @@ function consider(ts::TestState, attempt::Attempt)::Bool
     end
 end
 
+statistics(ts::TestState)                     = ts.stats
+count_attempt!(ts::TestState)                 = ts.stats = add_attempt(ts.stats)
 count_call!(ts::TestState)                    = ts.stats = add_invocation(ts.stats)
 count_valid!(ts::TestState)                   = ts.stats = add_validation(ts.stats)
 count_invalid!(ts::TestState)                 = ts.stats = add_invalidation(ts.stats)
 count_overrun!(ts::TestState)                 = ts.stats = add_overrun(ts.stats)
-record_duration!(ts::TestState, dur::Float64) = ts.stats = add_duration(ts.stats, dur)
+count_shrink!(ts::TestState)                  = ts.stats = add_shrink(ts.stats)
+function record_durations!(ts::TestState, tc::TestCase)
+    t_record = time()
+    if !isnothing(tc.call_start)
+        # This happens when an input was rejected before the call started
+        call_start = @something(tc.call_start)
+        ts.stats = add_call_duration(ts.stats, t_record - call_start)
+        if !isnothing(tc.generation_start)
+            ts.stats = add_gen_duration(ts.stats, call_start - @something(tc.generation_start))
+        end
+    elseif !isnothing(tc.generation_start) # We got an error during generation
+        ts.stats = add_gen_duration(ts.stats, t_record - @something(tc.generation_start))
+    end
+end
