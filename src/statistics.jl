@@ -120,3 +120,12 @@ function add_gen_duration(s::Stats, dur::Float64)
     mean_gentime, squared_dist_gentime = online_mean(gentime_mean(s), s.squared_dist_gentime, attempts(s), dur)
     merge(s; mean_gentime, squared_dist_gentime)
 end
+
+"""
+    add_total_duration(::Stats, dur::Float64) -> Stats
+
+Record the overall duration of one `@check` to the statistics.
+
+Returns a _new_ [`Stats`](@ref) object.
+"""
+add_total_duration(s::Stats, dur::Float64) = merge(s; total_time = dur)

@@ -174,6 +174,7 @@ A collection of various statistics of the execution of one [`@check`](@ref).
  * `mean_runtime`: Mean execution time of the property
  * `squared_dist_runtime`: Aggregated squared distance from the mean runtime
  * `shrinks`: Number of times a counterexample was shrunk successfully
+ * `total_time`: The total (wall-clock) time used.
 """
 struct Stats
     attempts::Int
@@ -186,6 +187,7 @@ struct Stats
     mean_runtime::Float64
     squared_dist_runtime::Float64
     shrinks::Int
+    total_time::Float64
     function Stats(; attempts=0,
                      acceptions=0,
                      rejections=0,
@@ -196,12 +198,13 @@ struct Stats
                      mean_runtime=NaN,
                      squared_dist_runtime=0.0,
                      shrinks=0,
+                     total_time=NaN,
                      kws...)
         !isempty(kws) && @warn "Got unsupported keyword arguments to Stats! Ignoring:" Keywords=keys(kws)
         new(attempts, acceptions, rejections,
             invocations, overruns, mean_gentime,
             squared_dist_gentime, mean_runtime,
-            squared_dist_runtime, shrinks)
+            squared_dist_runtime, shrinks, total_time)
     end
 end
 
@@ -215,6 +218,7 @@ runtime_mean(s::Stats)     = s.mean_runtime
 runtime_variance(s::Stats) = s.squared_dist_runtime / invocations(s)
 gentime_mean(s::Stats)     = s.mean_gentime
 gentime_variance(s::Stats) = s.squared_dist_gentime / attempts(s)
+total_time(s::Stats)       = s.total_time
 
 function Base.:(==)(a::Stats, b::Stats)
     a.attempts             ==  b.attempts             &&
@@ -249,6 +253,8 @@ end
  * `error_cache`: A cache of errors encountered during shrinking that were not of the same type as the first found one, or are from a different location
  * `test_is_trivial`: Whether `is_interesting` is trivial, i.e. led to no choices being required
  * `previous_example`: The previously recorded attempt (if any).
+ * `start_time`: The point in time when this execution started. `nothing` means execution has not yet started.
+ * `deadline`: The point in time (if any) after which no new examples will be generated.
 """
 mutable struct TestState
     config::CheckConfig
@@ -261,7 +267,8 @@ mutable struct TestState
     error_cache::Vector{Tuple{Type, StackFrame}}
     test_is_trivial::Bool
     previous_example::Option{Attempt}
-    stop_time::Option{Float64}
+    start_time::Option{Float64}
+    deadline::Option{Float64}
     function TestState(conf::CheckConfig, test_function, previous_example::Option{Attempt}=nothing)
         rng_orig = try
             copy(conf.rng)
@@ -271,7 +278,7 @@ mutable struct TestState
             rethrow(ArgumentError("Encountered a non-copyable RNG object. If you want to use a hardware RNG, seed a copyable RNG like `Random.Xoshiro` and pass that instead."))
         end
         error_cache = Tuple{Type,StackFrame}[]
-        stop_time = if !isnothing(conf.timeout)
+        deadline = if !isnothing(conf.timeout)
             Some(time() + Dates.tons(@something(conf.timeout))*1e-9)
         else
             nothing
@@ -287,7 +294,8 @@ mutable struct TestState
             error_cache,      # for display purposes only
             false,            # test is presumed nontrivial
             previous_example, # the choice sequence for the previous failure
-            stop_time)        # for timeout purposes
+            nothing,           # for keeping track of the total execution time
+            deadline)         # for timeout purposes
     end
 end
 
@@ -352,8 +360,6 @@ mutable struct SuppositionReport <: AbstractTestSet
     record_base::String
     final_state::Option{TestState}
     result::Option{Result}
-    time_start::Float64
-    time_end::Option{Float64}
     config::CheckConfig
     function SuppositionReport(func::String; description::String="",
                                 record_base::String="", rng=Random.Xoshiro(rand(Random.RandomDevice(), UInt)), config=DEFAULT_CONFIG[], kws...)
@@ -364,7 +370,7 @@ mutable struct SuppositionReport <: AbstractTestSet
             config.db
         end
         conf = merge(config; rng, db, kws...)
-        new(desc, record_base, nothing, nothing, time(), nothing, conf)
+        new(desc, record_base, nothing, nothing, conf)
     end
 end
 

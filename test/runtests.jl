@@ -4,7 +4,7 @@ using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
         choice!, weighted!, Stats, add_invocation, add_validation, add_invalidation,
         add_overrun, add_call_duration, add_gen_duration, add_shrink, gentime_mean, runtime_mean,
         runtime_variance, statistics, shrinks, overruns, attempts, acceptions, rejections, invocations,
-        online_mean
+        online_mean, total_time
 using Test
 using Aqua
 using Random
@@ -1136,7 +1136,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 @test !isnothing(sr.result)
                 @test @something(sr.result) isa Supposition.Pass
                 fs = @something sr.final_state
-                @test @something(sr.time_end) >= @something(fs.stop_time)
+                stats = statistics(sr)
+                @test (@something(fs.start_time) + total_time(stats)) >= @something(fs.deadline)
                 @test invocations(statistics(fs)) < sr.config.max_examples
             end
 

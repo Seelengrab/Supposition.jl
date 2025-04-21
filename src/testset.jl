@@ -12,12 +12,11 @@ function results(sr::SuppositionReport)
 end
 
 function _format_duration(sr::SuppositionReport)
-    (; time_start, time_end) = sr
-    isnothing(time_end) && return "?s"
-    time_end = @something(time_end)
+    dur_s = total_time(statistics(sr))
 
-    dur_s = time_end - time_start
-    if dur_s < 60
+    if isnan(dur_s)
+        "?s"
+    elseif dur_s < 60
         string(round(dur_s, digits = 1), "s")
     else
         m, s = divrem(dur_s, 60)
@@ -177,8 +176,6 @@ else
 end
 
 function Test.finish(sr::SuppositionReport)
-    sr.time_end = Some(time())
-
     # if the report doesn't have a result, we probably got
     # an error outside of the testsuite somewhere, somehow
     # either way, trying to print a nonexistent result

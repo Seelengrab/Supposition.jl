@@ -191,6 +191,7 @@ Run the checking algorithm on `ts`, generating values until we should stop, targ
 the score we want to target on and finally shrinking the result.
 """
 function run(ts::TestState)
+    ts.start_time = Some(time())
     @debug "Starting generating values" Test=ts.is_interesting
     generate!(ts)
     @debug "Improving targeted example"
@@ -198,6 +199,7 @@ function run(ts::TestState)
     @debug "Shrinking example"
     shrink!(ts)
     @debug "Done!"
+    finalize_stats!(ts)
     nothing
 end
 
@@ -210,8 +212,8 @@ Whether `ts` should keep generating new test cases, or whether `ts` is finished.
 we have room for more examples, and we haven't hit the specified timeout yet.
 """
 function should_keep_generating(ts::TestState)
-    end_time = @something ts.stop_time Some(typemax(Float64))
-    time() >= end_time && return false
+    deadline = @something ts.deadline Some(typemax(Float64))
+    time() >= deadline && return false
     stats = statistics(ts)
 
     triv = ts.test_is_trivial
@@ -353,14 +355,20 @@ function consider(ts::TestState, attempt::Attempt)::Bool
     end
 end
 
-statistics(ts::TestState)                     = ts.stats
-count_attempt!(ts::TestState)                 = ts.stats = add_attempt(ts.stats)
-count_call!(ts::TestState)                    = ts.stats = add_invocation(ts.stats)
-count_valid!(ts::TestState)                   = ts.stats = add_validation(ts.stats)
-count_invalid!(ts::TestState)                 = ts.stats = add_invalidation(ts.stats)
-count_overrun!(ts::TestState)                 = ts.stats = add_overrun(ts.stats)
-count_shrink!(ts::TestState)                  = ts.stats = add_shrink(ts.stats)
+statistics(ts::TestState)      = ts.stats
+# `isnan` encodes whether the TestState is still executing
+# TODO: introduce an explicit verb to query this
+count_attempt!(ts::TestState)  = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_attempt(ts.stats))
+count_call!(ts::TestState)     = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_invocation(ts.stats))
+count_valid!(ts::TestState)    = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_validation(ts.stats))
+count_invalid!(ts::TestState)  = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_invalidation(ts.stats))
+count_overrun!(ts::TestState)  = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_overrun(ts.stats))
+count_shrink!(ts::TestState)   = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_shrink(ts.stats))
+finalize_stats!(ts::TestState) = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_total_duration(ts.stats, time() - @something(ts.start_time)))
+
 function record_durations!(ts::TestState, tc::TestCase)
+    !isnan(total_time(ts.stats)) && return ts.stats
+
     t_record = time()
     if !isnothing(tc.call_start)
         # This happens when an input was rejected before the call started
@@ -372,4 +380,7 @@ function record_durations!(ts::TestState, tc::TestCase)
     elseif !isnothing(tc.generation_start) # We got an error during generation
         ts.stats = add_gen_duration(ts.stats, t_record - @something(tc.generation_start))
     end
+
+    return ts.stats
 end
+
