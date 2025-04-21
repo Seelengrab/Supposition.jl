@@ -54,11 +54,11 @@ sr = @check rng=Xoshiro(1) function israndgoal(f=Data.Floats{Float64}())
 end
 ```
 
-which results in Supposition.jl finding the _sole_ counterexample in a comparatively
-very small number of inputs:
+which results in Supposition.jl finding the _sole_ counterexample in (compared to all 2^64
+bitpatterns of `Float64`) very few attempts:
 
 ```@example singulartarget
-Supposition.num_testcases(sr)
+Supposition.statistics(sr)
 ```
 
 In more complex situations where you don't have a very clear goal to minimize or
