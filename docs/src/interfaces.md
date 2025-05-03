@@ -26,6 +26,39 @@ Supposition.@composed
 Supposition.@event!
 ```
 
+## `SuppositionReport` API
+
+`@check` returns a [`Supposition.SuppositionReport`](@ref), an opaque object
+summarizing the results of that invocation. While the fields of this object
+are considered internal & unsupported, there are some functions available for
+querying this report. This is useful for various statistics, or retrieving
+the exact object that was found as a counterexample. This can be particularly
+important when a specific `NaN` bitpattern is a counterexample, or in other
+cases where the printing of a value is not sufficient to reconstruct it.
+
+```@docs
+Supposition.statistics(::Supposition.SuppositionReport)
+```
+
+## Statistics
+
+These functions are useful for learning more about the behavior of one specific
+execution of a testcase, querying various collected statistics of a `SuppositionReport`.
+
+```@docs
+Supposition.attempts(::Supposition.Stats)
+Supposition.acceptions(::Supposition.Stats)
+Supposition.rejections(::Supposition.Stats)
+Supposition.invocations(::Supposition.Stats)
+Supposition.overruns(::Supposition.Stats)
+Supposition.shrinks(::Supposition.Stats)
+Supposition.runtime_mean(::Supposition.Stats)
+Supposition.runtime_variance(::Supposition.Stats)
+Supposition.gentime_mean(::Supposition.Stats)
+Supposition.gentime_variance(::Supposition.Stats)
+Supposition.total_time(::Supposition.Stats)
+```
+
 ## API for controlling fuzzing
 
 These items are intended for usage while testing, having various effects
