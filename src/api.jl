@@ -140,7 +140,7 @@ Supported options, passed as `key=value`:
  * `config`: A `CheckConfig` object that will be used as a default for all previous options. Options that are passed
    explicitly to `@check` will override whatever is provided through `config`.
 
-The arguments to the given function are expected to be generator strategies. The names they are bound to
+The arguments to the given function are expected to be `Possibilities`. The names they are bound to
 are the names the generated object will have in the test. These arguments will be shown should
 the property fail!
 
@@ -728,7 +728,5 @@ end
     statistics(::SuppositionReport) -> Stats
 
 Returns the statistics collected about this `SuppositionReport`.
-
-See [`Stats`](@ref) for information about what statistics are collected.
 """
 statistics(sr::SuppositionReport) = statistics(@something(sr.final_state))

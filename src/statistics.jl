@@ -42,7 +42,7 @@ add_invocation(s::Stats)   = merge(s; invocations = s.invocations+1)
 """
     add_validation(::Stats) -> Stats
 
-Record an invocation of the property under test to the statistics.
+Record a successful invocation of the property under test to the statistics.
 I.e., the property under test returned `true`.
 
 Returns a _new_ [`Stats`](@ref) object.

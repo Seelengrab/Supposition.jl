@@ -208,16 +208,101 @@ struct Stats
     end
 end
 
+"""
+    attempts(::Stats) -> Int
+
+Retrieve the total number of attempts that were made to generate
+a potential input to the property.
+"""
 attempts(s::Stats)         = s.attempts
+
+"""
+    acceptions(::Stats) -> Int
+
+Retrieve the total number of examples that were accepted by
+the property, i.e. how often the property returned `true`.
+"""
 acceptions(s::Stats)       = s.acceptions
+
+"""
+    rejections(::Stats) -> Int
+
+Retrieve the total number of examples that were rejected by
+the property, i.e. how often an input was `reject!`ed.
+"""
 rejections(s::Stats)       = s.rejections
+
+"""
+    invocations(::Stats) -> Int
+
+Retrieve the total number of times the property was invoked with
+and input.
+
+This number may be less than [`attempts`](@ref), since some inputs
+may be rejected before the property is invoked.
+"""
 invocations(s::Stats)      = s.invocations
+
+"""
+    overruns(::Stats) -> Int
+
+Retrieve the total number of times generating an input required more
+choices than were available from the currently used choice sequence.
+
+This can happen if you attempt to generate more data than the maximum
+buffer size configured, or when shrinking the choice sequence leads
+to too few choices available.
+"""
 overruns(s::Stats)         = s.overruns
+
+"""
+    shrinks(::Stats) -> Int
+
+Retrieve the total number of times a counterexample was successfully
+shrunk to a smaller one.
+"""
 shrinks(s::Stats)          = s.shrinks
+
+"""
+    runtime_mean(::Stats) -> Float64
+
+Retrieve the mean runtime in seconds of the property under test.
+"""
 runtime_mean(s::Stats)     = s.mean_runtime
+
+"""
+    runtime_variance(::Stats) -> Float64
+
+Retrieve the variance of the runtime in seconds of the property under test.
+"""
 runtime_variance(s::Stats) = s.squared_dist_runtime / invocations(s)
+
+"""
+    gentime_mean(::Stats) -> Float64
+
+Retrieve the mean time in seconds of generating an example.
+
+This counts any attempt at generating an example, including early
+rejections.
+"""
 gentime_mean(s::Stats)     = s.mean_gentime
+
+"""
+    gentime_variance(::Stats) -> Float64
+
+Retrieve the variance of the time in seconds of generating an example.
+
+This counts any attempt at generating an example, including early
+rejections.
+"""
 gentime_variance(s::Stats) = s.squared_dist_gentime / attempts(s)
+
+
+"""
+    total_time(::Stats) -> Float64
+
+Retrieve the total time taken for this fuzzing process.
+"""
 total_time(s::Stats)       = s.total_time
 
 function Base.:(==)(a::Stats, b::Stats)
