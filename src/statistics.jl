@@ -15,6 +15,7 @@ function Base.show(io::IO, ::MIME"text/plain", s::Stats)
         Rejections:                   {code:$(rejections(s))}
         Calls (accepted/total):       {code:$(acceptions(s))}/{code:$(invocations(s))}
         Total shrinks:                {code:$(shrinks(s))}
+        Targeted Improvements:        {code:$(improvements(s))}
         Property runtime:             {code:$runmean}s mean ({code:$runvar}s variance)
         Input generation time:        {code:$genmean}s mean ({code:$genvar}s variance)
     """)
@@ -129,3 +130,12 @@ Record the overall duration of one `@check` to the statistics.
 Returns a _new_ [`Stats`](@ref) object.
 """
 add_total_duration(s::Stats, dur::Float64) = merge(s; total_time = dur)
+
+"""
+    add_improvement(::Stats) -> Stats
+
+Record an improvement due to targeting.
+
+Returns a _new_ [`Stats`](@ref) object.
+"""
+add_improvement(s::Stats) = merge(s; improvements = improvements(s)+1)

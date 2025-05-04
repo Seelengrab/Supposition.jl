@@ -4,7 +4,7 @@ using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
         choice!, weighted!, Stats, add_invocation, add_validation, add_invalidation,
         add_overrun, add_call_duration, add_gen_duration, add_shrink, gentime_mean, runtime_mean,
         runtime_variance, statistics, shrinks, overruns, attempts, acceptions, rejections, invocations,
-        online_mean, total_time
+        online_mean, total_time, improvements, add_improvement
 using Test
 using Aqua
 using Random
@@ -1416,6 +1416,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test add_invalidation(Stats())       == Supposition.merge(Stats(); rejections=1)
             @test add_overrun(Stats())            == Supposition.merge(Stats(); overruns=1)
             @test add_shrink(Stats())             == Supposition.merge(Stats(); shrinks=1)
+            @test add_improvement(Stats())        == Supposition.merge(Stats(); improvements=1)
             dur = rand()
             @test add_call_duration(Stats(), dur) == Supposition.merge(Stats(); mean_runtime=dur, squared_dist_runtime=0.0)
             @test add_gen_duration(Stats(), dur)  == Supposition.merge(Stats(); mean_gentime=dur, squared_dist_gentime=0.0)
@@ -1456,12 +1457,31 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 truthy(_) = true
                 sr = @check max_examples=500 record=false truthy(Data.Integers{UInt8}())
                 stats = statistics(sr)
-                @test shrinks(stats)     == 0
-                @test overruns(stats)    == 0
-                @test attempts(stats)    == 500
-                @test acceptions(stats)  == 500
-                @test rejections(stats)  == 0
-                @test invocations(stats) == 500
+                @test shrinks(stats)      == 0
+                @test overruns(stats)     == 0
+                @test attempts(stats)     == 500
+                @test acceptions(stats)   == 500
+                @test rejections(stats)   == 0
+                @test invocations(stats)  == 500
+                @test improvements(stats) == 0
+            end
+            @testset "Targeted improvement" begin
+                target = Ref{Float64}(rand(Random.RandomDevice(), Float64))
+                # We have to be pretty limited in what we generate here,
+                # since most Float64 are not in Float32 or Float16.
+                # Also disallow NaNs and Infs, since those can't be
+                # generated from the above `rand` invocation at all.
+                sr = @check db=false broken=true record=false function findzero(i=Data.Floats{Float64}(;nans=false,infs=false))
+                    target!(-abs(target[]-i))
+                    target[] != i
+                end
+                # we expect to find the equality
+                @test @something(sr.result) isa Supposition.Fail
+                stats = statistics(sr)
+                # targeting is necessary
+                @test !iszero(improvements(stats))
+                # this is for the RNG seed
+                @test isone(shrinks(stats))
             end
         end
     end

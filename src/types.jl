@@ -175,6 +175,7 @@ A collection of various statistics of the execution of one [`@check`](@ref).
  * `squared_dist_runtime`: Aggregated squared distance from the mean runtime
  * `shrinks`: Number of times a counterexample was shrunk successfully
  * `total_time`: The total (wall-clock) time used.
+ * `improvements`: Number of times an improvement was made with `target!`
 """
 struct Stats
     attempts::Int
@@ -188,6 +189,7 @@ struct Stats
     squared_dist_runtime::Float64
     shrinks::Int
     total_time::Float64
+    improvements::Int
     function Stats(; attempts=0,
                      acceptions=0,
                      rejections=0,
@@ -199,12 +201,14 @@ struct Stats
                      squared_dist_runtime=0.0,
                      shrinks=0,
                      total_time=NaN,
+                     improvements=0,
                      kws...)
         !isempty(kws) && @warn "Got unsupported keyword arguments to Stats! Ignoring:" Keywords=keys(kws)
         new(attempts, acceptions, rejections,
             invocations, overruns, mean_gentime,
             squared_dist_gentime, mean_runtime,
-            squared_dist_runtime, shrinks, total_time)
+            squared_dist_runtime, shrinks, total_time,
+            improvements)
     end
 end
 
@@ -305,6 +309,13 @@ Retrieve the total time taken for this fuzzing process.
 """
 total_time(s::Stats)       = s.total_time
 
+"""
+    improvements(::Stats) -> Int
+
+Retrieve the total number of improvements made due to calls to `target!`.
+"""
+improvements(s::Stats)     = s.improvements
+
 function Base.:(==)(a::Stats, b::Stats)
     a.attempts             ==  b.attempts             &&
     a.acceptions           ==  b.acceptions           &&
@@ -315,6 +326,7 @@ function Base.:(==)(a::Stats, b::Stats)
     # as an auxilliary; NaN === NaN is true (up to bitpatterns)
     a.mean_runtime         === b.mean_runtime         &&
     a.squared_dist_runtime === b.squared_dist_runtime &&
+    a.improvements         === b.improvements         &&
     a.shrinks              ==  b.shrinks
 end
 

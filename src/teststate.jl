@@ -266,14 +266,17 @@ function target!(ts::TestState)
         new.choices[i] += 1
 
         if adjust(ts, new)
+            count_target!(ts)
             k = 1
             new.choices[i] += k
             while should_keep_generating(ts) && adjust(ts, new)
+                count_target!(ts)
                 k *= 2
                 new.choices[i] += k
             end
             while k > 0
                 while should_keep_generating(ts) && adjust(ts, new)
+                    count_target!(ts)
                     new.choices[i] += k
                 end
                 k ÷= 2
@@ -288,6 +291,7 @@ function target!(ts::TestState)
 
         new.choices[i] -= 1
         if adjust(ts, new)
+            count_target!(ts)
             k = 1
             if new.choices[i] < k
                 continue
@@ -295,6 +299,7 @@ function target!(ts::TestState)
             new.choices[i] -= k
 
             while should_keep_generating(ts) && adjust(ts, new)
+                count_target!(ts)
                 if new.choices[i] < k
                     break
                 end
@@ -304,6 +309,7 @@ function target!(ts::TestState)
             end
             while k > 0
                 while should_keep_generating(ts) && adjust(ts, new)
+                    count_target!(ts)
                     if new.choices[i] < k
                         break
                     end
@@ -364,6 +370,7 @@ count_valid!(ts::TestState)    = !isnan(total_time(ts.stats)) ? ts.stats : (ts.s
 count_invalid!(ts::TestState)  = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_invalidation(ts.stats))
 count_overrun!(ts::TestState)  = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_overrun(ts.stats))
 count_shrink!(ts::TestState)   = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_shrink(ts.stats))
+count_target!(ts::TestState)   = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_improvement(ts.stats))
 finalize_stats!(ts::TestState) = !isnan(total_time(ts.stats)) ? ts.stats : (ts.stats = add_total_duration(ts.stats, time() - @something(ts.start_time)))
 
 function record_durations!(ts::TestState, tc::TestCase)
