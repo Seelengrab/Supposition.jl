@@ -334,7 +334,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
         $Test.@testset $sr $(tsargs...) $namestr begin
             $report = $Test.get_testset()
             $previous_failure = $retrieve($report.config.db, $record_name($report))
-            $ts = $TestState($report.config, $run_input, $previous_failure)
+            $ts = $TestState($report.config, $gen_input, $run_input, $previous_failure)
             $Supposition.run($ts)
             $Test.record($report, $ts)
             $got_res = !isnothing($ts.result)
@@ -353,7 +353,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                 end
                 $n_tc = $Supposition.for_choices($attempt.choices, $copy($ts.rng), $attempt.generation, $attempt.max_generation)
                 $obj = $ScopedValues.@with $Supposition.CURRENT_TESTCASE => $n_tc begin
-                    $gen_input($n_tc)
+                    $ts.gen_input($n_tc)
                 end
                 $Logging.@debug "Recording result in testset"
                 if $got_err
@@ -730,3 +730,32 @@ end
 Returns the statistics collected about this `SuppositionReport`.
 """
 statistics(sr::SuppositionReport) = statistics(@something(sr.final_state))
+
+"""
+    counterexample(::SuppositionReport) -> Option
+
+Return the counterexample found during execution as a `Some`, if any exists.
+Otherwise, `nothing` is returned.
+
+!!! note "Format"
+    The counterexample itself is a tuple of the objects passed as arguments to the property.
+    For example, a property `f(::Float64)` would have a counterexample of type `Tuple{Float64}`.
+"""
+function counterexample(sr::SuppositionReport)
+    ts = @something sr.final_state (return nothing)
+    res = Base.@something ts.target_err ts.best_scoring ts.result (return nothing #= odd? =#)
+    got_err = !isnothing(ts.target_err)
+    got_score = !isnothing(ts.best_scoring)
+    attempt = if got_err | got_score
+        last(res)
+    else
+        res
+    end
+
+    n_tc = Supposition.for_choices(attempt.choices, copy(ts.rng), attempt.generation, attempt.max_generation)
+    obj = ScopedValues.@with Supposition.CURRENT_TESTCASE => n_tc begin
+        ts.gen_input(n_tc)
+    end
+
+    return Some(values(obj))
+end

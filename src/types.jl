@@ -355,6 +355,7 @@ end
 """
 mutable struct TestState
     config::CheckConfig
+    gen_input::Any
     is_interesting::Any
     rng::Random.AbstractRNG
     stats::Stats
@@ -366,7 +367,7 @@ mutable struct TestState
     previous_example::Option{Attempt}
     start_time::Option{Float64}
     deadline::Option{Float64}
-    function TestState(conf::CheckConfig, test_function, previous_example::Option{Attempt}=nothing)
+    function TestState(conf::CheckConfig, input_function, test_function, previous_example::Option{Attempt}=nothing)
         rng_orig = try
             copy(conf.rng)
         catch e
@@ -382,6 +383,7 @@ mutable struct TestState
         end
         new(
             conf,              # pass the given arguments through
+            input_function,
             test_function,
             rng_orig,
             Stats(),

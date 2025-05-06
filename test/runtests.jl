@@ -4,7 +4,7 @@ using Supposition: Data, test_function, shrink_remove, shrink_redistribute,
         choice!, weighted!, Stats, add_invocation, add_validation, add_invalidation,
         add_overrun, add_call_duration, add_gen_duration, add_shrink, gentime_mean, runtime_mean,
         runtime_variance, statistics, shrinks, overruns, attempts, acceptions, rejections, invocations,
-        online_mean, total_time, improvements, add_improvement
+        online_mean, total_time, improvements, add_improvement, counterexample
 using Test
 using Aqua
 using Random
@@ -47,7 +47,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     # Write your tests here.
     @testset "test function interesting" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, Returns(true))
+        ts = TestState(conf, Returns(nothing), Returns(true))
         tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test first(test_function(ts, tc))
         @test @something(ts.result).choices == []
@@ -64,7 +64,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "test function valid" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, Returns(false))
+        ts = TestState(conf, Returns(nothing), Returns(false))
 
         tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
@@ -79,7 +79,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "test function invalid" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, (_, _) -> Supposition.reject!())
+        ts = TestState(conf, Returns(nothing), (_, _) -> Supposition.reject!())
 
         tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
@@ -88,14 +88,14 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "shrink remove" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, Returns(true))
+        ts = TestState(conf, Returns(nothing), Returns(true))
         ts.result = Some(Attempt(UInt[1,2,3], 1, 10_000))
 
         @test @something(shrink_remove(ts, Attempt(UInt[1,2],1,10_000), UInt(1))).choices == [1]
         @test @something(shrink_remove(ts, Attempt(UInt[1,2],1,10_000), UInt(2))).choices == UInt[]
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, Returns(true))
+        ts = TestState(conf, Returns(nothing), Returns(true))
         ts.result = Some(Attempt(UInt[1,2,3,4,5], 1,10_000))
         @test @something(shrink_remove(ts, Attempt(UInt[1,2,3,4],1,10_000), UInt(2))).choices == [1,2]
 
@@ -104,19 +104,19 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             last(ls) == 5
         end
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, second_is_five)
+        ts = TestState(conf, Returns(nothing), second_is_five)
         ts.result = Some(Attempt(UInt[1,2,5,4,5],1,10_000))
         @test @something(shrink_remove(ts, Attempt(UInt[1,2,5,4,5],1,10_000), UInt(2))).choices == UInt[1,2,5]
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, sum_greater_1000)
+        ts = TestState(conf, Returns(nothing), sum_greater_1000)
         ts.result = Some(Attempt(UInt[1,1,10_000,1,10_000],1,10_000))
         @test isnothing(shrink_remove(ts, Attempt(UInt[1,1,0,1,1001,0],1,10_000), UInt(1)))
     end
 
     @testset "shrink redistribute" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, Returns(true))
+        ts = TestState(conf, Returns(nothing), Returns(true))
 
         ts.result = Some(Attempt(UInt[500,500,500,500],1,10_000))
         @test @something(shrink_redistribute(ts, Attempt(UInt[500,500],1, 10_000), UInt(1))).choices == UInt[0, 1000]
@@ -127,7 +127,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
     @testset "finds small list" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, sum_greater_1000)
+        ts = TestState(conf, Returns(nothing), sum_greater_1000)
         Supposition.run(ts)
         # This tests the _exact_ IR of Data.Vectors!
         @test @something(ts.result).choices == UInt[1,1,1001]
@@ -146,7 +146,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, bl_sum_greater_1000)
+        ts = TestState(conf, Returns(nothing), bl_sum_greater_1000)
         Supposition.run(ts)
         @test @something(ts.result).choices == UInt[1,1001]
     end
@@ -159,7 +159,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             return (n+m) > 1_000
         end
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, int_sum_greater_1000)
+        ts = TestState(conf, Returns(nothing), int_sum_greater_1000)
         Supposition.run(ts)
         @test @something(ts.result).choices == [1,1000]
     end
@@ -171,7 +171,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             iszero(n)
         end
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, test)
+        ts = TestState(conf, Returns(nothing), test)
         Supposition.run(ts)
         @test isnothing(ts.result) && isnothing(ts.target_err)
     end
@@ -187,7 +187,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, test_maxima)
+        ts = TestState(conf, Returns(nothing), test_maxima)
         Supposition.run(ts)
         @test !isnothing(ts.result)
     end
@@ -202,7 +202,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, target_upwards)
+        ts = TestState(conf, Returns(nothing), target_upwards)
         Supposition.run(ts)
         @test ts.result != nothing
     end
@@ -217,7 +217,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, target_upwards_nofail)
+        ts = TestState(conf, Returns(nothing), target_upwards_nofail)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -235,7 +235,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, no_benefit)
+        ts = TestState(conf, Returns(nothing), no_benefit)
         Supposition.run(ts)
         @test ts.result != nothing
     end
@@ -250,7 +250,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, target_downwards)
+        ts = TestState(conf, Returns(nothing), target_downwards)
         Supposition.run(ts)
         @test !isnothing(ts.result)
         @test !isnothing(ts.best_scoring)
@@ -265,7 +265,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
 
             conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=100)
-            ts = TestState(conf, map_pos)
+            ts = TestState(conf, Returns(nothing), map_pos)
             Supposition.run(ts)
             @test ts.result == nothing
             @test ts.target_err == nothing
@@ -277,7 +277,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
 
             conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=100)
-            ts = TestState(conf, multi_map_pos)
+            ts = TestState(conf, Returns(nothing), multi_map_pos)
             Supposition.run(ts)
             @test ts.result == nothing
             @test ts.target_err == nothing
@@ -291,7 +291,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, sel_pos)
+        ts = TestState(conf, Returns(nothing), sel_pos)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -306,7 +306,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, bound_pos)
+        ts = TestState(conf, Returns(nothing), bound_pos)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -319,7 +319,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, witness_nothing)
+        ts = TestState(conf, Returns(nothing), witness_nothing)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -332,7 +332,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, draw_mix)
+        ts = TestState(conf, Returns(nothing), draw_mix)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -350,7 +350,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, impos)
+        ts = TestState(conf, Returns(nothing), impos)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -368,7 +368,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
-        ts = TestState(conf, guaran)
+        ts = TestState(conf, Returns(nothing), guaran)
         Supposition.run(ts)
         @test ts.result == nothing
         @test ts.target_err == nothing
@@ -453,12 +453,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "Can find the smallest even Integer" begin
         @testset for T in integer_types
             gen = Data.Integers{T}()
-            sr = @check record=false broken=true iseven(gen)
-            # TODO: Replace this with retrieval of the counterexample
-            fs = @something(sr.final_state)
-            tc = Supposition.for_choices(@something(fs.result), copy(sr.config.rng))
-            obj = Data.produce!(tc, gen)
-            @test obj == typemin(T)
+            sr = @check record=false broken=true isodd(gen)
+            @test counterexample(sr) == Some((typemin(T),))
         end
     end
 
@@ -1483,6 +1479,15 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 # this is for the RNG seed
                 @test isone(shrinks(stats))
             end
+        end
+    end
+
+    @testset "SuppositionReport API" begin
+        @testset "Counterexample" begin
+            sr = @check db=false record=false broken=true function find_target(f=Data.Integers{UInt8}())
+                f == typemax(Int)
+            end
+            @test counterexample(sr) == Some((0x0,))
         end
     end
 end
