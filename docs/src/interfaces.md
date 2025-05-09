@@ -38,6 +38,7 @@ cases where the printing of a value is not sufficient to reconstruct it.
 
 ```@docs
 Supposition.statistics(::Supposition.SuppositionReport)
+Supposition.counterexample(::Supposition.SuppositionReport)
 ```
 
 ## Statistics
