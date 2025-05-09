@@ -1404,85 +1404,89 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         @check allascii(c=Data.UnicodeCharacters()) -> c isa Char
     end
 
-    @testset "Statistics" begin
-        @testset "individual calls" begin
-            # TODO: Replace this with stateful property based testing
-            @test add_invocation(Stats())         == Supposition.merge(Stats(); invocations=1)
-            @test add_validation(Stats())         == Supposition.merge(Stats(); acceptions=1)
-            @test add_invalidation(Stats())       == Supposition.merge(Stats(); rejections=1)
-            @test add_overrun(Stats())            == Supposition.merge(Stats(); overruns=1)
-            @test add_shrink(Stats())             == Supposition.merge(Stats(); shrinks=1)
-            @test add_improvement(Stats())        == Supposition.merge(Stats(); improvements=1)
-            dur = rand()
-            @test add_call_duration(Stats(), dur) == Supposition.merge(Stats(); mean_runtime=dur, squared_dist_runtime=0.0)
-            @test add_gen_duration(Stats(), dur)  == Supposition.merge(Stats(); mean_gentime=dur, squared_dist_gentime=0.0)
-        end
-
-        # the maximum is only here to prevent edge cases with overflow
-        sleep_durs = Data.Vectors(Data.Floats{Float64}(;nans=false,infs=false, minimum=0.001, maximum=100.0); min_size=2)
-        @check function online_mean_oracle(durations=sleep_durs)
-            runtime_mean, runtime_variance = foldl(enumerate(durations); init=(NaN, 0.0)) do (mu, sig²), (n, val)
-                online_mean(mu, sig², n, val)
-            end
-            runtime_variance = runtime_variance / length(durations)
-            var_oracle = var(durations; corrected=false)
-            mean_oracle = mean(durations)
-            # The online variance should not be too far off; +-5%
-            var_correct = @event! isapprox(runtime_variance, var_oracle; rtol=0.05)
-            # Our targets are tight - the calculated mean should be well within 1σ.
-            mean_correct = @event! isapprox(runtime_mean, mean_oracle; atol=std(durations))
-            var_correct & mean_correct
-        end
-
-        @testset "Long generation & fast property" begin
-            # This ensures that the duration of the generation of input
-            # does not influence the statistics about the duration of the call.
-            gen = map(Data.Just(0x1)) do x
-                sleep(0.05) # 50 ms sleep is AGES
-                return x
-            end
-            stats = statistics(@check max_examples=10 db=false record=false (x=gen) -> true)
-            # The property is so trivial, calls here should never EVER take this long.
-            # If it does, something is seriously wacky in the environment where the test is run.
-            @test runtime_mean(stats) < 0.01
-            @test gentime_mean(stats) ≈ 0.05 rtol=0.05
-        end
-
-        @testset "Aggregated counts" begin
-            @testset "Trivial property" begin
-                truthy(_) = true
-                sr = @check max_examples=500 record=false truthy(Data.Integers{UInt8}())
-                stats = statistics(sr)
-                @test shrinks(stats)      == 0
-                @test overruns(stats)     == 0
-                @test attempts(stats)     == 500
-                @test acceptions(stats)   == 500
-                @test rejections(stats)   == 0
-                @test invocations(stats)  == 500
-                @test improvements(stats) == 0
-            end
-            @testset "Targeted improvement" begin
-                target = Ref{Float64}(rand(Random.RandomDevice(), Float64))
-                # We have to be pretty limited in what we generate here,
-                # since most Float64 are not in Float32 or Float16.
-                # Also disallow NaNs and Infs, since those can't be
-                # generated from the above `rand` invocation at all.
-                sr = @check db=false broken=true record=false function findzero(i=Data.Floats{Float64}(;nans=false,infs=false))
-                    target!(-abs(target[]-i))
-                    target[] != i
-                end
-                # we expect to find the equality
-                @test @something(sr.result) isa Supposition.Fail
-                stats = statistics(sr)
-                # targeting is necessary
-                @test !iszero(improvements(stats))
-                # this is for the RNG seed
-                @test isone(shrinks(stats))
-            end
-        end
-    end
 
     @testset "SuppositionReport API" begin
+        @testset "Statistics" begin
+            @testset "individual calls" begin
+                # TODO: Replace this with stateful property based testing
+                @test add_invocation(Stats())         == Supposition.merge(Stats(); invocations=1)
+                @test add_validation(Stats())         == Supposition.merge(Stats(); acceptions=1)
+                @test add_invalidation(Stats())       == Supposition.merge(Stats(); rejections=1)
+                @test add_overrun(Stats())            == Supposition.merge(Stats(); overruns=1)
+                @test add_shrink(Stats())             == Supposition.merge(Stats(); shrinks=1)
+                @test add_improvement(Stats())        == Supposition.merge(Stats(); improvements=1)
+                dur = rand()
+                @test add_call_duration(Stats(), dur) == Supposition.merge(Stats(); mean_runtime=dur, squared_dist_runtime=0.0)
+                @test add_gen_duration(Stats(), dur)  == Supposition.merge(Stats(); mean_gentime=dur, squared_dist_gentime=0.0)
+            end
+
+            # the maximum is only here to prevent edge cases with overflow
+            sleep_durs = Data.Vectors(Data.Floats{Float64}(;nans=false,infs=false, minimum=0.001, maximum=100.0); min_size=2)
+            @check function online_mean_oracle(durations=sleep_durs)
+                runtime_mean, runtime_variance = foldl(enumerate(durations); init=(NaN, 0.0)) do (mu, sig²), (n, val)
+                    online_mean(mu, sig², n, val)
+                end
+                runtime_variance = runtime_variance / length(durations)
+                var_oracle = var(durations; corrected=false)
+                mean_oracle = mean(durations)
+                # The online variance should not be too far off; +-5%
+                var_correct = @event! isapprox(runtime_variance, var_oracle; rtol=0.05)
+                # Our targets are tight - the calculated mean should be well within 1σ.
+                mean_correct = @event! isapprox(runtime_mean, mean_oracle; atol=std(durations))
+                var_correct & mean_correct
+            end
+
+            @testset "Long generation & fast property" begin
+                # This ensures that the duration of the generation of input
+                # does not influence the statistics about the duration of the call.
+                gen = map(Data.Just(0x1)) do x
+                    sleep(0.05) # 50 ms sleep is AGES
+                    return x
+                end
+                stats = statistics(@check max_examples=10 db=false record=false (x=gen) -> true)
+                # The property is so trivial, calls here should never EVER take this long.
+                # If it does, something is seriously wacky in the environment where the test is run.
+                @test runtime_mean(stats) < 0.01
+                @test gentime_mean(stats) ≈ 0.05 rtol=0.05
+            end
+
+            @testset "Aggregated counts" begin
+                @testset "Trivial property" begin
+                    truthy(_) = true
+                    sr = @check max_examples=500 record=false truthy(Data.Integers{UInt8}())
+                    stats = statistics(sr)
+                    # a trivial property doesn't shrink
+                    @test shrinks(stats)      == 0
+                    # a trivial property doesn't overrun
+                    @test overruns(stats)     == 0
+                    # a trivial property accepts any input, forever
+                    @test attempts(stats)     == 500
+                    @test acceptions(stats)   == 500
+                    @test rejections(stats)   == 0
+                    @test invocations(stats)  == 500
+                    # a trivial property never improves
+                    @test improvements(stats) == 0
+                end
+                @testset "Targeted improvement" begin
+                    target = Ref{Float64}(rand(Random.RandomDevice(), Float64))
+                    # We have to be pretty limited in what we generate here,
+                    # since most Float64 are not in Float32 or Float16.
+                    # Also disallow NaNs and Infs, since those can't be
+                    # generated from the above `rand` invocation at all.
+                    sr = @check db=false broken=true record=false function findzero(i=Data.Floats{Float64}(;nans=false,infs=false))
+                        target!(-abs(target[]-i))
+                        target[] != i
+                    end
+                    # we expect to find the equality
+                    @test @something(sr.result) isa Supposition.Fail
+                    stats = statistics(sr)
+                    # targeting is necessary
+                    @test !iszero(improvements(stats))
+                    # this is for the RNG seed
+                    @test isone(shrinks(stats))
+                end
+            end
+        end
         @testset "Counterexample" begin
             sr = @check db=false record=false broken=true function find_target(f=Data.Integers{UInt8}())
                 f == typemax(Int)
