@@ -92,7 +92,7 @@ Options:
  * `rng`: The initial RNG object given to `@check`. Defaults to a copyable `Random.AbstractRNG`.
  * `max_examples`: The maximum number of examples allowed to be drawn with this config. `-1` means infinite drawing (careful!). Defaults to `10_000`.
  * `record`: Whether the result should be recorded in the parent testset, if there is one. Defaults to `true`.
- * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`. Defaults to `false`.
+ * `verbose`: Whether the printing should be verbose, i.e. print even if it's a `Pass`. Also shows statistics if enabled. Defaults to `false`.
  * `broken`: Whether the invocation is expected to fail. Defaults to `false`.
  * `db`: An `ExampleDB` for recording failure cases for later replaying. Defaults to `default_directory_db()`.
  * `buffer_size`: The default maximum buffer size to use for a test case. Defaults to `100_000`.
@@ -526,6 +526,21 @@ function show_events(io, ::MIME"text/plain", res::Result)
     end
 end
 
+function show_stats(io, m::MIME"text/plain", sr::SuppositionReport)
+    print(io, styled"""
+
+
+      {underline:Statistics:}
+    """)
+
+    buf = StyledStrings.AnnotatedIOBuffer()
+    show(buf, m, statistics(sr))
+    seekstart(buf)
+    readline(buf) # skip the first two lines
+    readline(buf)
+    write(io, buf)
+end
+
 function show_result(io::IO, m::MIME"text/plain", sr::SuppositionReport)
     res::Fail = @something sr.result
 
@@ -536,6 +551,9 @@ function show_result(io::IO, m::MIME"text/plain", sr::SuppositionReport)
 
     show_arguments(io, m, res)
     !isempty(res.events) && show_events(io, m, res)
+
+    !sr.config.verbose && return
+    show_stats(io, m, sr)
 end
 
 function show_error(io::IO, m::MIME"text/plain", sr::SuppositionReport)
@@ -564,6 +582,9 @@ function show_error(io::IO, m::MIME"text/plain", sr::SuppositionReport)
 
     write(io, "    ")
     join(io, eachline(buf; keep=true), "    ")
+
+    !sr.config.verbose && return
+    show_stats(io, m, sr)
 end
 
 function show_pass(io::IO, m::MIME"text/plain", sr::SuppositionReport)
@@ -584,6 +605,7 @@ function show_pass(io::IO, m::MIME"text/plain", sr::SuppositionReport)
     !sr.config.verbose && return
 
     !isempty(res.events) && show_events(io, m, res)
+    show_stats(io, m, sr)
 end
 
 function show_fix_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
@@ -598,6 +620,7 @@ function show_fix_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
     !sr.config.verbose && return
 
     !isempty(res.events) && show_events(io, m, res)
+    show_stats(io, m, sr)
 end
 
 function show_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
@@ -611,12 +634,16 @@ function show_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
     !sr.config.verbose && return
 
     !isempty(res.events) && show_events(io, m, res)
+    show_stats(io, m, sr)
 end
 
-function show_timeout(io::IO, _::MIME"text/plain", sr::SuppositionReport)
+function show_timeout(io::IO, m::MIME"text/plain", sr::SuppositionReport)
     res::Timeout = @something sr.result
 
     print(io, styled"""
     {blue,bold:Hit timeout before any tests concluded (Timeout: $(res.duration))}
       {underline:Context:} $(sr.description)""")
+
+    !sr.config.verbose && return
+    show_stats(io, m, sr)
 end

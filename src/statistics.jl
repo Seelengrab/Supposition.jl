@@ -17,8 +17,7 @@ function Base.show(io::IO, ::MIME"text/plain", s::Stats)
         Total shrinks:                {code:$(shrinks(s))}
         Targeted Improvements:        {code:$(improvements(s))}
         Property runtime:             {code:$runmean}s mean ({code:$runvar}s variance)
-        Input generation time:        {code:$genmean}s mean ({code:$genvar}s variance)
-    """)
+        Input generation time:        {code:$genmean}s mean ({code:$genvar}s variance)""")
 end
 
 
