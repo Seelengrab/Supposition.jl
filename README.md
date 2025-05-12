@@ -5,7 +5,7 @@
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://seelengrab.github.io/Supposition.jl/stable)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://seelengrab.github.io/Supposition.jl/dev)
 [![codecov](https://codecov.io/gh/Seelengrab/Supposition.jl/graph/badge.svg?token=BMO2XHN5JX)](https://codecov.io/gh/Seelengrab/Supposition.jl)
-[![Fuzzy Tests](https://raw.githubusercontent.com/Seelengrab/Supposition.jl/master/badge.svg)](https://github.com/Seelengrab/Supposition.jl)
+[![Fuzzy Tests](https://raw.githubusercontent.com/Seelengrab/Supposition.jl/main/badge.svg)](https://github.com/Seelengrab/Supposition.jl)
 [![Aqua](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 This is a Julia implementation of property based testing. It's been heavily inspired by the testing framework [Hypothesis](https://hypothesis.readthedocs.io/en/latest/).
@@ -78,9 +78,9 @@ Which will produce this output:
 You can add the following line in README.md to show the Supposition.jl badge:
 
 ```markdown
-[![Fuzzy Tests](https://raw.githubusercontent.com/Seelengrab/Supposition.jl/master/badge.svg)](https://github.com/Seelengrab/Supposition.jl)
+[![Fuzzy Tests](https://raw.githubusercontent.com/Seelengrab/Supposition.jl/main/badge.svg)](https://github.com/Seelengrab/Supposition.jl)
 ```
 
 which is rendered as
 
-> [![Fuzzy Tests](https://raw.githubusercontent.com/Seelengrab/Supposition.jl/master/badge.svg)](https://github.com/Seelengrab/Supposition.jl)
+> [![Fuzzy Tests](https://raw.githubusercontent.com/Seelengrab/Supposition.jl/main/badge.svg)](https://github.com/Seelengrab/Supposition.jl)
