@@ -245,21 +245,21 @@ function check_func(e::Expr, tsargs)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
 
-    pushfirst!(tsargs, :(record_base = string($namestr, $argtypes(Base.promote_op($gen_input, $TestCase)))))
+    pushfirst!(tsargs, :(record_base = $string($namestr, $argtypes($Base.promote_op($gen_input, $TestCase)))))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
         function $gen_input($tc::$TestCase)
-            rng_seed = $Data.produce!($tc, Data.Integers{UInt64}())
+            rng_seed = $Data.produce!($tc, $Data.Integers{$UInt64}())
             $Random.seed!(rng_seed)
             $args
         end
 
         function $run_input($ts::$TestState, $tc::$TestCase)
-            $tc.generation_start = Some($time())
+            $tc.generation_start = $Some($time())
             $data = $gen_input($tc)
             $count_call!($ts)
-            $tc.call_start = Some($time())
+            $tc.call_start = $Some($time())
             return !$name($data...)
         end
 
@@ -301,21 +301,21 @@ function check_call(e::Expr, tsargs)
         push!(params.args, Expr(:kw, argname, :($Data.produce!($tc, $e))))
     end
 
-    pushfirst!(tsargs, :(record_base = string($namestr, $argtypes(Base.promote_op($gen_input, $TestCase)))))
+    pushfirst!(tsargs, :(record_base = $string($namestr, $argtypes($Base.promote_op($gen_input, $TestCase)))))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
 
     esc(quote
         function $gen_input($tc::$TestCase)
-            rng_seed = $Data.produce!($tc, Data.Integers{UInt64}())
+            rng_seed = $Data.produce!($tc, $Data.Integers{$UInt64}())
             $Random.seed!(rng_seed)
             $args
         end
 
         function $run_input($ts::$TestState, $tc::$TestCase)
-            $tc.generation_start = Some($time())
+            $tc.generation_start = $Some($time())
             $data = $gen_input($tc)
             $count_call!($ts)
-            $tc.call_start = Some($time())
+            $tc.call_start = $Some($time())
             return !$name($data...)
         end
 
@@ -341,8 +341,8 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
             $got_err = !isnothing($ts.target_err)
             $got_score = !isnothing($ts.best_scoring)
             $Logging.@debug "Any result?" Res=$got_res Err=$got_err Score=$got_score
-            if iszero($attempts($statistics($ts)))
-                $timeout = $Timeout(@something($report.config.timeout))
+            if $iszero($attempts($statistics($ts)))
+                $timeout = $Timeout($Base.@something($report.config.timeout))
                 $Test.record($report, $timeout)
             elseif $got_res | $got_err | $got_score
                 $res = $Base.@something $ts.target_err $ts.best_scoring $ts.result
@@ -351,8 +351,8 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                 else
                     $res
                 end
-                $n_tc = $Supposition.for_choices($attempt.choices, $copy($ts.rng), $attempt.generation, $attempt.max_generation)
-                $obj = $ScopedValues.@with $Supposition.CURRENT_TESTCASE => $n_tc begin
+                $n_tc = $for_choices($attempt.choices, $copy($ts.rng), $attempt.generation, $attempt.max_generation)
+                $obj = $ScopedValues.@with $CURRENT_TESTCASE => $n_tc begin
                     $ts.gen_input($n_tc)
                 end
                 $Logging.@debug "Recording result in testset"
@@ -373,7 +373,7 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                     $Test.record($report, $pass)
                 end
             else
-                $pass = $Supposition.Pass($nothing, Pair{AbstractString,Any}[], $nothing)
+                $pass = $Supposition.Pass($nothing, $Pair{$AbstractString, $Any}[], $nothing)
                 $Test.record($report, $pass)
             end
         end
