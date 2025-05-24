@@ -380,7 +380,7 @@ function determinism!(ts::TestState)
 
     # handle errors
     if (threw1 & threw2) && (obj1[1] != obj2[1] || any(Base.splat(!=), zip(obj1[2], obj2[2])))
-        data = filter(splat(!=), collect(zip(obj1[2], obj2[2])))
+        data = filter(Base.splat(!=), collect(zip(obj1[2], obj2[2])))
         @debug "Nondeterminism: Threw consistent, errors distinct" O1=obj1 O2=obj2 Distinct=data
         ts.generation_indeterminate = ThrowsNondeterministic()
         return
@@ -569,7 +569,7 @@ function property_deterministic!(ts::TestState, attempt::Attempt)
             return is_det
         end
 
-        trace_eq = all(splat(==), zip(trace1, trace2))
+        trace_eq = all(Base.splat(==), zip(trace1, trace2))
         @debug "Error traces" Eq=trace_eq
 
         return err1 == err2 && trace_eq
