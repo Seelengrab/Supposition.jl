@@ -196,7 +196,7 @@ function run(ts::TestState)
     ts.start_time = Some(time())
     @debug "Checking determinism of generating values"
     determinism!(ts)
-    if ts.generation_indeterminate isa Indeterministic
+    if ts.generation_indeterminate isa Nondeterministic
         # No sense in trying to generate an input from something that we can't replay reliably
         return nothing
     end
@@ -382,18 +382,18 @@ function determinism!(ts::TestState)
     if (threw1 & threw2) && (obj1[1] != obj2[1] || any(Base.splat(!=), zip(obj1[2], obj2[2])))
         data = filter(splat(!=), collect(zip(obj1[2], obj2[2])))
         @debug "Nondeterminism: Threw consistent, errors distinct" O1=obj1 O2=obj2 Distinct=data
-        ts.generation_indeterminate = ThrowsIndeterministic()
+        ts.generation_indeterminate = ThrowsNondeterministic()
         return
     elseif threw1 != threw2
         @debug "Nondeterminism: Threw inconsistent" T1=threw1 T2=threw2
-        ts.generation_indeterminate = ThrowsIndeterministic()
+        ts.generation_indeterminate = ThrowsNondeterministic()
         return
     end
 
     # different types were generated on the same input
     if typeof(obj1) != typeof(obj2)
         @debug "Nondeterminism: Types different" O1=obj1 O2=obj2
-        ts.generation_indeterminate = GenTypeIndeterministic()
+        ts.generation_indeterminate = GenTypeNondeterministic()
         return
     end
 
@@ -402,7 +402,7 @@ function determinism!(ts::TestState)
         # bitstypes are defined by their bitpattern, and noone can override `===`
         if obj1 !== obj2
             @debug "Nondeterminism: Bitstypes objects not identical" O1=obj1 O2=obj2
-            ts.generation_indeterminate = GenObjIndeterministic()
+            ts.generation_indeterminate = GenObjNondeterministic()
         else
             ts.generation_indeterminate = Deterministic()
         end
@@ -421,7 +421,7 @@ function determinism!(ts::TestState)
         # non-fallback implementation, let's give it a try!
         if !isequal(obj1, obj2)
             @debug "Nondeterminism: Mutable objects not `isqeual`" O1=obj1 O2=obj2
-            ts.generation_indeterminate = GenObjIndeterministic()
+            ts.generation_indeterminate = GenObjNondeterministic()
         else
             ts.generation_indeterminate = Deterministic()
         end
@@ -434,7 +434,7 @@ function determinism!(ts::TestState)
         # non-fallback implementation, let's give it a try!
         if !(==(obj1, obj2))
             @debug "Nondeterminism: Mutable objects not `==`" O1=obj1 O2=obj2
-            ts.generation_indeterminate = GenObjIndeterministic()
+            ts.generation_indeterminate = GenObjNondeterministic()
         else
             ts.generation_indeterminate = Deterministic()
         end

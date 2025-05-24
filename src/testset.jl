@@ -3,15 +3,15 @@ function results(sr::SuppositionReport)
     res_fail = @something(sr.result) isa Fail
     res_error = @something(sr.result) isa Error
     istimeout = @something(sr.result) isa Timeout
-    res_indet = @something(sr.result) isa Indeterministic
+    res_nondet = @something(sr.result) isa Nondeterministic
     expect_broken = sr.config.broken
     ispass = res_pass && !expect_broken
     iserror = res_error && !expect_broken
     isfail = (res_pass && expect_broken) ||
              (res_fail && !expect_broken)
-    isindeterministic = res_indet && !expect_broken
-    isbroken = !(ispass | iserror | isfail | istimeout | isindeterministic)
-    (;ispass,isfail,iserror,isbroken,istimeout,isindeterministic)
+    isnondeterministic = res_nondet && !expect_broken
+    isbroken = !(ispass | iserror | isfail | istimeout | isnondeterministic)
+    (;ispass,isfail,iserror,isbroken,istimeout,isnondeterministic)
 end
 
 function _format_duration(sr::SuppositionReport)
@@ -189,8 +189,8 @@ function Test.finish(sr::SuppositionReport)
 
     # this is a failure, so record the result in the db
     # timeouts are like a failure, but there is nothing to record
-    # Indeterministics are also a failure without a counterexample
-    if !(res isa Pass || res isa Timeout || res isa Indeterministic)
+    # Nondeterministics are also a failure without a counterexample
+    if !(res isa Pass || res isa Timeout || res isa Nondeterministic)
         ts = @something sr.final_state
         attempt::Attempt = @something err_choices(ts) ts.result begin
             @warn "Unexpected result!" Res=res

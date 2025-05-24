@@ -479,31 +479,31 @@ This only happens in case the given objects don't customize `==` or `isequal`.
 struct Indeterminate <: Determinism end
 
 """
-    Indeterministic
+    Nondeterministic
 
 A result indicating that the given `Possibility` are *not*
 generating values in a deterministic way.
 """
-abstract type Indeterministic <: Determinism end
+abstract type Nondeterministic <: Determinism end
 
 """
-    GenTypeIndeterministic
+    GenTypeNondeterministic
 
 A result indicating that the types of the objects generated from the same
 input are not deterministic.
 """
-struct GenTypeIndeterministic <: Indeterministic end
+struct GenTypeNondeterministic <: Nondeterministic end
 
 """
-    GenObjIndeterministic
+    GenObjNondeterministic
 
 A result indicating that the objects generated from the same
 input are not deterministic.
 """
-struct GenObjIndeterministic <: Indeterministic end
+struct GenObjNondeterministic <: Nondeterministic end
 
 """
-    ThrowsIndeterministic
+    ThrowsNondeterministic
 
 A result indicating that the given `Possibility` throws
 indeterministically when generating an object, given the same input.
@@ -511,15 +511,15 @@ indeterministically when generating an object, given the same input.
 I.e., sometimes an error is thrown and sometimes no error is thrown,
 or the same error is thrown from two different places.
 """
-struct ThrowsIndeterministic <: Indeterministic end
+struct ThrowsNondeterministic <: Nondeterministic end
 
 """
-    PropertyIndeterministic
+    PropertyNondeterministic
 
 A result indicating that the given property is not deterministic,
 i.e. given the same input, the result can differ.
 """
-struct PropertyIndeterministic <: Indeterministic end
+struct PropertyNondeterministic <: Nondeterministic end
 
 """
     NoEquality
@@ -560,9 +560,9 @@ mutable struct SuppositionReport <: AbstractTestSet
 end
 
 function Base.show(io::IO, m::MIME"text/plain", sr::SuppositionReport)
-    (;ispass,isfail,iserror,isbroken,istimeout,isindeterministic) = results(sr)
+    (;ispass,isfail,iserror,isbroken,istimeout,isnondeterministic) = results(sr)
     expect_broken = sr.config.broken
-    if isindeterministic
+    if isnondeterministic
         show_indet(io, m, sr)
     elseif istimeout
         show_timeout(io, m, sr)
@@ -737,28 +737,28 @@ function show_timeout(io::IO, m::MIME"text/plain", sr::SuppositionReport)
 end
 
 function show_indet(io::IO, m::MIME"text/plain", sr::SuppositionReport)
-    res::Indeterministic = @something sr.result
+    res::Nondeterministic = @something sr.result
 
-    message = if res isa GenObjIndeterministic
+    message = if res isa GenObjNondeterministic
         styled"""
         Given {code:Possibility} are not deterministic when generating input!
           The produced objects are of the same type, but they are not `isequal`, `==` or `===`."""
-    elseif res isa GenTypeIndeterministic
+    elseif res isa GenTypeNondeterministic
         styled"""
         Given {code:Possibility} are not deterministic when generating input!
           The types of the produced objects are not the same."""
-    elseif res isa ThrowsIndeterministic
+    elseif res isa ThrowsNondeterministic
         styled"""
         Given {code:Possibility} are not deterministic when generating input!
           The same input choice sequence indeterministically leads to one or multiple distinct errors being thrown."""
-    elseif res isa PropertyIndeterministic
+    elseif res isa PropertyNondeterministic
         styled"""
         Given property is not deterministic!
           The same input object(s) lead to different results being reported."""
     end
 
     println(io, styled"""
-    {red,bold:Indeterminism:}
+    {red,bold:Nondeterminism:}
       {underline:Context:} $(sr.description)
 
       $message""")

@@ -341,12 +341,15 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
             $got_err = !isnothing($ts.target_err)
             $got_score = !isnothing($ts.best_scoring)
             $Logging.@debug "Any result?" Res=$got_res Err=$got_err Score=$got_score
-            if $ts.generation_indeterminate isa $Indeterministic
+
+            if $ts.generation_indeterminate isa $Nondeterministic
                 # This is already a `Result`, so record it directly
                 $Test.record($report, $ts.generation_indeterminate)
+
             elseif iszero($attempts($statistics($ts)))
                 $timeout = $Timeout($Base.@something($report.config.timeout))
                 $Test.record($report, $timeout)
+
             elseif $got_res | $got_err | $got_score
                 $res = $Base.@something $ts.target_err $ts.best_scoring $ts.result
                 $attempt = if $got_err | $got_score
