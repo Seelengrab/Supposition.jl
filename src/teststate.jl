@@ -338,7 +338,7 @@ Check if generating an example is deterministic, by first generating a random
 example and then trying to replay the input, expecting to get the exact same object back.
 """
 function determinism!(ts::TestState)
-    original_testcase = TestCase(UInt64[], ts.rng, invocations(statistics(ts))+1, ts.config.max_examples, ts.config.buffer_size*8)
+    original_testcase = TestCase(UInt64[], copy(ts.rng), invocations(statistics(ts))+1, ts.config.max_examples, ts.config.buffer_size*8)
     determ_method = only(methods(determinism!, (TestState,), Supposition))
 
     obj1, threw1 = try
@@ -359,7 +359,7 @@ function determinism!(ts::TestState)
         (e, trace), true
     end
 
-    duplicate_testcase = for_choices(original_testcase.attempt.choices, ts.rng, original_testcase.attempt.generation, original_testcase.attempt.max_generation)
+    duplicate_testcase = for_choices(original_testcase.attempt.choices, copy(ts.rng), original_testcase.attempt.generation, original_testcase.attempt.max_generation)
     obj2, threw2 = try
         ts.gen_input(duplicate_testcase), false
     catch e
@@ -511,3 +511,67 @@ function record_durations!(ts::TestState, tc::TestCase)
     return ts.stats
 end
 
+function property_deterministic!(ts::TestState, attempt::Attempt)
+    @debug "Checking determinism" Attempt=attempt
+
+    tc1 = for_choices(attempt.choices, copy(ts.rng), attempt.generation, attempt.max_generation)
+    res1 = try
+        @with CURRENT_TESTCASE => tc1 begin
+            ts.is_interesting(ts, tc1)
+        end
+    catch e
+        # Interrupts are an abort signal, so rethrow
+        e isa InterruptException && rethrow()
+        # UndefVarError are a programmer error, so rethrow
+        e isa UndefVarError && rethrow()
+        # true errors are always interesting
+        (e, stacktrace(catch_backtrace()))
+    end
+
+    tc2 = for_choices(attempt.choices, copy(ts.rng), attempt.generation, attempt.max_generation)
+    res2 = try
+        @with CURRENT_TESTCASE => tc2 begin
+            ts.is_interesting(ts, tc2)
+        end
+    catch e
+        # Interrupts are an abort signal, so rethrow
+        e isa InterruptException && rethrow()
+        # UndefVarError are a programmer error, so rethrow
+        e isa UndefVarError && rethrow()
+        # true errors are always interesting
+        (e, stacktrace(catch_backtrace()))
+    end
+
+    @debug "Results" R1=res1 R2=res2
+
+    if typeof(res1) != typeof(res2)
+        @debug "Types distinct"
+        # one threw, the other finished as expected
+        return false
+    elseif res1 isa Bool
+        @debug "Bools"
+        return res1 == res2
+    else # Error case
+        err1, trace1 = res1
+        err2, trace2 = res2
+        pdet_method = only(methods(property_deterministic!))
+        filter!(trace1) do frame
+            is_det = frame.func === pdet_method.name &&
+                     frame.line === pdet_method.line &&
+                     frame.file === pdet_method.file
+            return is_det
+        end
+
+        filter!(trace2) do frame
+            is_det = frame.func === pdet_method.name &&
+                     frame.line === pdet_method.line &&
+                     frame.file === pdet_method.file
+            return is_det
+        end
+
+        trace_eq = all(splat(==), zip(trace1, trace2))
+        @debug "Error traces" Eq=trace_eq
+
+        return err1 == err2 && trace_eq
+    end
+end

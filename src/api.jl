@@ -362,22 +362,29 @@ function final_check_block(namestr, run_input, gen_input, tsargs)
                     $ts.gen_input($n_tc)
                 end
                 $Logging.@debug "Recording result in testset"
-                if $got_err
-                    # This is an unexpected error, report as `Error`
-                    $exc, $trace, $len = $res
-                    $err = $Error($obj, $attempt.events, $exc, $trace[begin:$len-2])
-                    $Test.record($report, $err)
-                elseif $got_res # res
-                    # This is an unexpected failure, report as `Fail`
-                    $fail = $Fail($obj, $attempt.events, $nothing)
-                    $Test.record($report, $fail)
-                elseif $got_score
-                    # This means we didn't actually get a result, so report as `Pass`
-                    # Also mark this, so we can display this correctly during `finish`
-                    $score = $first($res)
-                    $pass = $Pass($Some($obj), $attempt.events, $Some($score))
-                    $Test.record($report, $pass)
+                if $!($property_deterministic!($ts, $attempt))
+                    # This case is hit when generating an input is deterministic,
+                    # but the property itself is not.
+                    $Test.record($report, $PropertyNondeterministic())
+                else
+                    if $got_err
+                        # This is an unexpected error, report as `Error`
+                        $exc, $trace, $len = $res
+                        $err = $Error($obj, $attempt.events, $exc, $trace[begin:$len-2])
+                        $Test.record($report, $err)
+                    elseif $got_res # res
+                        # This is an unexpected failure, report as `Fail`
+                        $fail = $Fail($obj, $attempt.events, $nothing)
+                        $Test.record($report, $fail)
+                    elseif $got_score
+                        # This means we didn't actually get a result, so report as `Pass`
+                        # Also mark this, so we can display this correctly during `finish`
+                        $score = $first($res)
+                        $pass = $Pass($Some($obj), $attempt.events, $Some($score))
+                        $Test.record($report, $pass)
+                    end
                 end
+
             else
                 $pass = $Supposition.Pass($nothing, $Pair{$AbstractString, $Any}[], $nothing)
                 $Test.record($report, $pass)
@@ -748,6 +755,11 @@ Otherwise, `nothing` is returned.
     For example, a property `f(::Float64)` would have a counterexample of type `Tuple{Float64}`.
 """
 function counterexample(sr::SuppositionReport)
+    res = @something sr.result (return nothing)
+    if res isa Pass || res isa Nondeterministic
+        return nothing
+    end
+
     ts = @something sr.final_state (return nothing)
     res = Base.@something ts.target_err ts.best_scoring ts.result (return nothing #= odd? =#)
     got_err = !isnothing(ts.target_err)

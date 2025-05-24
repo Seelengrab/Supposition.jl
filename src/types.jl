@@ -712,8 +712,8 @@ function show_fix_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
 end
 
 function show_broken(io::IO, m::MIME"text/plain", sr::SuppositionReport)
-    res::Union{Error,Fail} = @something sr.result
-    cause = res isa Error ? "Error" : "Failure"
+    res::Union{Error,Fail,Nondeterministic} = @something sr.result
+    cause = res isa Error ? "Error" : (res isa Nondeterministic ? "Nondeterminism" : "Failure")
 
     print(io, styled"""
     {yellow,bold:Test is known broken (Result: $cause)}

@@ -28,6 +28,8 @@ end
 # whether the tests actually passed on earlier versions
 const verb = VERSION.major == 1 && VERSION.minor < 11
 
+const truthy = Returns(true)
+
 @testset "Supposition.jl" begin
     @testset "Code quality (Aqua.jl)" begin
         Aqua.test_all(Supposition; ambiguities = false, stale_deps=false)
@@ -473,7 +475,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 length(v) < (upper_limit-offset)
             end;
         @test @something(sr.result) isa Supposition.Fail
-        arr = only(@something(sr.result).example);
+        arr = (@something counterexample(sr))[1]
         @test length(arr) == (upper_limit-offset)
     end
 
@@ -985,27 +987,35 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         fail(_) = false
         err(_) = error()
         db = Supposition.NoRecordDB()
-
-        pass_sr       = @check db=db record=false pass(Data.Just("Dummy"))
-        # silence the expected printing
-        fail_sr, err_sr, broke_pass_sr, timeout_sr = redirect_stderr(devnull) do
-            fail_sr       = @check db=db record=false fail(Data.Just("Dummy"))
-            err_sr        = @check db=db record=false err(Data.Just("Dummy"))
-            broke_pass_sr = @check db=db record=false broken=true pass(Data.Just("Dummy"))
-            timeout_sr    = @check db=db record=false timeout=Nanosecond(1) pass(Data.Just("Dummy"))
-            fail_sr, err_sr, broke_pass_sr, timeout_sr
+        # purposefully nondeterministic Possibility
+        nondet_pos = map(Data.Just(1)) do _
+            rand(Random.RandomDevice(), Int)
         end
-        broke_fail_sr    = @check db=db record=false broken=true fail(Data.Just("Dummy"))
-        broke_err_sr     = @check db=db record=false broken=true err(Data.Just("Dummy"))
+
+        pass_sr = @check db=db record=false pass(Data.Just("Dummy"))
+        # silence the expected printing
+        fail_sr, err_sr, broke_pass_sr, timeout_sr, nondet_broken_sr, nondet_pos_sr = redirect_stderr(devnull) do
+            fail_sr          = @check db=db record=false fail(Data.Just("Dummy"))
+            err_sr           = @check db=db record=false err(Data.Just("Dummy"))
+            broke_pass_sr    = @check db=db record=false broken=true pass(Data.Just("Dummy"))
+            timeout_sr       = @check db=db record=false timeout=Nanosecond(1) pass(Data.Just("Dummy"))
+            nondet_broken_sr = @check db=db record=false broken=true pass(nondet_pos)
+            nondet_pos_sr    = @check db=db record=false pass(nondet_pos)
+            fail_sr, err_sr, broke_pass_sr, timeout_sr, nondet_broken_sr, nondet_pos_sr
+        end
+        broke_fail_sr = @check db=db record=false broken=true fail(Data.Just("Dummy"))
+        broke_err_sr  = @check db=db record=false broken=true err(Data.Just("Dummy"))
 
         @testset "Result types" begin
-            @test @something(pass_sr.result)       isa Supposition.Pass
-            @test @something(broke_pass_sr.result) isa Supposition.Pass
-            @test @something(fail_sr.result)       isa Supposition.Fail
-            @test @something(broke_fail_sr.result) isa Supposition.Fail
-            @test @something(err_sr.result)        isa Supposition.Error
-            @test @something(broke_err_sr.result)  isa Supposition.Error
-            @test @something(timeout_sr.result)    isa Supposition.Timeout
+            @test @something(pass_sr.result)          isa Supposition.Pass
+            @test @something(broke_pass_sr.result)    isa Supposition.Pass
+            @test @something(fail_sr.result)          isa Supposition.Fail
+            @test @something(broke_fail_sr.result)    isa Supposition.Fail
+            @test @something(err_sr.result)           isa Supposition.Error
+            @test @something(broke_err_sr.result)     isa Supposition.Error
+            @test @something(timeout_sr.result)       isa Supposition.Timeout
+            @test @something(nondet_broken_sr.result) isa Supposition.Nondeterministic
+            @test @something(nondet_pos_sr.result)    isa Supposition.Nondeterministic
         end
 
         @testset "Pass" begin
@@ -1014,6 +1024,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(pass_sr).iserror
             @test !Supposition.results(pass_sr).isbroken
             @test !Supposition.results(pass_sr).istimeout
+            @test !Supposition.results(pass_sr).isnondeterministic
         end
 
         @testset "Fail" begin
@@ -1022,6 +1033,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(fail_sr).iserror
             @test !Supposition.results(fail_sr).isbroken
             @test !Supposition.results(fail_sr).istimeout
+            @test !Supposition.results(fail_sr).isnondeterministic
         end
 
         @testset "Error" begin
@@ -1030,6 +1042,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test  Supposition.results(err_sr).iserror
             @test !Supposition.results(err_sr).isbroken
             @test !Supposition.results(err_sr).istimeout
+            @test !Supposition.results(err_sr).isnondeterministic
         end
 
         @testset "Timeout" begin
@@ -1038,6 +1051,16 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(timeout_sr).iserror
             @test !Supposition.results(timeout_sr).isbroken
             @test  Supposition.results(timeout_sr).istimeout
+            @test !Supposition.results(timeout_sr).isnondeterministic
+        end
+
+        @testset "Nondeterministic" begin
+            @test !Supposition.results(nondet_pos_sr).ispass
+            @test !Supposition.results(nondet_pos_sr).isfail
+            @test !Supposition.results(nondet_pos_sr).iserror
+            @test !Supposition.results(nondet_pos_sr).isbroken
+            @test !Supposition.results(nondet_pos_sr).istimeout
+            @test  Supposition.results(nondet_pos_sr).isnondeterministic
         end
 
         @testset "Broken Pass" begin
@@ -1046,6 +1069,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(broke_pass_sr).iserror
             @test !Supposition.results(broke_pass_sr).isbroken
             @test !Supposition.results(broke_pass_sr).istimeout
+            @test !Supposition.results(broke_pass_sr).isnondeterministic
         end
 
         @testset "Broken Fail" begin
@@ -1054,6 +1078,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(broke_fail_sr).iserror
             @test  Supposition.results(broke_fail_sr).isbroken
             @test !Supposition.results(broke_fail_sr).istimeout
+            @test !Supposition.results(broke_fail_sr).isnondeterministic
         end
 
         @testset "Broken Error" begin
@@ -1062,6 +1087,16 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test !Supposition.results(broke_err_sr).iserror
             @test  Supposition.results(broke_err_sr).isbroken
             @test !Supposition.results(broke_err_sr).istimeout
+            @test !Supposition.results(broke_err_sr).isnondeterministic
+        end
+
+        @testset "Broken Nondeterministic" begin
+            @test !Supposition.results(nondet_broken_sr).ispass
+            @test !Supposition.results(nondet_broken_sr).isfail
+            @test !Supposition.results(nondet_broken_sr).iserror
+            @test  Supposition.results(nondet_broken_sr).isbroken
+            @test !Supposition.results(nondet_broken_sr).istimeout
+            @test !Supposition.results(nondet_broken_sr).isnondeterministic
         end
 
         @testset "Alignment" begin
@@ -1100,9 +1135,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                     end
                 end
                 # This one MUST be recorded!
-                recorded_report = @check record=true function truthy(i=Data.Integers{Int8}())
-                    true
-                end
+                recorded_report = @check record=true truthy(Data.Integers{Int8}())
             end
             @test invocations(statistics(unrecorded_report)) == 10
             @test invocations(statistics(recorded_report))   == 10
@@ -1452,7 +1485,6 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
             @testset "Aggregated counts" begin
                 @testset "Trivial property" begin
-                    truthy(_) = true
                     sr = @check max_examples=500 record=false truthy(Data.Integers{UInt8}())
                     stats = statistics(sr)
                     # a trivial property doesn't shrink
@@ -1493,5 +1525,56 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
             @test counterexample(sr) == Some((0x0,))
         end
+    end
+
+    @testset "Determinism" begin
+        # `Possibility` is indeterministic
+        indet_obj = map(Data.Just(1)) do _
+            rand(Random.RandomDevice(), Int)
+        end
+        sr = @check broken=true record=false truthy(indet_obj)
+        @test @something(sr.result) isa Supposition.GenObjNondeterministic
+        @test counterexample(sr) isa Nothing
+
+        # `Possibility` throws indeterministically
+        throw_call_counter = Ref(0)
+        indet_throw = map(Data.Just(1)) do _
+            isone(throw_call_counter[] += 1) ? 0 : error()
+        end
+        sr = @check broken=true record=false truthy(indet_throw)
+        @test @something(sr.result) isa Supposition.ThrowsNondeterministic
+        @test counterexample(sr) isa Nothing
+
+        # `Possibility` indeterministically returns a different type
+        throw_call_counter[] = 0
+        indet_type = map(Data.Just(1)) do _
+            isone(throw_call_counter[] += 1) ? 0 : ""
+        end
+        sr = @check broken=true record=false truthy(indet_type)
+        @test @something(sr.result) isa Supposition.GenTypeNondeterministic
+        @test counterexample(sr) isa Nothing
+
+        # Property returns an indeterministic result
+        nondet_ret = Ref(true)
+        function nondet_prop(x)
+            res = nondet_ret[]
+            nondet_ret[] = !res
+            return res
+        end
+        sr = @check db=false broken=true record=false nondet_prop(Data.Integers{Int8}())
+        @test @something(sr.result) isa Supposition.PropertyNondeterministic
+        @test counterexample(sr) isa Nothing
+
+        # Property throws indeterministically
+        nondet_ret = Ref(true)
+        function nondet_throw_prop(x)
+            res = nondet_ret[]
+            nondet_ret[] = !res
+            res && error()
+            return res
+        end
+        sr = @check db=false broken=true record=false nondet_prop(Data.Integers{Int8}())
+        @test @something(sr.result) isa Supposition.PropertyNondeterministic
+        @test counterexample(sr) isa Nothing
     end
 end
