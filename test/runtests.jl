@@ -130,7 +130,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         ts = TestState(conf, Returns(nothing), sum_greater_1000)
         Supposition.run(ts)
         # This tests the _exact_ IR of Data.Vectors!
-        @test @something(ts.result).choices == UInt[1,1,1001]
+        @test @something(ts.result).choices == UInt[0,1,1001,0]
     end
 
     @testset "finds small list even with bad lists" begin
