@@ -480,8 +480,16 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "size bounds on matrices" begin
         matgen = Data.Matrices(Data.Integers(0x0,0xa); min_cols=UInt(1), max_cols=UInt(3),
                                                        min_rows=UInt(1), max_rows=UInt(3))
-        @check function bounds(m=matgen)
+        @check function mat_bounds(m=matgen)
             1 <= size(m, 1) <= 3 && 1 <= size(m, 2) <= 3
+        end
+
+        square_mat = Data.SquareMatrices(Data.Integers(0x0,0xa); min_size=UInt(1), max_size=UInt(3))
+        @check function squmat_bounds(sq=square_mat)
+            1 <= size(sq, 1) <= 3 && 1 <= size(sq, 2) <= 3
+        end
+        @check function square_is_suqare(sq=square_mat)
+            size(sq, 1) == size(sq, 2)
         end
     end
 
@@ -1196,6 +1204,8 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
                 Data.Floats() | Data.Booleans(),
                 Data.WeightedNumbers([.1, .2, .7]),
                 Data.WeightedSample(1:3, [.1, .2, .7]),
+                Data.Matrices(Data.Integers{Int}(); min_rows=3, min_cols=5, max_rows=20, max_cols=22),
+                Data.SquareMatrices(Data.Booleans(); min_size=3, max_size=20),
                 )
             @test eval(Meta.parse(repr(pos))) == pos
         end
@@ -1248,6 +1258,36 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test occursin("Booleans()", vec_repr)
             # show the target vector type
             @test occursin("Vector{Bool}", vec_repr)
+        end
+        @testset "Data.Matrices" begin
+            mat_repr = repr("text/plain", Data.Matrices(Data.Booleans(); min_cols=10, max_cols=22, min_rows=45, max_rows=50))
+            @test occursin("matrices", mat_repr)
+            # show the interval of the cols
+            @test occursin("[10, 22]", mat_repr)
+            # show the interval of the rows
+            @test occursin("[45, 50]", mat_repr)
+            # minimum extent
+            @test occursin("(45, 10)", mat_repr)
+            # maximum extent
+            @test occursin("(50, 22)", mat_repr)
+            # show the `Possibility` for elements
+            @test occursin("Booleans()", mat_repr)
+            # show the target vector type
+            @test occursin("Matrix{Bool}", mat_repr)
+        end
+        @testset "Data.SquareMatrices" begin
+            mat_repr = repr("text/plain", Data.SquareMatrices(Data.Booleans(); min_size=3, max_size=10))
+            @test occursin("matrices", mat_repr)
+            # show the interval of the sizes
+            @test occursin("[3, 10]", mat_repr)
+            # minimum extent
+            @test occursin("(3, 3)", mat_repr)
+            # maximum extent
+            @test occursin("(10, 10)", mat_repr)
+            # show the `Possibility` for elements
+            @test occursin("Booleans()", mat_repr)
+            # show the target vector type
+            @test occursin("Matrix{Bool}", mat_repr)
         end
         @testset "Data.Dicts" begin
             dict_repr = repr("text/plain", Data.Dicts(Data.Booleans(), Data.Characters(); min_size=10, max_size=50))

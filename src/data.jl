@@ -651,9 +651,17 @@ struct Matrices{T, P <: Possibility{T}} <: Possibility{Matrix{T}}
     end
 end
 
+function Base.:(==)(m1::Matrices{T}, m2::Matrices{T}) where T
+    m1.min_rows == m2.min_rows &&
+    m1.max_rows == m2.max_rows &&
+    m1.min_cols == m2.min_cols &&
+    m1.max_cols == m2.max_cols &&
+    m1.data     == m2.data
+end
+
 function Base.show(io::IO, mats::Matrices)
     print(io, Matrices, "(")
-    show(io, mats.data)
+    show(io, mats.data.elements)
     print(io, "; ")
     print(io, "min_rows=", mats.min_rows, ", ")
     print(io, "max_rows=", mats.max_rows, ", ")
@@ -670,7 +678,7 @@ function Base.show(io::IO, ::MIME"text/plain", mats::Matrices)
     print(io, styled"""
     {code,underline:$Matrices}:
 
-        Produce a {code:Matrix\{$(postype(mats.data))\}} with number of rows in the interval $row_lengths and
+        Produce a {code:Matrix\{$(postype(mats.data.elements))\}} with number of rows in the interval $row_lengths and
         number of columns in $col_lengths. I.e., the produced matrices have a {code:size} somewhere between $min_size and $max_size.
         The data is produced by {code:$(mats.data.elements)}.""")
     obj = styled"""
@@ -801,9 +809,15 @@ struct SquareMatrices{T, P <: Possibility{T}} <: Possibility{Matrix{T}}
     end
 end
 
+function Base.:(==)(m1::SquareMatrices{T}, m2::SquareMatrices{T}) where T
+    m1.min_size == m2.min_size &&
+    m1.max_size == m2.max_size &&
+    m1.data     == m2.data
+end
+
 function Base.show(io::IO, mats::SquareMatrices)
     print(io, SquareMatrices, "(")
-    show(io, mats.data)
+    show(io, mats.data.elements)
     print(io, "; ")
     print(io, "min_size=", mats.min_size, ", ")
     print(io, "max_size=", mats.max_size)
@@ -817,7 +831,7 @@ function Base.show(io::IO, ::MIME"text/plain", mats::SquareMatrices)
     print(io, styled"""
     {code,underline:$SquareMatrices}:
 
-        Produce a {code:Matrix\{$(postype(mats.data))\}} that is square and whose sidelengths are in $lengths.
+        Produce a {code:Matrix\{$(postype(mats.data.elements))\}} that is square and whose sidelengths are in $lengths.
         I.e., the produced matrices have a {code:size} somewhere between $min_size and $max_size, and `size(mat, 1) == size(mat, 2)`.
         The data is produced by {code:$(mats.data.elements)}.""")
     obj = styled"""
