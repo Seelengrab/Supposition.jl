@@ -1468,7 +1468,7 @@ function float_remap(num::T, _min::T, _max::T) where T <: AbstractFloat
     # to resample the actual range
     range_size = min(_max - _min, floatmax(T))
     _, _, mantissa = Supposition.tear(num)
-    max_mantissa = oftype(mantissa, (2^Supposition.fracsize(T)) - 1)
+    max_mantissa = oftype(mantissa, 2)^Supposition.fracsize(T) - 1
     num = _min + range_size * (mantissa / max_mantissa)
 
     # ensure the value is still in the desired range
