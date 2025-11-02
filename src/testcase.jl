@@ -74,7 +74,7 @@ function choice!(tc::TestCase, n::UInt)
         end
     else
         result = rand(tc.rng, zero(n):n)
-        forced_choice!(tc, UInt(result))
+        forced_choice!(tc, result % UInt64)
     end
 end
 
