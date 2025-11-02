@@ -64,7 +64,7 @@ end
 Force a number of choices to occur, taking from the existing prefix first.
 If the prefix is exhausted, draw from `[zero(n), n]` instead.
 """
-function choice!(tc::TestCase, n::UInt)
+function choice!(tc::TestCase, n::UInt64)
     if length(tc.attempt.choices) < length(tc.prefix)
         preordained = tc.prefix[length(tc.attempt.choices)+1]
         if preordained > n
@@ -74,14 +74,16 @@ function choice!(tc::TestCase, n::UInt)
         end
     else
         result = rand(tc.rng, zero(n):n)
-        forced_choice!(tc, result % UInt64)
+        forced_choice!(tc, result)
     end
 end
+choice!(tc::TestCase, n::UInt32) = choice!(tc, n % UInt64)
 
-function choice!(tc::TestCase, n::Int)
+function choice!(tc::TestCase, n::Int64)
     n >= 0 || throw(ArgumentError("Can't make a negative number of choices!"))
-    choice!(tc, n % UInt) % Int
+    choice!(tc, n % UInt64) % Int64
 end
+choice!(tc::TestCase, n::Int32) = choice!(tc, n % Int64)
 
 function choice!(tc::TestCase, values::AbstractVector)
     n = length(values)
