@@ -48,16 +48,16 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "test function interesting" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), Returns(true))
-        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
+        tc = TestCase(UInt64[], Random.default_rng(), 1, 10_000, 10_000)
         @test first(test_function(ts, tc))
         @test @something(ts.result).choices == []
 
-        ts.result = Some(Attempt(UInt[1,2,3,4],1,10_000))
-        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
+        ts.result = Some(Attempt(UInt64[1,2,3,4],1,10_000))
+        tc = TestCase(UInt64[], Random.default_rng(), 1, 10_000, 10_000)
         @test first(test_function(ts, tc))
         @test @something(ts.result).choices == []
 
-        tc = TestCase(UInt[1,2,3,4], Random.default_rng(), 1, 10_000, 10_000)
+        tc = TestCase(UInt64[1,2,3,4], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
         @test @something(ts.result).choices == []
     end
@@ -66,14 +66,14 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), Returns(false))
 
-        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
+        tc = TestCase(UInt64[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
         @test isnothing(ts.result) && isnothing(ts.target_err)
 
-        ts.result = Some(Attempt(UInt[1,2,3,4],1,10_000))
+        ts.result = Some(Attempt(UInt64[1,2,3,4],1,10_000))
         @test begin
-            test_function(ts, TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000))
-            @something(ts.result).choices == UInt[1,2,3,4]
+            test_function(ts, TestCase(UInt64[], Random.default_rng(), 1, 10_000, 10_000))
+            @something(ts.result).choices == UInt64[1,2,3,4]
         end
     end
 
@@ -81,7 +81,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), (_, _) -> Supposition.reject!())
 
-        tc = TestCase(UInt[], Random.default_rng(), 1, 10_000, 10_000)
+        tc = TestCase(UInt64[], Random.default_rng(), 1, 10_000, 10_000)
         @test !first(test_function(ts, tc))
         @test isnothing(ts.result) && isnothing(ts.target_err)
     end
@@ -89,15 +89,15 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
     @testset "shrink remove" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), Returns(true))
-        ts.result = Some(Attempt(UInt[1,2,3], 1, 10_000))
+        ts.result = Some(Attempt(UInt64[1,2,3], 1, 10_000))
 
-        @test @something(shrink_remove(ts, Attempt(UInt[1,2],1,10_000), UInt(1))).choices == [1]
-        @test @something(shrink_remove(ts, Attempt(UInt[1,2],1,10_000), UInt(2))).choices == UInt[]
+        @test @something(shrink_remove(ts, Attempt(UInt64[1,2],1,10_000), UInt(1))).choices == [1]
+        @test @something(shrink_remove(ts, Attempt(UInt64[1,2],1,10_000), UInt(2))).choices == UInt64[]
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), Returns(true))
-        ts.result = Some(Attempt(UInt[1,2,3,4,5], 1,10_000))
-        @test @something(shrink_remove(ts, Attempt(UInt[1,2,3,4],1,10_000), UInt(2))).choices == [1,2]
+        ts.result = Some(Attempt(UInt64[1,2,3,4,5], 1,10_000))
+        @test @something(shrink_remove(ts, Attempt(UInt64[1,2,3,4],1,10_000), UInt(2))).choices == [1,2]
 
         function second_is_five(_, tc::TestCase)
             ls = [ choice!(tc, 10) for _ in 1:3 ]
@@ -105,24 +105,24 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         end
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), second_is_five)
-        ts.result = Some(Attempt(UInt[1,2,5,4,5],1,10_000))
-        @test @something(shrink_remove(ts, Attempt(UInt[1,2,5,4,5],1,10_000), UInt(2))).choices == UInt[1,2,5]
+        ts.result = Some(Attempt(UInt64[1,2,5,4,5],1,10_000))
+        @test @something(shrink_remove(ts, Attempt(UInt64[1,2,5,4,5],1,10_000), UInt(2))).choices == UInt64[1,2,5]
 
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), sum_greater_1000)
-        ts.result = Some(Attempt(UInt[1,1,10_000,1,10_000],1,10_000))
-        @test isnothing(shrink_remove(ts, Attempt(UInt[1,1,0,1,1001,0],1,10_000), UInt(1)))
+        ts.result = Some(Attempt(UInt64[1,1,10_000,1,10_000],1,10_000))
+        @test isnothing(shrink_remove(ts, Attempt(UInt64[1,1,0,1,1001,0],1,10_000), UInt(1)))
     end
 
     @testset "shrink redistribute" begin
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), Returns(true))
 
-        ts.result = Some(Attempt(UInt[500,500,500,500],1,10_000))
-        @test @something(shrink_redistribute(ts, Attempt(UInt[500,500],1, 10_000), UInt(1))).choices == UInt[0, 1000]
+        ts.result = Some(Attempt(UInt64[500,500,500,500],1,10_000))
+        @test @something(shrink_redistribute(ts, Attempt(UInt64[500,500],1, 10_000), UInt(1))).choices == UInt64[0, 1000]
 
-        ts.result = Some(Attempt(UInt[500,500,500,500],1,10_000))
-        @test @something(shrink_redistribute(ts, Attempt(UInt[500,500,500],1, 10_000), UInt(2))).choices == UInt[0, 500, 1000]
+        ts.result = Some(Attempt(UInt64[500,500,500,500],1,10_000))
+        @test @something(shrink_redistribute(ts, Attempt(UInt64[500,500,500],1, 10_000), UInt(2))).choices == UInt64[0, 500, 1000]
     end
 
     @testset "finds small list" begin
@@ -130,7 +130,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         ts = TestState(conf, Returns(nothing), sum_greater_1000)
         Supposition.run(ts)
         # This tests the _exact_ IR of Data.Vectors!
-        @test @something(ts.result).choices == UInt[1,1,1001]
+        @test @something(ts.result).choices == UInt64[1,1,1001]
     end
 
     @testset "finds small list even with bad lists" begin
@@ -148,7 +148,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
         conf = Supposition.CheckConfig(; rng=Random.default_rng(), max_examples=10_000)
         ts = TestState(conf, Returns(nothing), bl_sum_greater_1000)
         Supposition.run(ts)
-        @test @something(ts.result).choices == UInt[1,1001]
+        @test @something(ts.result).choices == UInt64[1,1001]
     end
 
     @testset "reduces additive pairs" begin
