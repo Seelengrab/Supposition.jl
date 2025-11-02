@@ -503,14 +503,13 @@ function Base.show(io::IO, ::MIME"text/plain", bi::BitIntegers)
 end
 
 function produce!(tc::TestCase, i::Integers{T}) where T
-    offset = choice!(tc, i.range % UInt) % T
+    offset = choice!(tc, i.range % UInt64) % T
     return (i.minimum + offset) % T
 end
 
 function produce!(tc::TestCase, i::Integers{T}) where T <: Union{Int128, UInt128}
-    # FIXME: this assumes a 64-bit architecture!
-    upperbound = (i.range >> 64) % UInt
-    lowerbound = i.range % UInt
+    upperbound = (i.range >> 64) % UInt64
+    lowerbound = i.range % UInt64
     upper = choice!(tc, upperbound) % T
     lower = choice!(tc, lowerbound) % T
     offset = (upper << 64) | lower
