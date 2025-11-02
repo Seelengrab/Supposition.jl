@@ -84,7 +84,7 @@ function shrink_remove(ts::TestState, attempt::Attempt, k::UInt)::Option{Attempt
     valid = ( (j, j+k-1) for j in (length(attempt.choices)-k+1):-1:1 )
     for (x,y) in valid
         head, _, tail = windows(attempt.choices, x, y)
-        new = Attempt(UInt[head; tail], attempt.generation, attempt.max_generation)
+        new = Attempt(UInt64[head; tail], attempt.generation, attempt.max_generation)
         if consider(ts, new)
             return Some(new)
         elseif x > 1 && new.choices[x-1] > 0

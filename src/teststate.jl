@@ -92,7 +92,7 @@ function test_function(ts::TestState, tc::TestCase)
         was_better = false
         if !isnothing(tc.targeting_score)
             score = @something tc.targeting_score
-            old_score, attempt = @something ts.best_scoring Some((typemin(score), (;choices=UInt[])))
+            old_score, attempt = @something ts.best_scoring Some((typemin(score), (;choices=UInt64[])))
             if old_score < score || (old_score == score && attempt.choices > tc.attempt.choices)
                 ts.best_scoring = Some((score, copy(tc.attempt)))
                 was_better = true

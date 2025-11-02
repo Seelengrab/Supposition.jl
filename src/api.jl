@@ -31,7 +31,7 @@ function example(pos::Data.Possibility; tries=100_000, generation::Int=rand(1:50
     isassigned(CURRENT_TESTCASE) && error("Invalid use of `example`! Call `produce!` on your `Possibility` instead.")
 
     for _ in 1:tries
-        tc = for_choices(UInt[], Random.default_rng(), convert(UInt, generation), 10_000)
+        tc = for_choices(UInt64[], Random.default_rng(), convert(UInt, generation), 10_000)
         tc.max_size = typemax(UInt)
         try
             @with CURRENT_TESTCASE => tc begin
