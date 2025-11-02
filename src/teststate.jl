@@ -267,7 +267,7 @@ function target!(ts::TestState)
 
         if adjust(ts, new)
             count_target!(ts)
-            k = 1
+            k = one(Int64)
             new.choices[i] += k
             while should_keep_generating(ts) && adjust(ts, new)
                 count_target!(ts)
@@ -292,7 +292,7 @@ function target!(ts::TestState)
         new.choices[i] -= 1
         if adjust(ts, new)
             count_target!(ts)
-            k = 1
+            k = one(Int64)
             if new.choices[i] < k
                 continue
             end
