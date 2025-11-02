@@ -47,7 +47,9 @@ using PrecompileTools
             ig = Data.Floats{T}()
             example(Data.Vectors(ig))
             example(ig)
-            example(filter(iseven, ig))
+            if Int === Int64
+                example(filter(iseven, ig))
+            end
             example(map(double, ig))
         end
         example(Data.Text(Data.AsciiCharacters()))
