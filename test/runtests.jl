@@ -674,7 +674,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
 
         @testset "targeting score" begin
             high = 0xaaaaaaaaaaaaaaaa # a reckless disregard for gravity
-            @check verbose=verb function target_test(i=Data.Integers(zero(UInt),high))
+            @check verbose=verb function target_test(i=Data.Integers(zero(UInt64),high))
                 target!(1/abs(high - i))
                 i < high+1
             end
