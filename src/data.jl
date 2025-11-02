@@ -1250,9 +1250,9 @@ function produce!(tc::TestCase, d::Dicts{K,V}) where {K,V}
 
     while true
         if length(dict) < d.min_size
-            forced_choice!(tc, UInt(1))
+            forced_choice!(tc, one(UInt64))
         elseif (length(dict)+1) >= d.max_size
-            forced_choice!(tc, UInt(0))
+            forced_choice!(tc, zero(UInt64))
             break
         elseif !weighted!(tc, 0.9)
             break
