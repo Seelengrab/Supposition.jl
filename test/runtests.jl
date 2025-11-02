@@ -1184,7 +1184,7 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test occursin("Produce an integer of type $Int", repr("text/plain", Data.Integers{Int}()))
             limited_repr = repr("text/plain", Data.Integers(5, 10))
             @test occursin("Integers", limited_repr)
-            @test occursin("Int64", limited_repr)
+            @test occursin(string(Int), limited_repr)
             @test occursin("[5, 10]", limited_repr)
             bitint_repr = repr("text/plain", Data.BitIntegers())
             @testset "BitIntegers: $T" for T in (
