@@ -10,7 +10,7 @@ be added at a later date.
     The entries written on this page are automatically generated and DO NOT represent
     the currently supported API surface. Feel free to use anything you can find here,
     but be aware that just because it's listed here, does not mean it's covered under
-    semver (though it may be - check [Userfacing API](@ref) if you're unsure).
+    semver (though it may be - check [User-facing API](@ref) if you're unsure).
 
 ## Data reference
 
