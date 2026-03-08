@@ -586,6 +586,23 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             end
         end
 
+        @testset "docstring" begin
+            @with DEFAULT_CONFIG => API_conf begin
+                @check "Integers are integers." function docfunc(i=Data.Integers(0x0, 0xff))
+                    i isa Integer
+                end
+                @test contains(string(@doc docfunc), "Integers are integers.")
+
+                @check "Short form integers." docshort(i=Data.Integers(0x0, 0xff)) = i isa Integer
+                @test contains(string(@doc docshort), "Short form integers.")
+
+                @check verbose=verb "Adjacent to kwargs." function doc_adj(i=Data.Integers(0x0, 0xff))
+                    i isa Integer
+                end
+                @test contains(string(@doc doc_adj), "Adjacent to kwargs.")
+            end
+        end
+
         @testset "interdependent generation" begin
             Supposition.@check config=API_conf function depend(a=Data.Integers(0x0, 0xff), b=Data.Integers(a, 0xff))
                 a <= b
