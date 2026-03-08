@@ -204,21 +204,30 @@ macro check(args...)
     isempty(args) && throw(ArgumentError("No arguments supplied to `@check`! Please refer to the documentation for usage information."))
     func = last(args)
     kw_args = collect(args[begin:end-1])
+
+    # Extract a docstring immediately preceding the function definition,
+    # e.g. @check "doc" function f(x=gen) ... end
+    docstring = nothing
+    if !isempty(kw_args) && last(kw_args) isa AbstractString
+        docstring = pop!(kw_args)
+    end
+
     opts = similar(kw_args, Any)
     opts .= kw_args
     if isexpr(func, :function, 2)
-        check_func(func, opts)
+        check_func(func, opts; docstring)
     elseif isexpr(func, :call)
+        docstring !== nothing && throw(ArgumentError("Docstring can only be attached to a function definition, not a function call!"))
         check_call(func, opts)
     elseif isexpr(func, Symbol("->")) | isexpr(func, Symbol("="), 2)
         func = anon_to_func(func)
-        check_func(func, opts)
+        check_func(func, opts; docstring)
     else
         throw(ArgumentError("Given expression is not a function call or definition!"))
     end
 end
 
-function check_func(e::Expr, tsargs)
+function check_func(e::Expr, tsargs; docstring=nothing)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
@@ -242,6 +251,11 @@ function check_func(e::Expr, tsargs)
     pushfirst!(funchead.args, name)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
+
+    # Attach docstring if provided
+    if docstring !== nothing
+        testfunc = Expr(:macrocall, GlobalRef(Core, Symbol("@doc")), nothing, docstring, testfunc)
+    end
 
     pushfirst!(tsargs, :(record_base = $string($namestr, $argtypes($Base.promote_op($gen_input, $TestCase)))))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
