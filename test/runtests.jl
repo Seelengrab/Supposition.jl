@@ -734,6 +734,32 @@ const verb = VERSION.major == 1 && VERSION.minor < 11
             @test err.res isa Test.Error
             @test err.res.value == string(one_err)
         end
+
+        @testset "@check preserves function docstrings." begin
+            # On a function without a docstring, the doc is `nothing`.
+            @check function length_nil_undocumented(x=Data.Just(Int[]))
+                length(x) == 0
+            end
+            @test isnothing(@doc length_nil_undocumented)
+
+            # Docstrings are applied.
+            @check "Length is zero." function length_nil_long(x=Data.Just(Int[]))
+                length(x) == 0
+            end
+            @test only((@doc length_nil_long).text) == "Length is zero."
+            @check "Length is zero." length_nil_short(x=Data.Just(Int[])) =
+                length(x) == 0
+            @test only((@doc length_nil_short).text) == "Length is zero."
+
+            # Docstrings are preserved in the presence of keyword arguments:
+            @check verbose=false "Length is zero." function length_nil_long_kw(x=Data.Just(Int[]))
+                length(x) == 0
+            end
+            @test only((@doc length_nil_long_kw).text) == "Length is zero."
+            @check verbose=false "Length is zero." length_nil_short_kw(x=Data.Just(Int[])) = length(x) == 0
+            @test only((@doc length_nil_short_kw).text) == "Length is zero."
+        end
+
     end
 
     @testset "@composed API" begin

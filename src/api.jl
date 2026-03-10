@@ -204,21 +204,26 @@ macro check(args...)
     isempty(args) && throw(ArgumentError("No arguments supplied to `@check`! Please refer to the documentation for usage information."))
     func = last(args)
     kw_args = collect(args[begin:end-1])
+    docstring = if !isempty(kw_args) && last(kw_args) isa AbstractString
+        pop!(kw_args)
+    else
+        nothing
+    end
     opts = similar(kw_args, Any)
     opts .= kw_args
     if isexpr(func, :function, 2)
-        check_func(func, opts)
+        check_func(func, opts; docstring)
+    elseif isexpr(func, Symbol("="), 2) | isexpr(func, Symbol("->"))
+        func = normalize_func(func)
+        check_func(func, opts; docstring)
     elseif isexpr(func, :call)
         check_call(func, opts)
-    elseif isexpr(func, Symbol("->")) | isexpr(func, Symbol("="), 2)
-        func = anon_to_func(func)
-        check_func(func, opts)
     else
         throw(ArgumentError("Given expression is not a function call or definition!"))
     end
 end
 
-function check_func(e::Expr, tsargs)
+function check_func(e::Expr, tsargs; docstring=nothing)
     isexpr(e, :function, 2) || throw(ArgumentError("Given expression is not a function expression!"))
     head, body = e.args
     isexpr(head, :call) || throw(ArgumentError("Given expression is not a function head expression!"))
@@ -242,6 +247,7 @@ function check_func(e::Expr, tsargs)
     pushfirst!(funchead.args, name)
     push!(testfunc.args, funchead)
     push!(testfunc.args, body)
+    testfunc = isnothing(docstring) ? testfunc : :(Base.@doc $docstring $testfunc)
 
     pushfirst!(tsargs, :(record_base = $string($namestr, $argtypes($Base.promote_op($gen_input, $TestCase)))))
     final_block = final_check_block(namestr, run_input, gen_input, tsargs)
@@ -470,7 +476,7 @@ macro composed(e::Expr)
     (isfunc | isanon | iscall) || throw(ArgumentError("Given expression is not a call or an (anonymous) function definition!"))
 
     if isanon
-        func = anon_to_func(e)
+        func = normalize_func(e)
         composed_from_func(func)
     elseif isfunc
         composed_from_func(e)
@@ -479,7 +485,7 @@ macro composed(e::Expr)
     end
 end
 
-function anon_to_func(e::Expr)
+function normalize_func(e::Expr)
     body = e.args[2]
     input = e.args[1]
 
@@ -549,7 +555,7 @@ function composed_from_call(e::Expr)
     prodname = QuoteNode(func)
 
     tc = gensym()
-    
+
     args = Expr(:tuple)
     for e in kwargs
         push!(args.args, :($Data.produce!($tc, $e)))
